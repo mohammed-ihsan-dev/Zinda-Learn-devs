@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { seedUsers } from './user.seed.js';
 import { seedCourses } from './course.seed.js';
 
-dotenv.config({ path: '../.env' }); // Make sure dotenv loads relative to the root backend
+dotenv.config();
 
 const seedData = async () => {
   try {

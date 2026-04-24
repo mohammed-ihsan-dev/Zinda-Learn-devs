@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken';
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please provide a name'],
     trim: true,
     maxlength: [50, 'Name cannot exceed 50 characters']
   },
@@ -18,7 +17,6 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please provide a password'],
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
@@ -27,6 +25,10 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'instructor', 'admin'],
     default: 'student'
   },
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
   profilePic: {
     type: String,
     default: ''
@@ -34,6 +36,16 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: ''
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  otp: {
+    type: String
+  },
+  otpExpiry: {
+    type: Date
   },
   bio: {
     type: String,

@@ -1,25 +1,87 @@
 import User from "../models/User.js";
 import admin from "../config/firebaseAdmin.js";
+import sendEmail from "../utils/sendEmail.js";
+
+// Send OTP
+export const sendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 1 * 60 * 1000); // 1 minute
+
+    let user = await User.findOne({ email });
+    if (user && user.isVerified && user.password) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
+    }
+
+    if (!user) {
+      user = new User({ email });
+    }
+
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    try {
+      await sendEmail({
+        email,
+        subject: "Verification OTP - Zinda Learn",
+        message: `Your OTP is ${otp}. It expires in 1 minute.`,
+        html: `<h3>Verification OTP</h3><p>Your OTP is <b>${otp}</b>. It expires in 1 minute.</p>`
+      });
+      res.status(200).json({ success: true, message: "OTP sent successfully" });
+    } catch (err) {
+      console.error("Email Sending Error:", err);
+      user.otp = undefined;
+      user.otpExpiry = undefined;
+      await user.save();
+      return res.status(500).json({ success: false, message: "Failed to send email" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Verify OTP
+export const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
+
+    const user = await User.findOne({ email, otp, otpExpiry: { $gt: Date.now() } });
+    if (!user) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Email verified" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // Register user
 export const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered"
-      });
+    const user = await User.findOne({ email });
+    if (!user || !user.isVerified) {
+      return res.status(400).json({ success: false, message: "Email not verified" });
     }
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: role || "student"
-    });
+    if (user.password) {
+      return res.status(400).json({ success: false, message: "User already registered" });
+    }
+
+    user.name = name;
+    user.password = password;
+    user.role = role || "student";
+    await user.save();
 
     const token = user.generateToken();
 
@@ -37,10 +99,7 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -56,7 +115,8 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    // Fetch user and explicitly select password (trim email to avoid whitespace issues)
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
 
     if (!user) {
       return res.status(401).json({
@@ -97,9 +157,10 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("Login Error:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Server error during login"
     });
   }
 };

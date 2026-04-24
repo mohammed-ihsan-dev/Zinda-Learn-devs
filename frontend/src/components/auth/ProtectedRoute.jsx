@@ -14,7 +14,9 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   }
 
   if (roles.length > 0 && !roles.includes(user?.role)) {
-    // Redirect based on role
+    // Dynamic redirect based on user's actual role
+    if (user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (user?.role === 'instructor') return <Navigate to="/instructor/dashboard" replace />;
     return <Navigate to="/student/dashboard" replace />;
   }
 

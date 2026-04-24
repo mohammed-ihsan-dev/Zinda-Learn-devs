@@ -17,6 +17,7 @@ const StudentDashboard = () => {
         setEnrollments(data.enrollments || []);
       } catch (error) {
         console.error('Error fetching enrollments:', error);
+        setEnrollments([]); // Fallback to empty array
       } finally {
         setLoading(false);
       }
@@ -41,10 +42,10 @@ const StudentDashboard = () => {
         {/* Abstract Gradient Overlay - Fade Left to Right */}
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-transparent z-10 w-full lg:w-3/4"></div>
         
-        {enrollments.length > 0 && (
+        {(enrollments && enrollments.length > 0) && (
           <img 
-            src={enrollments[0].course.thumbnail} 
-            alt={enrollments[0].course.title}
+            src={enrollments[0].course?.thumbnail} 
+            alt={enrollments[0].course?.title}
             className="absolute inset-0 w-full h-full object-cover object-right opacity-40 group-hover:opacity-50 transition-opacity duration-1000"
           />
         )}
@@ -61,7 +62,7 @@ const StudentDashboard = () => {
                 Continue Learning
               </span>
               <h2 className="text-3xl lg:text-5xl font-extrabold text-white mb-3 leading-tight drop-shadow-lg">
-                {enrollments[0].course.title}
+                {enrollments[0].course?.title}
               </h2>
               <p className="text-zinc-300 mb-8 max-w-xl text-lg font-light tracking-wide">
                 Module {enrollments[0].currentLesson.moduleIndex + 1} — Lesson {enrollments[0].currentLesson.lessonIndex + 1}
@@ -147,7 +148,7 @@ const StudentDashboard = () => {
           </div>
 
           <div className="space-y-4">
-            {enrollments.length > 0 ? (
+            {(enrollments && enrollments.length > 0) ? (
               enrollments.map((enrollment) => (
                 <div key={enrollment._id} className="bg-white p-4 rounded-2xl shadow-sm hover:shadow-md border border-zinc-100 flex items-center gap-5 group cursor-pointer transition-all duration-300">
                   <div className="relative overflow-hidden rounded-xl w-32 h-20 shrink-0 border border-zinc-100">

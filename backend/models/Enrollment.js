@@ -43,6 +43,9 @@ const enrollmentSchema = new mongoose.Schema({
   amountPaid: {
     type: Number,
     default: 0
+  },
+  paymentId: {
+    type: String
   }
 }, { timestamps: true });
 

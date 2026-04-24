@@ -5,6 +5,9 @@ import Button from '../../components/Button';
 import { enrollCourse } from '../../services/courseService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import CoursePurchaseModal from '../../components/CoursePurchaseModal';
+import PaymentStepModal from '../../components/PaymentStepModal';
+import { createPaymentOrder, verifyPayment } from '../../services/paymentService';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -23,16 +26,47 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
     (acc, m) => acc + (m.lessons?.reduce((a, l) => a + (l.duration || 0), 0) || 0), 0
   ) || 0;
 
-  const handleEnroll = async () => {
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
+
+  const handleEnrollClick = () => {
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleProceedToPayment = async () => {
+    setIsPurchaseModalOpen(false);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePayment = async () => {
     setEnrolling(true);
     try {
-      await enrollCourse(course._id);
-      toast.success('Enrolled successfully! 🎉');
-      navigate('/student/my-learning');
+      // 1. Create order
+      const orderData = await createPaymentOrder(course._id);
+      
+      // 2. Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // 3. Verify payment (mocking Razorpay success)
+      await verifyPayment({
+        paymentId: 'mock_payment_' + Math.random().toString(36).substr(2, 9),
+        orderId: orderData.orderId,
+        signature: 'mock_signature',
+        courseId: course._id
+      });
+
+      toast.success('Payment Successful! 🎉');
+      setTimeout(() => {
+        toast.success('Enrollment Completed');
+        navigate('/student/my-learning');
+      }, 1000);
+      
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Enrollment failed');
+      toast.error(err.response?.data?.message || 'Payment failed. Please try again.');
     } finally {
       setEnrolling(false);
+      setIsPaymentModalOpen(false);
     }
   };
 
@@ -118,7 +152,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                   Continue Learning
                 </Button>
               ) : (
-                <Button onClick={handleEnroll} loading={enrolling} className="!px-8 !py-3.5 text-base font-bold rounded-xl">
+                <Button onClick={handleEnrollClick} loading={enrolling} className="!px-8 !py-3.5 text-base font-bold rounded-xl">
                   Enroll Now — {course.discountPrice > 0 ? `₹${course.discountPrice?.toLocaleString()}` : course.price === 0 ? 'Free' : `₹${course.price?.toLocaleString()}`}
                 </Button>
               )}
@@ -171,7 +205,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                   <span className="font-bold text-green-700 text-sm">You're enrolled</span>
                 </div>
               ) : (
-                <Button onClick={handleEnroll} loading={enrolling} fullWidth className="!py-3.5 text-base font-bold rounded-xl">
+                <Button onClick={handleEnrollClick} loading={enrolling} fullWidth className="!py-3.5 text-base font-bold rounded-xl">
                   Enroll Now
                 </Button>
               )}
@@ -338,6 +372,21 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
           </div>
         </div>
       )}
+      {/* MODALS */}
+      <CoursePurchaseModal
+        course={course}
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+        onProceedToPayment={handleProceedToPayment}
+      />
+      
+      <PaymentStepModal
+        course={course}
+        isOpen={isPaymentModalOpen}
+        onClose={() => !enrolling && setIsPaymentModalOpen(false)}
+        onPay={handlePayment}
+        isProcessing={enrolling}
+      />
     </div>
   );
 };

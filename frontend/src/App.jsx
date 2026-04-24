@@ -10,8 +10,28 @@ import StudentLayout from './layouts/StudentLayout';
 import Home from './pages/Home';
 import StudentLogin from './pages/StudentLogin';
 import StudentRegister from './pages/auth/StudentRegister';
+import InstructorLogin from './pages/auth/InstructorLogin';
+import InstructorSignup from './pages/auth/InstructorSignup';
+import AdminLogin from './pages/auth/AdminLogin';
 import CoursesPage from './pages/CoursesPage';
+import AboutPage from './pages/AboutPage';
 import StudentDashboard from './pages/student/Dashboard';
+
+// Instructor Pages
+import InstructorLayout from './layouts/InstructorLayout';
+import InstructorDashboard from './pages/instructor/Dashboard';
+import MyCourses from './pages/instructor/MyCourses';
+import CreateCourse from './pages/instructor/CreateCourse';
+import Earnings from './pages/instructor/Earnings';
+import Students from './pages/instructor/Students';
+
+// Admin Pages
+import AdminLayout from './layouts/AdminLayout';
+import AdminDashboard from './pages/admin/Dashboard';
+import CourseApproval from './pages/admin/CourseApproval';
+import UserManagement from './pages/admin/UserManagement';
+import InstructorManagement from './pages/admin/InstructorManagement';
+import Analytics from './pages/admin/Analytics';
 
 import MyLearning from './pages/student/MyLearning';
 import BrowseCourses from './pages/student/BrowseCourses';
@@ -27,7 +47,11 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<StudentLogin />} />
           <Route path="/register" element={<StudentRegister />} />
+          <Route path="/instructor/login" element={<InstructorLogin />} />
+          <Route path="/instructor/signup" element={<InstructorSignup />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/about" element={<AboutPage />} />
 
           {/* Student Routes */}
           <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
@@ -40,6 +64,28 @@ function App() {
             <Route path="progress" element={<div>Progress Page</div>} />
             <Route path="certificates" element={<div>Certificates Page</div>} />
             <Route path="settings" element={<div>Settings Page</div>} />
+          </Route>
+
+          {/* Instructor Routes */}
+          <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/instructor/dashboard" replace />} />
+            <Route path="dashboard" element={<InstructorDashboard />} />
+            <Route path="my-courses" element={<MyCourses />} />
+            <Route path="create-course" element={<CreateCourse />} />
+            <Route path="earnings" element={<Earnings />} />
+            <Route path="students" element={<Students />} />
+            <Route path="settings" element={<div>Instructor Settings</div>} />
+          </Route>
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="course-approval" element={<CourseApproval />} />
+            <Route path="user-management" element={<UserManagement />} />
+            <Route path="instructor-management" element={<InstructorManagement />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="settings" element={<div>Admin Settings</div>} />
           </Route>
 
           {/* 404 Route */}

@@ -29,16 +29,10 @@ const CourseCard = ({ course, enrolled = false }) => {
   const hours = Math.floor(totalDuration / 60);
   const mins = totalDuration % 60;
 
-  const handleEnroll = async (e) => {
+  const handleEnrollClick = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    try {
-      await enrollCourse(_id);
-      toast.success('Successfully enrolled!');
-      navigate(`/student/courses/${_id}/learn`);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Enrollment failed');
-    }
+    navigate(`/courses/${_id}`);
   };
 
   const handleCardClick = () => {
@@ -115,7 +109,7 @@ const CourseCard = ({ course, enrolled = false }) => {
 
             {!enrolled ? (
               <Button 
-                onClick={handleEnroll}
+                onClick={handleEnrollClick}
                 size="sm" 
                 className="rounded-xl shadow-sm hover:shadow-md"
               >

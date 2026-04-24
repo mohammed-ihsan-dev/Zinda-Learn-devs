@@ -9,6 +9,9 @@ import authRoutes from './routes/auth.routes.js';
 import courseRoutes from './routes/courses.js';
 import enrollmentRoutes from './routes/enrollments.js';
 import messageRoutes from './routes/messages.js';
+import instructorRoutes from './routes/instructor.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 // Load env vars
 dotenv.config();
@@ -19,7 +22,18 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:5174', 
+    'https://zinda-learn.vercel.app', // update this to your actual Vercel/Netlify frontend URL if different
+    'https://zindalearn.vercel.app',
+    'https://bae-by-ecommerce-project-dcnu.vercel.app' // from the previous frontend url
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -32,6 +46,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/instructor', instructorRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

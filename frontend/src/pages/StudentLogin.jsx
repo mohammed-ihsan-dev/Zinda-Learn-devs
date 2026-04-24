@@ -34,7 +34,11 @@ const StudentLogin = () => {
     try {
       const data = await login(formData);
       toast.success('Welcome back!');
-      navigate('/student/dashboard');
+      
+      // Dynamic redirect based on role
+      if (data.user.role === 'admin') navigate('/admin/dashboard');
+      else if (data.user.role === 'instructor') navigate('/instructor/dashboard');
+      else navigate('/student/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
@@ -60,9 +64,13 @@ const StudentLogin = () => {
       };
 
       setLoading(true);
-      await googleLogin(payload);
+      const data = await googleLogin(payload);
       toast.success('Signed in with Google!');
-      navigate('/student/dashboard');
+      
+      // Dynamic redirect based on role
+      if (data.user.role === 'admin') navigate('/admin/dashboard');
+      else if (data.user.role === 'instructor') navigate('/instructor/dashboard');
+      else navigate('/student/dashboard');
     } catch (err) {
       if (err.code === 'auth/popup-closed-by-user') {
         toast.error('Login cancelled');

@@ -26,9 +26,10 @@ const Navbar = ({ showBackground = false }) => {
     setIsOpen(false);
   };
 
-  const handleTestimonialsClick = (e) => {
+  const handleAboutClick = (e) => {
     e.preventDefault();
-    navigate('/#testimonials');
+    navigate('/about');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsOpen(false);
   };
 
@@ -77,7 +78,7 @@ const Navbar = ({ showBackground = false }) => {
           }`}>
             <button onClick={handleHomeClick} className={getNavLinkClass("/")}>Home</button>
             <NavLink to="/courses" className={({ isActive }) => getNavLinkClass("/courses")}>Courses</NavLink>
-            <button onClick={handleTestimonialsClick} className={getNavLinkClass("#testimonials", true)}>Testimonials</button>
+            <button onClick={handleAboutClick} className={getNavLinkClass("/about")}>About</button>
           </div>
 
           {/* Desktop Auth */}
@@ -142,10 +143,10 @@ const Navbar = ({ showBackground = false }) => {
                 Courses
               </Link>
               <button 
-                onClick={handleTestimonialsClick} 
-                className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${location.hash === "#testimonials" ? "bg-primary-50 text-primary-600" : "text-surface-700 hover:bg-primary-50 hover:text-primary-600"}`}
+                onClick={handleAboutClick} 
+                className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${location.pathname === "/about" ? "bg-primary-50 text-primary-600" : "text-surface-700 hover:bg-primary-50 hover:text-primary-600"}`}
               >
-                Testimonials
+                About
               </button>
             </div>
             <hr className="my-4 border-surface-100" />

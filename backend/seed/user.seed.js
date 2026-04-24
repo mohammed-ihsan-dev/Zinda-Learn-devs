@@ -1,39 +1,81 @@
 import User from '../models/User.js';
 
-
 export const seedUsers = async () => {
-  await User.deleteMany();
-  console.log('Seed: Cleared existing users');
+  try {
+   
+    if (process.env.NODE_ENV === "production") {
+      console.log(" Seeding is disabled in production");
+      return;
+    }
 
-  
-  
-  const admin = await User.create({
-    name: 'Admin',
-    email: 'admin@zindalearn.com',
-    password: 'admin123',
-    role: 'admin',
-    isApproved: true
-  });
-  console.log('Seed: Created Admin');
+    console.log(" Seeding users...");
 
-  const instructor = await User.create({
-    name: 'Ihsan Mohammed',
-    email: 'mohammed@zindalearn.com',
-    password: 'instructor123',
-    role: 'instructor',
-    isApproved: true,
-    bio: 'Expert React and Full-Stack Developer with 10+ years of experience.'
-  });
-  console.log('Seed: Created Instructor');
 
-  const student = await User.create({
-    name: 'Mhd Ihsan',
-    email: 'mhdihsan@gmail.com.com',
-    password: 'student123',
-    role: 'student',
-    isApproved: true
-  });
-  console.log('Seed: Created Student');
+    const existingAdmin = await User.findOne({
+      email: process.env.ADMIN_EMAIL || 'admin@zindalearn.com'
+    });
 
-  return { admin, instructor, student };
+    if (!existingAdmin) {
+      await User.create({
+        name: 'Admin',
+        email: process.env.ADMIN_EMAIL || 'admin@zindalearn.com',
+        password: process.env.ADMIN_PASSWORD || 'admin123',
+        role: 'admin',
+        isApproved: true
+      });
+
+      console.log(' Admin created');
+    } else {
+      console.log(' Admin already exists');
+    }
+
+
+    if (process.env.NODE_ENV === "development") {
+      const existingInstructor = await User.findOne({
+        email: 'mohammed@zindalearn.com'
+      });
+
+      if (!existingInstructor) {
+        await User.create({
+          name: 'Ihsan Mohammed',
+          email: 'mohammed@zindalearn.com',
+          password: 'instructor123',
+          role: 'instructor',
+          isApproved: true,
+          bio: 'Expert React and Full-Stack Developer'
+        });
+
+        console.log(' Instructor created');
+      }
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      const existingStudent = await User.findOne({
+        email: 'mhdihsan@gmail.com'
+      });
+
+      if (!existingStudent) {
+        await User.create({
+          name: 'Mhd Ihsan',
+          email: 'mhdihsan@gmail.com',
+          password: 'student123',
+          role: 'student',
+          isApproved: true
+        });
+
+        console.log(' Student created');
+      }
+    }
+
+    // Final return for seeder orchestration
+    const admin = await User.findOne({ role: 'admin' });
+    const instructor = await User.findOne({ role: 'instructor' });
+    const student = await User.findOne({ role: 'student' });
+    
+    return { admin, instructor, student };
+
+  } catch (error) {
+    console.error(" Seeding error:", error);
+    return {};
+  }
 };
