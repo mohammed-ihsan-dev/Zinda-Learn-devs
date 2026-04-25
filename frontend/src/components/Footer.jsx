@@ -85,11 +85,11 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3 text-sm text-surface-400">
                 <Phone className="w-4 h-4 text-primary-400 shrink-0" />
-                +91 98765 43210
+                +91 85906 98873
               </li>
               <li className="flex items-start gap-3 text-sm text-surface-400">
                 <MapPin className="w-4 h-4 text-primary-400 shrink-0 mt-0.5" />
-                123 Tech Park, Bengaluru, Karnataka, India
+                Tech Park, Palakkad, Kerala, India
               </li>
             </ul>
           </div>
