@@ -93,9 +93,8 @@ const MyCourses = () => {
                       {new Date(course.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-surface-500 text-right">
-                      {/* Placeholder for Edit/Delete buttons */}
-                      <button className="text-primary-600 hover:text-primary-700 font-medium mr-3">Edit</button>
-                      <button className="text-red-500 hover:text-red-600 font-medium">Delete</button>
+                      <Link to={`/instructor/courses/${course._id}`} className="text-purple-600 hover:text-purple-700 font-bold mr-4 text-xs">Manage</Link>
+                      <button className="text-red-500 hover:text-red-600 font-medium text-xs">Delete</button>
                     </td>
                   </tr>
                 ))}
