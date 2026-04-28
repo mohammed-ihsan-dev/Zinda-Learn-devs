@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../../firebase';
 import { signInWithPopup } from 'firebase/auth';
+import api from '../../services/api';
 
 const InstructorSignup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -15,10 +16,70 @@ const InstructorSignup = () => {
   const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
 
+  // OTP State
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleSendOTP = async () => {
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error('Please enter a valid email first');
+      return;
+    }
+    
+    setSendingOtp(true);
+    try {
+      await api.post('/auth/send-otp', { email: formData.email });
+      setOtpSent(true);
+      setResendTimer(60);
+      toast.success('OTP sent to your email!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter a 6-digit OTP');
+      return;
+    }
+    
+    setVerifyingOtp(true);
+    try {
+      await api.post('/auth/verify-otp', { email: formData.email, otp });
+      setIsEmailVerified(true);
+      setOtpSent(false);
+      toast.success('Email verified successfully!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid or expired OTP');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       toast.error('Please fill in all fields');
+      return;
+    }
+    if (!isEmailVerified) {
+      toast.error('Please verify your email first');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -36,7 +97,7 @@ const InstructorSignup = () => {
 
     setLoading(true);
     try {
-      const data = await register({
+      await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -62,7 +123,7 @@ const InstructorSignup = () => {
       const token = await user.getIdToken();
 
       setLoading(true);
-      const data = await googleLogin({
+      await googleLogin({
         name: user.displayName,
         email: user.email,
         photo: user.photoURL,
@@ -167,18 +228,60 @@ const InstructorSignup = () => {
               />
             </div>
 
-            <div>
+            <div className="relative">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                 Professional Email
               </label>
-              <input
-                type="email"
-                placeholder="Enter Your Email..."
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  placeholder="Enter Your Email..."
+                  value={formData.email}
+                  disabled={isEmailVerified}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm"
+                />
+                {!isEmailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendOTP}
+                    disabled={sendingOtp || resendTimer > 0}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-purple-600 hover:text-purple-700 disabled:text-slate-400 px-3 py-1.5 bg-purple-50 rounded-lg transition-colors"
+                  >
+                    {sendingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Verify'}
+                  </button>
+                )}
+                {isEmailVerified && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-600 text-[10px] font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                  </div>
+                )}
+              </div>
             </div>
+
+            {otpSent && !isEmailVerified && (
+              <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100 animate-slide-up">
+                <label className="text-[10px] font-bold text-purple-700 mb-3 block uppercase tracking-widest">Enter 6-Digit OTP</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-500 focus:outline-none tracking-[0.5em] font-bold text-center text-sm"
+                    placeholder="000000"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOTP}
+                    disabled={verifyingOtp}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold text-xs hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {verifyingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
@@ -239,13 +342,13 @@ const InstructorSignup = () => {
                 className="w-4 h-4 mt-0.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
               />
               <label htmlFor="agree" className="text-xs text-slate-500 cursor-pointer">
-                I agree to the <a href="#" className="text-purple-600 font-medium hover:underline">Instructor Terms</a> and <a href="#" className="text-purple-600 font-medium hover:underline">Privacy Policy</a>.
+                I agree to the <a href="#" className="text-purple-600 font-medium hover:underline">Instructor Terms</a> and <a href="#" className="text-purple-600 font-medium underline">Privacy Policy</a>.
               </label>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isEmailVerified}
               className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-full transition-colors shadow-lg shadow-purple-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               {loading ? 'Creating Account...' : 'Create Instructor Account'}

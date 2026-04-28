@@ -36,11 +36,11 @@ export const getPendingInstructors = async () => {
 };
 
 export const approveInstructor = async (id) => {
-  const { data } = await api.patch(`/admin/instructors/${id}/approve`);
+  const { data } = await api.put(`/admin/instructor/${id}/approve`);
   return data;
 };
 
 export const rejectInstructor = async (id) => {
-  const { data } = await api.patch(`/admin/instructors/${id}/reject`);
+  const { data } = await api.delete(`/admin/instructor/${id}`);
   return data;
 };

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, BookOpen, PlusCircle, Settings, LogOut, Menu, X,
-  Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle
+  Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, User
 } from 'lucide-react';
 
 const instructorMenuItems = [
@@ -18,13 +18,25 @@ const instructorMenuItems = [
 
 const InstructorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/instructor/login');
   };
 
   return (
@@ -117,22 +129,46 @@ const InstructorLayout = () => {
             </div>
 
             <div className="flex items-center gap-6">
-              <button className="relative text-slate-400 hover:text-slate-600 transition-colors">
+              <Link to="/instructor/notifications" className="relative text-slate-400 hover:text-purple-600 transition-colors">
                 <Bell className="w-5 h-5" />
                 <span className="absolute 0 0 w-2 h-2 bg-purple-500 rounded-full border-2 border-white"></span>
-              </button>
+              </Link>
               
-              <div className="flex items-center gap-3 cursor-pointer group">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 overflow-hidden border-2 border-white shadow-sm">
-                  <img src="https://ui-avatars.com/api/?name=Mohammed&background=6366f1&color=fff" alt="Avatar" className="w-full h-full object-cover" />
-                </div>
-                <div className="hidden sm:flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors">{user?.name || 'Mohammed'}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <div className="relative" ref={menuRef}>
+                <div 
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover:scale-105">
+                    <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Mohammed'}&background=6366f1&color=fff`} alt="Avatar" className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">SENIOR EDITOR</span>
+                  <div className="hidden sm:flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors">{user?.name || 'Mohammed'}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">INSTRUCTOR</span>
+                  </div>
                 </div>
+
+                {/* Dropdown Menu */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-4 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 animate-scale-in z-50">
+                    <div className="px-4 py-3 border-b border-slate-50">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Account</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{user?.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

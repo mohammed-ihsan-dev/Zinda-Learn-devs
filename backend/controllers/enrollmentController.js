@@ -36,7 +36,8 @@ export const enroll = async (req, res) => {
 
     await Promise.all([
       Course.findByIdAndUpdate(courseId, {
-        $inc: { totalStudents: 1 }
+        $inc: { totalStudents: 1 },
+        $push: { students: req.user.id }
       }),
       User.findByIdAndUpdate(req.user.id, {
         $push: { enrolledCourses: courseId }

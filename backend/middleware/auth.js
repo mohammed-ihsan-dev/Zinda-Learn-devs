@@ -61,3 +61,38 @@ export const authorize = (...roles) => {
     next();
   };
 };
+
+export const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Access denied: Admins only' });
+  }
+};
+
+export const isInstructor = (req, res, next) => {
+  if (req.user && req.user.role === 'instructor') {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Access denied: Instructors only' });
+  }
+};
+
+export const isStudent = (req, res, next) => {
+  if (req.user && req.user.role === 'student') {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Access denied: Students only' });
+  }
+};
+
+export const isApprovedInstructor = (req, res, next) => {
+  if (req.user && req.user.role === 'instructor' && req.user.isApproved) {
+    next();
+  } else {
+    res.status(403).json({ 
+      success: false, 
+      message: 'Access denied: Your instructor account is pending approval' 
+    });
+  }
+};

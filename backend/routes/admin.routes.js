@@ -22,8 +22,8 @@ router.use(protect, authorize('admin'));
 
 // 1. Instructor Approval System
 router.get('/instructors/pending', getPendingInstructors);
-router.patch('/instructors/:id/approve', approveInstructor);
-router.patch('/instructors/:id/reject', rejectInstructor);
+router.put('/instructor/:id/approve', approveInstructor);
+router.delete('/instructor/:id', rejectInstructor);
 
 // 2. User Management
 router.get('/users', getAllUsers);

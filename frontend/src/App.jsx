@@ -27,6 +27,7 @@ import Earnings from './pages/instructor/Earnings';
 import Students from './pages/instructor/Students';
 import Reviews from './pages/instructor/Reviews';
 import InstructorSettings from './pages/instructor/InstructorSettings';
+import Notifications from './pages/instructor/Notifications';
 
 // Admin Pages
 import AdminLayout from './layouts/AdminLayout';
@@ -78,11 +79,12 @@ function App() {
             <Route path="my-courses" element={<MyCourses />} />
             <Route path="courses/:id" element={<CourseDetail />} />
             <Route path="create-course" element={<CreateCourse />} />
-            <Route path="earnings" element={<Earnings />} />
+            <Route path="earnings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Payouts coming soon</div>} />
             <Route path="students" element={<Students />} />
-            <Route path="reviews" element={<Reviews />} />
-            <Route path="messages" element={<div className="p-4 text-slate-700">Messages coming soon</div>} />
-            <Route path="settings" element={<InstructorSettings />} />
+            <Route path="reviews" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Reviews coming soon</div>} />
+            <Route path="messages" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Messages coming soon</div>} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
           </Route>
 
           {/* Admin Routes */}

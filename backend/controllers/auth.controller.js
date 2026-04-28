@@ -261,11 +261,23 @@ export const googleLogin = async (req, res) => {
     // 1. Verify Firebase token
     let decodedToken;
     try {
-      decodedToken = await admin.auth().verifyIdToken(token);
+      // Check if Firebase Admin is initialized
+      if (admin && admin.apps.length > 0) {
+        decodedToken = await admin.auth().verifyIdToken(token);
+      } else if (process.env.NODE_ENV === 'development') {
+        // BYPASS for development if service account is missing
+        console.warn("WARNING: Firebase Admin not initialized. Bypassing token verification in development mode.");
+        decodedToken = { email, name }; 
+      } else {
+        throw new Error("Firebase Admin SDK not initialized");
+      }
     } catch (error) {
+      console.error("Firebase Verification Error:", error.message);
       return res.status(401).json({
         success: false,
-        message: "Invalid or expired Firebase token"
+        message: process.env.NODE_ENV === 'development' 
+          ? `Firebase Error: ${error.message}. Please check serviceAccountKey.json`
+          : "Invalid or expired Firebase token"
       });
     }
 
@@ -288,8 +300,9 @@ export const googleLogin = async (req, res) => {
         email,
         profilePic: photo || "",
         avatar: photo || "",
-        role: "student",
-        password: randomPassword
+        role: req.body.role || "student",
+        password: randomPassword,
+        isVerified: true // Google users are considered verified
       });
     }
 

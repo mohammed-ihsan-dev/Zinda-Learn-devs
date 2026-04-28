@@ -8,16 +8,20 @@ import {
   deleteCourse,
   getInstructorCourses
 } from '../controllers/courseController.js';
-import { protect, authorize } from '../middleware/auth.js';
+import { enroll } from '../controllers/enrollmentController.js';
+import { protect, isInstructor, isApprovedInstructor } from '../middleware/auth.js';
 
 // Public routes
 router.get('/', getCourses);
 router.get('/:id', getCourse);
 
+// Student routes
+router.post('/:id/enroll', protect, enroll);
+
 // Instructor routes
-router.get('/instructor/my-courses', protect, authorize('instructor'), getInstructorCourses);
-router.post('/', protect, authorize('instructor'), createCourse);
-router.put('/:id', protect, authorize('instructor'), updateCourse);
-router.delete('/:id', protect, authorize('instructor'), deleteCourse);
+router.get('/instructor/my-courses', protect, isInstructor, getInstructorCourses);
+router.post('/', protect, isInstructor, isApprovedInstructor, createCourse);
+router.put('/:id', protect, isInstructor, isApprovedInstructor, updateCourse);
+router.delete('/:id', protect, isInstructor, isApprovedInstructor, deleteCourse);
 
 export default router;

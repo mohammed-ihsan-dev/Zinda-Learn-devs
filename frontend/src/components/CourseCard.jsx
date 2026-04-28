@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Star, Clock, Users, BookOpen, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { enrollCourse } from '../services/courseService';
@@ -29,10 +30,22 @@ const CourseCard = ({ course, enrolled = false }) => {
   const hours = Math.floor(totalDuration / 60);
   const mins = totalDuration % 60;
 
-  const handleEnrollClick = (e) => {
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const handleEnrollClick = async (e) => {
     e.stopPropagation();
     e.preventDefault();
-    navigate(`/courses/${_id}`);
+    
+    try {
+      setIsEnrolling(true);
+      await enrollCourse(_id);
+      toast.success('Successfully enrolled!');
+      navigate(`/student/my-learning`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to enroll');
+    } finally {
+      setIsEnrolling(false);
+    }
   };
 
   const handleCardClick = () => {
@@ -110,10 +123,11 @@ const CourseCard = ({ course, enrolled = false }) => {
             {!enrolled ? (
               <Button 
                 onClick={handleEnrollClick}
+                disabled={isEnrolling}
                 size="sm" 
                 className="rounded-xl shadow-sm hover:shadow-md"
               >
-                Enroll Now
+                {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
               </Button>
             ) : (
               <Button 
