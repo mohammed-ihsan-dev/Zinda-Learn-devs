@@ -13,10 +13,10 @@ import {
   updateUser,
   getAllCourses,
   deleteCourse,
-  togglePublishStatus,
+  updateCourseStatus,
   getPendingCourses,
   approveCourse,
-  rejectCourse,
+  declineCourse,
   getDashboardStats
 } from '../controllers/admin.controller.js';
 import { protect, authorize } from '../middleware/auth.js';
@@ -42,9 +42,9 @@ router.patch('/users/:id/restore', restoreUser);
 router.get('/courses', getAllCourses);
 router.get('/courses/pending', getPendingCourses);
 router.delete('/courses/:id', deleteCourse);
-router.patch('/courses/:id/toggle-publish', togglePublishStatus);
-router.put('/course/:id/approve', approveCourse);
-router.put('/course/:id/reject', rejectCourse);
+router.patch('/courses/:id/status', updateCourseStatus);
+router.patch('/courses/:id/approve', approveCourse);
+router.patch('/courses/:id/decline', declineCourse);
 
 // 4. Dashboard Stats
 router.get('/dashboard', getDashboardStats);

@@ -7,7 +7,9 @@ import {
   Plus, 
   ArrowRight,
   BookOpen,
-  MoreVertical
+  Trash2,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
@@ -17,6 +19,8 @@ const MyCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, courseId: null, courseTitle: '' });
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,14 +38,21 @@ const MyCourses = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this course?')) return;
+  const handleDeleteClick = (course) => {
+    setDeleteModal({ isOpen: true, courseId: course._id, courseTitle: course.title });
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
     try {
-      await deleteCourse(id);
+      await deleteCourse(deleteModal.courseId);
       toast.success('Course deleted successfully');
+      setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' });
       fetchCourses();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to delete course');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -125,10 +136,11 @@ const MyCourses = () => {
                     className="w-full h-48 object-cover rounded-2xl"
                   />
                   <div className="absolute top-3 right-3">
-                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                      course.status === 'published' 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-slate-900 text-white'
+                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg backdrop-blur-md border ${
+                      course.status === 'published' ? 'bg-emerald-500 text-white border-emerald-400/30' : 
+                      course.status === 'pending' ? 'bg-amber-500 text-white border-amber-400/30' : 
+                      course.status === 'declined' ? 'bg-rose-500 text-white border-rose-400/30' :
+                      'bg-slate-900 text-white border-slate-700/30'
                     }`}>
                       {course.status || 'Draft'}
                     </span>
@@ -165,15 +177,63 @@ const MyCourses = () => {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                     <button 
-                      onClick={() => handleDelete(course._id)}
-                      className="p-3 bg-red-50 hover:bg-red-100 text-red-500 rounded-2xl transition-colors"
+                      onClick={() => handleDeleteClick(course)}
+                      className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-2xl transition-all hover:scale-110 active:scale-95 group/del"
+                      title="Delete Course"
                     >
-                      <MoreVertical className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 transition-transform group-hover/del:rotate-12" />
                     </button>
                   </div>
                 </div>
               </div>
             ))}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.isOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl shadow-slate-200/50 animate-scale-in overflow-hidden">
+                  <div className="p-8 text-center">
+                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <AlertCircle className="w-10 h-10" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-2">Delete Course?</h3>
+                    <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                      Are you sure you want to delete <span className="font-bold text-slate-700">"{deleteModal.courseTitle}"</span>? This action cannot be undone.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button 
+                        onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
+                        className="flex-1 px-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={confirmDelete}
+                        disabled={deleting}
+                        className="flex-1 px-6 py-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2"
+                      >
+                        {deleting ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
+                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Add New Course Card */}
             <button 

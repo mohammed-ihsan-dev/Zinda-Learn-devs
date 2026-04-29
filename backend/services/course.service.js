@@ -110,5 +110,17 @@ export const courseService = {
       { status, isApproved: status === "published" },
       { new: true }
     );
+  },
+
+  submitCourseForReview: async (id, instructorId) => {
+    const course = await Course.findById(id);
+    if (!course) throw new Error("Course not found");
+    if (course.instructor.toString() !== instructorId) throw new Error("Not authorized");
+
+    return await Course.findByIdAndUpdate(
+      id,
+      { status: 'pending', submittedAt: new Date() },
+      { new: true }
+    );
   }
 };

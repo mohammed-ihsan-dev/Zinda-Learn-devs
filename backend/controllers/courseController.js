@@ -202,3 +202,20 @@ export const updateCourseStatus = async (req, res) => {
     });
   }
 };
+
+// Submit course for review
+export const submitCourse = async (req, res) => {
+  try {
+    const course = await courseService.submitCourseForReview(req.params.id, req.user.id);
+    res.status(200).json({
+      success: true,
+      message: "Course submitted for review",
+      course
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

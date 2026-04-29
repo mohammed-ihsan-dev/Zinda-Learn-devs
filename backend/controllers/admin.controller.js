@@ -132,11 +132,13 @@ export const deleteCourse = async (req, res) => {
   }
 };
 
-export const togglePublishStatus = async (req, res) => {
+export const updateCourseStatus = async (req, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
-    const course = await adminService.togglePublishStatus(req.params.id);
-    res.status(200).json({ success: true, message: "Course status toggled", data: course });
+    const { status } = req.body;
+    const adminId = req.user.id || req.user._id;
+    const course = await adminService.updateCourseStatus(req.params.id, status, adminId);
+    res.status(200).json({ success: true, message: `Course status updated to ${status}`, data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -154,18 +156,21 @@ export const getPendingCourses = async (req, res) => {
 export const approveCourse = async (req, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
-    const course = await adminService.approveCourse(req.params.id);
+    const adminId = req.user.id || req.user._id;
+    const course = await adminService.approveCourse(req.params.id, adminId);
     res.status(200).json({ success: true, message: "Course approved", data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const rejectCourse = async (req, res) => {
+export const declineCourse = async (req, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
-    const course = await adminService.rejectCourse(req.params.id);
-    res.status(200).json({ success: true, message: "Course rejected", data: course });
+    const { declineReason } = req.body;
+    const adminId = req.user.id || req.user._id;
+    const course = await adminService.declineCourse(req.params.id, declineReason, adminId);
+    res.status(200).json({ success: true, message: "Course declined", data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -125,18 +125,44 @@ export const adminService = {
       .sort({ createdAt: -1 });
   },
 
-  approveCourse: async (id) => {
+  approveCourse: async (id, adminId) => {
     return await Course.findByIdAndUpdate(
       id,
-      { status: "published", isApproved: true, isPublished: true },
+      { 
+        status: "published", 
+        isApproved: true, 
+        isPublished: true,
+        reviewedAt: new Date(),
+        reviewedBy: adminId
+      },
       { new: true }
     );
   },
 
-  rejectCourse: async (id) => {
+  declineCourse: async (id, reason, adminId) => {
     return await Course.findByIdAndUpdate(
       id,
-      { status: "rejected", isApproved: false, isPublished: false },
+      { 
+        status: "declined", 
+        isApproved: false, 
+        isPublished: false,
+        declineReason: reason,
+        reviewedAt: new Date(),
+        reviewedBy: adminId
+      },
+      { new: true }
+    );
+  },
+
+  updateCourseStatus: async (id, status, adminId) => {
+    return await Course.findByIdAndUpdate(
+      id,
+      { 
+        status, 
+        isPublished: status === 'published',
+        reviewedAt: new Date(),
+        reviewedBy: adminId
+      },
       { new: true }
     );
   },

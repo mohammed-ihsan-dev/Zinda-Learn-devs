@@ -11,12 +11,17 @@ export const getPendingCourses = async () => {
 };
 
 export const approveCourse = async (id) => {
-  const { data } = await api.put(`/admin/course/${id}/approve`);
+  const { data } = await api.patch(`/admin/courses/${id}/approve`);
   return data;
 };
 
-export const rejectCourse = async (id) => {
-  const { data } = await api.put(`/admin/course/${id}/reject`);
+export const declineCourse = async (id, declineReason) => {
+  const { data } = await api.patch(`/admin/courses/${id}/decline`, { declineReason });
+  return data;
+};
+
+export const updateCourseStatus = async (id, status) => {
+  const { data } = await api.patch(`/admin/courses/${id}/status`, { status });
   return data;
 };
 

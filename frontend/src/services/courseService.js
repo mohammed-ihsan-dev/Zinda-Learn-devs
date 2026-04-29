@@ -25,3 +25,8 @@ export const updateProgress = async (enrollmentId, { lessonId, moduleIndex, less
   });
   return response.data;
 };
+
+export const submitCourse = async (id) => {
+  const response = await api.patch(`/courses/${id}/submit`);
+  return response.data;
+};

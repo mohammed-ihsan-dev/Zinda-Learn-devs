@@ -19,3 +19,8 @@ export const deleteCourse = async (id) => {
   const { data } = await api.delete(`/instructor/course/${id}`);
   return data;
 };
+
+export const submitCourse = async (id) => {
+  const { data } = await api.patch(`/courses/${id}/submit`);
+  return data;
+};
