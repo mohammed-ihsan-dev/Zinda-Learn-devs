@@ -1,176 +1,196 @@
-import { useState } from 'react';
-import { AlertCircle, Clock, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  BookOpen, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Download, 
+  Filter, 
+  Calendar,
+  Loader2,
+  PieChart,
+  Activity,
+  Award
+} from 'lucide-react';
+import { getDashboardStats } from '../../services/adminService';
+import { formatCurrency } from '../../utils/currencyFormatter';
+import { toast } from 'react-hot-toast';
 
 const Analytics = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await getDashboardStats();
+        setStats(data);
+      } catch (error) {
+        toast.error('Failed to load analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
+      </div>
+    );
+  }
+
+  const formatNumber = (num) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num;
+  };
+
   return (
-    <div className="animate-fade-in pb-10 relative min-h-[calc(100vh-80px)]">
-      <div className="flex justify-between items-start mb-8">
+    <div className="animate-fade-in pb-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reports & Support</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Platform Reports</h1>
           <p className="text-zinc-400 text-sm max-w-2xl">
-            Manage system inquiries and technical issues. High-priority tickets are highlighted for immediate attention.
+            Detailed performance analysis and growth metrics for the Zinda Learn ecosystem.
           </p>
         </div>
+        <div className="flex gap-3">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
+            <Calendar className="w-4 h-4 text-zinc-500" />
+            Last 30 Days
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-95">
+            <Download className="w-4 h-4" />
+            Export PDF
+          </button>
+        </div>
+      </div>
+
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {[
+          { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Active Learners', value: formatNumber(stats?.totalUsers || 0), icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Total Courses', value: stats?.totalCourses || 0, icon: BookOpen, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+          { label: 'Average Rating', value: '4.8', icon: Award, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+        ].map((stat, idx) => (
+          <div key={idx} className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-all">
+            <div className="flex justify-between items-start mb-4">
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center ${stat.color}`}>
+                <stat.icon className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-bold">
+                <TrendingUp className="w-3 h-3" /> +12%
+              </div>
+            </div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">{stat.label}</p>
+            <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Stats & Alerts */}
-        <div className="space-y-6">
-          <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6">
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">TOTAL OPEN TICKETS</p>
-            <div className="flex items-end gap-3">
-              <span className="text-4xl font-bold text-white leading-none">42</span>
-              <span className="text-xs font-bold text-purple-400 mb-1 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">+12%</span>
+        {/* Revenue by Category (Horizontal Bars) */}
+        <div className="lg:col-span-2 bg-[#1c1c21] border border-[#27272a] rounded-2xl p-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-purple-400" />
+                Revenue by Category
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1">Global sales distribution across disciplines</p>
             </div>
-          </div>
-          
-          <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6">
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">AVERAGE RESOLVE TIME</p>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold text-white leading-none">4.2</span>
-              <span className="text-sm font-medium text-zinc-400 mb-1">hours</span>
-            </div>
-          </div>
-
-          <div className="bg-[#2d1b36] border border-[#4c1d95] rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="w-5 h-5 text-purple-400" />
-              <h3 className="text-lg font-bold text-purple-100">Critical Outage</h3>
-            </div>
-            <p className="text-xs text-purple-200/70 leading-relaxed mb-6">
-              Course playback server reporting 502 errors in Asia-Pacific region.
-            </p>
-            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors w-full">
-              Emergency Action
+            <button className="p-2 hover:bg-[#27272a] rounded-lg transition-colors">
+              <Filter className="w-4 h-4 text-zinc-500" />
             </button>
           </div>
+
+          <div className="space-y-8">
+            {stats?.revenueBreakdown?.length > 0 ? stats.revenueBreakdown.map((item, idx) => {
+              const max = stats.revenueBreakdown[0].amount || 1;
+              const percentage = (item.amount / max) * 100;
+              const colors = ['bg-purple-500', 'bg-blue-500', 'bg-pink-500', 'bg-emerald-500', 'bg-amber-500'];
+              
+              return (
+                <div key={idx} className="relative">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-zinc-300 capitalize">{item.category}</span>
+                    <span className="text-sm font-bold text-white">{formatCurrency(item.amount)}</span>
+                  </div>
+                  <div className="h-2 w-full bg-[#121212] rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${colors[idx % colors.length]} rounded-full transition-all duration-1000`} 
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="py-10 text-center text-zinc-500 italic">No revenue breakdown data available</div>
+            )}
+          </div>
         </div>
 
-        {/* Right Column - Lists */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Open Complaints */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></div>
-                <h2 className="text-sm font-bold text-white">Open Complaints</h2>
-              </div>
-              <div className="flex gap-2">
-                <button className="text-[10px] font-bold text-zinc-400 hover:text-white uppercase tracking-widest bg-[#1c1c21] px-3 py-1.5 rounded-lg border border-[#27272a] transition-colors">Newest</button>
-                <button className="text-[10px] font-bold text-zinc-400 hover:text-white uppercase tracking-widest bg-[#1c1c21] px-3 py-1.5 rounded-lg border border-[#27272a] transition-colors">Filter</button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="bg-[#1c1c21] border border-[#27272a] rounded-xl p-4 flex items-center justify-between group hover:border-[#3f3f46] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="px-2 py-1 bg-[#121212] rounded text-[10px] font-mono text-zinc-500 border border-[#27272a]">
-                    CMP-8285
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-200">Incorrect billing for Premium Plan</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      By Elena Rodriguez • 1h ago
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="px-2 py-1 bg-red-500/10 text-red-400 text-[9px] font-bold uppercase tracking-wider rounded border border-red-500/20">HIGH PRIORITY</span>
-                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button className="text-zinc-400 hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><Clock className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><MoreVertical className="w-4 h-4" /></button>
-                  </div>
+        {/* Growth Insights */}
+        <div className="space-y-6">
+          <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-purple-500/20 transition-colors"></div>
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-400" />
+              User Retention
+            </h3>
+            
+            <div className="flex flex-col items-center justify-center py-4">
+              <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="58" fill="transparent" stroke="#121212" strokeWidth="12" />
+                  <circle 
+                    cx="64" 
+                    cy="64" 
+                    r="58" 
+                    fill="transparent" 
+                    stroke="#3b82f6" 
+                    strokeWidth="12" 
+                    strokeDasharray="364.4" 
+                    strokeDashoffset="72.8" 
+                    strokeLinecap="round"
+                    className="drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center">
+                  <span className="text-3xl font-bold text-white">80%</span>
+                  <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Monthly</span>
                 </div>
               </div>
-
-              <div className="bg-[#1c1c21] border border-[#27272a] rounded-xl p-4 flex items-center justify-between group hover:border-[#3f3f46] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="px-2 py-1 bg-[#121212] rounded text-[10px] font-mono text-zinc-500 border border-[#27272a]">
-                    CMP-8042
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-200">Tutor did not show up for live session</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      By Marcus Chen • 2h ago
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="px-2 py-1 bg-orange-500/10 text-orange-400 text-[9px] font-bold uppercase tracking-wider rounded border border-orange-500/20">MED PRIORITY</span>
-                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button className="text-zinc-400 hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><Clock className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><MoreVertical className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
+              <p className="text-center text-xs text-zinc-400 leading-relaxed px-4">
+                Your platform retention rate is <span className="text-emerald-400 font-bold">5% higher</span> than the industry average.
+              </p>
             </div>
           </div>
 
-          {/* Technical Tickets */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]"></div>
-              <h2 className="text-sm font-bold text-white">Technical Tickets</h2>
-            </div>
-
-            <div className="space-y-3">
-              <div className="bg-[#1c1c21] border border-[#27272a] rounded-xl p-4 flex items-center justify-between group hover:border-[#3f3f46] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="px-2 py-1 bg-[#121212] rounded text-[10px] font-mono text-zinc-500 border border-[#27272a]">
-                    TCH-1024
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-200">Mobile app crashes on video upload</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      By Sarah Jenkins • 45m ago
-                    </p>
-                  </div>
+          <div className="bg-gradient-to-br from-[#1c1c21] to-[#121212] border border-[#27272a] rounded-2xl p-8">
+            <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest text-zinc-500">Quick Insights</h3>
+            <div className="space-y-6">
+              {[
+                { label: 'Most Popular', value: 'Web Development', color: 'text-purple-400' },
+                { label: 'Top Instructor', value: 'Elena Rodriguez', color: 'text-blue-400' },
+                { label: 'Platform NPS', value: '4.9/5.0', color: 'text-amber-400' },
+              ].map((insight, i) => (
+                <div key={i} className="flex justify-between items-center pb-4 border-b border-[#27272a] last:border-0 last:pb-0">
+                  <span className="text-xs font-bold text-zinc-500">{insight.label}</span>
+                  <span className={`text-xs font-bold ${insight.color}`}>{insight.value}</span>
                 </div>
-                <div className="flex items-center gap-6">
-                  <span className="px-2 py-1 bg-red-500/10 text-red-400 text-[9px] font-bold uppercase tracking-wider rounded border border-red-500/20">HIGH PRIORITY</span>
-                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button className="text-zinc-400 hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><Clock className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><MoreVertical className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#1c1c21] border border-[#27272a] rounded-xl p-4 flex items-center justify-between group hover:border-[#3f3f46] transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="px-2 py-1 bg-[#121212] rounded text-[10px] font-mono text-zinc-500 border border-[#27272a]">
-                    TCH-0590
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-200">Subtitles out of sync in Advanced Python</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      By David Miller • 3h ago
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="px-2 py-1 bg-zinc-500/10 text-zinc-400 text-[9px] font-bold uppercase tracking-wider rounded border border-zinc-500/20">LOW PRIORITY</span>
-                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button className="text-zinc-400 hover:text-white transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><Clock className="w-4 h-4" /></button>
-                    <button className="text-zinc-400 hover:text-white transition-colors"><MoreVertical className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-
         </div>
       </div>
-
-      {/* Floating Action Button */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center justify-center text-white hover:scale-105 transition-transform z-10">
-        <Plus className="w-6 h-6" />
-      </button>
     </div>
   );
 };
