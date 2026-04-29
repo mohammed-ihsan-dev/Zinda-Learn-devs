@@ -5,9 +5,11 @@ import toast from 'react-hot-toast';
 import Button from './Button';
 import { enrollInCourse } from '../services/courseService';
 import { formatCurrency } from '../utils/currencyFormatter';
+import { useAuth } from '../context/AuthContext';
 
 const CourseCard = ({ course, enrolled = false }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const {
     _id,
     title,
@@ -38,6 +40,12 @@ const CourseCard = ({ course, enrolled = false }) => {
     e.preventDefault();
     
     if (isEnrolling) return;
+
+    if (!isAuthenticated) {
+      toast.error('Please login to enroll in courses');
+      navigate('/login');
+      return;
+    }
     
     setIsEnrolling(true);
     const loadingToast = toast.loading('Enrolling in course...');

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { enrollInCourse } from '../../services/courseService';
 import { formatCurrency } from '../../utils/currencyFormatter';
+import { useAuth } from '../../context/AuthContext';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -16,6 +17,7 @@ const formatDuration = (mins) => {
 
 const CourseOverview = ({ course, enrollment, onLessonClick }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [enrolling, setEnrolling] = useState(false);
   const isEnrolled = !!enrollment;
 
@@ -26,7 +28,13 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
 
   const handleEnrollClick = async () => {
     if (enrolling) return;
-    
+
+    if (!isAuthenticated) {
+      toast.error('Please login to enroll in courses');
+      navigate('/login');
+      return;
+    }
+
     setEnrolling(true);
     const loadingToast = toast.loading('Processing your enrollment...');
     
