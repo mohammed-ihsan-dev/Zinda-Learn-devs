@@ -152,8 +152,7 @@ export const enrollInCourse = async (req, res) => {
       user: req.user.id,
       course: courseId,
       paymentStatus: 'free',
-      amountPaid: 0,
-      enrolledAt: new Date()
+      amountPaid: 0
     });
 
     // Update course and user

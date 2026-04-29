@@ -27,7 +27,7 @@ const StudentDashboard = () => {
   }, []);
 
   const stats = [
-    { label: 'Courses Enrolled', value: user?.enrolledCourses?.length || 0, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { label: 'Courses Enrolled', value: enrollments?.length || 0, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100' },
     { label: 'Hours Learned', value: `${user?.hoursLearned || 0}h`, icon: Clock, color: 'text-purple-600', bg: 'bg-purple-100' },
     { label: 'Certificates', value: user?.certificates?.length || 0, icon: Award, color: 'text-amber-600', bg: 'bg-amber-100' },
     { label: 'Skill Points', value: user?.points?.toLocaleString() || 0, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-100' },

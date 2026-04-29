@@ -84,7 +84,7 @@ function App() {
               <Route path="earnings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Payouts coming soon</div>} />
               <Route path="students" element={<Students />} />
               <Route path="reviews" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Reviews coming soon</div>} />
-              <Route path="messages" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Messages coming soon</div>} />
+              <Route path="messages" element={<Messages />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
             </Route>

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = ['All', 'Web Development', 'Mobile Development', 'Data Science', 'UI/UX Design', 'DevOps'];
-const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced'];
+const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
 const BrowseCourses = () => {
   const { courses, loading, error } = useCourses();
