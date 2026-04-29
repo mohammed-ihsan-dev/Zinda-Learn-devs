@@ -1,18 +1,43 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
 import Button from './Button';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const PaymentStepModal = ({ course, isOpen, onClose, onPay, isProcessing }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const priceToPay = course.discountPrice > 0 ? course.discountPrice : course.price;
   const isFree = priceToPay === 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative animate-scale-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!isProcessing) onClose();
+      }}
+    >
+      <div 
+        className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative z-[10000]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button 
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           disabled={isProcessing}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors z-10 disabled:opacity-50"
         >
@@ -33,7 +58,7 @@ const PaymentStepModal = ({ course, isOpen, onClose, onPay, isProcessing }) => {
             <div className="flex justify-between items-center border-t border-zinc-200 pt-4 mt-2">
               <span className="font-bold text-zinc-900">Total</span>
               <span className="text-xl font-extrabold text-primary-600">
-                {isFree ? 'Free' : `₹${priceToPay?.toLocaleString()}`}
+                {isFree ? 'Free' : formatCurrency(priceToPay)}
               </span>
             </div>
           </div>
@@ -50,11 +75,14 @@ const PaymentStepModal = ({ course, isOpen, onClose, onPay, isProcessing }) => {
           </div>
 
           <Button 
-            onClick={onPay} 
+            onClick={(e) => {
+              e.stopPropagation();
+              onPay();
+            }} 
             loading={isProcessing} 
             className="w-full !py-4 text-base font-bold rounded-xl"
           >
-            {isFree ? 'Enroll for Free' : `Pay ₹${priceToPay?.toLocaleString()}`}
+            {isFree ? 'Enroll for Free' : `Pay ${formatCurrency(priceToPay)}`}
           </Button>
           
           {isProcessing && (
@@ -66,6 +94,11 @@ const PaymentStepModal = ({ course, isOpen, onClose, onPay, isProcessing }) => {
       </div>
     </div>
   );
+
+  const portalRoot = document.getElementById('modal-root');
+  if (!portalRoot) return modalContent;
+
+  return createPortal(modalContent, portalRoot);
 };
 
 export default PaymentStepModal;

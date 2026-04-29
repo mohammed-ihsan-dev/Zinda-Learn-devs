@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Layouts
@@ -46,63 +47,65 @@ import Messages from './pages/student/Messages';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Toaster position="top-center" reverseOrder={false} />
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<StudentLogin />} />
-          <Route path="/register" element={<StudentRegister />} />
-          <Route path="/instructor/login" element={<InstructorLogin />} />
-          <Route path="/instructor/signup" element={<InstructorSignup />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/about" element={<AboutPage />} />
+      <NotificationProvider>
+        <Router>
+          <Toaster position="top-center" reverseOrder={false} />
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<StudentLogin />} />
+            <Route path="/register" element={<StudentRegister />} />
+            <Route path="/instructor/login" element={<InstructorLogin />} />
+            <Route path="/instructor/signup" element={<InstructorSignup />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/about" element={<AboutPage />} />
 
-          {/* Student Routes */}
-          <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/student/dashboard" replace />} />
-            <Route path="dashboard" element={<StudentDashboard />} />
-            <Route path="my-learning" element={<MyLearning />} />
-            <Route path="browse-courses" element={<BrowseCourses />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="live-classes" element={<div>Live Classes Page</div>} />
-            <Route path="progress" element={<div>Progress Page</div>} />
-            <Route path="certificates" element={<div>Certificates Page</div>} />
-            <Route path="settings" element={<div>Settings Page</div>} />
-          </Route>
+            {/* Student Routes */}
+            <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/student/dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="my-learning" element={<MyLearning />} />
+              <Route path="browse-courses" element={<BrowseCourses />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="live-classes" element={<div>Live Classes Page</div>} />
+              <Route path="progress" element={<div>Progress Page</div>} />
+              <Route path="certificates" element={<div>Certificates Page</div>} />
+              <Route path="settings" element={<div>Settings Page</div>} />
+            </Route>
 
-          {/* Instructor Routes */}
-          <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/instructor/dashboard" replace />} />
-            <Route path="dashboard" element={<InstructorDashboard />} />
-            <Route path="my-courses" element={<MyCourses />} />
-            <Route path="courses/:id" element={<CourseDetail />} />
-            <Route path="create-course" element={<CreateCourse />} />
-            <Route path="earnings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Payouts coming soon</div>} />
-            <Route path="students" element={<Students />} />
-            <Route path="reviews" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Reviews coming soon</div>} />
-            <Route path="messages" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Messages coming soon</div>} />
-            <Route path="notifications" element={<Notifications />} />
-            <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
-          </Route>
+            {/* Instructor Routes */}
+            <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/instructor/dashboard" replace />} />
+              <Route path="dashboard" element={<InstructorDashboard />} />
+              <Route path="my-courses" element={<MyCourses />} />
+              <Route path="courses/:id" element={<CourseDetail />} />
+              <Route path="create-course" element={<CreateCourse />} />
+              <Route path="earnings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Payouts coming soon</div>} />
+              <Route path="students" element={<Students />} />
+              <Route path="reviews" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Reviews coming soon</div>} />
+              <Route path="messages" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Messages coming soon</div>} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
+            </Route>
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="course-approval" element={<CourseApproval />} />
-            <Route path="user-management" element={<UserManagement />} />
-            <Route path="instructor-management" element={<InstructorManagement />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="course-approval" element={<CourseApproval />} />
+              <Route path="user-management" element={<UserManagement />} />
+              <Route path="instructor-management" element={<InstructorManagement />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
 
-          {/* 404 Route */}
-          <Route path="*" element={<div className="min-h-screen flex items-center justify-center">404 - Page Not Found</div>} />
-        </Routes>
-      </Router>
+            {/* 404 Route */}
+            <Route path="*" element={<div className="min-h-screen flex items-center justify-center">404 - Page Not Found</div>} />
+          </Routes>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Star, Users, Clock, BookOpen, CheckCircle2, ChevronDown, Play, Award } from 'lucide-react';
 import ModuleAccordion from '../../components/ModuleAccordion';
 import Button from '../../components/Button';
-import { enrollCourse } from '../../services/courseService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import CoursePurchaseModal from '../../components/CoursePurchaseModal';
 import PaymentStepModal from '../../components/PaymentStepModal';
 import { createPaymentOrder, verifyPayment } from '../../services/paymentService';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -153,7 +153,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                 </Button>
               ) : (
                 <Button onClick={handleEnrollClick} loading={enrolling} className="!px-8 !py-3.5 text-base font-bold rounded-xl">
-                  Enroll Now — {course.discountPrice > 0 ? `₹${course.discountPrice?.toLocaleString()}` : course.price === 0 ? 'Free' : `₹${course.price?.toLocaleString()}`}
+                  Enroll Now — {course.discountPrice > 0 ? formatCurrency(course.discountPrice) : course.price === 0 ? 'Free' : formatCurrency(course.price)}
                 </Button>
               )}
               <button className="px-6 py-3.5 border-2 border-zinc-200 text-zinc-700 font-bold rounded-xl hover:border-primary-400 hover:text-primary-600 transition-colors">
@@ -187,8 +187,8 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
               <div className="flex items-center gap-3 mb-4">
                 {course.discountPrice > 0 && course.discountPrice < course.price ? (
                   <>
-                    <span className="text-3xl font-extrabold text-zinc-900">₹{course.discountPrice?.toLocaleString()}</span>
-                    <span className="text-lg text-zinc-400 line-through">₹{course.price?.toLocaleString()}</span>
+                    <span className="text-3xl font-extrabold text-zinc-900">{formatCurrency(course.discountPrice)}</span>
+                    <span className="text-lg text-zinc-400 line-through">{formatCurrency(course.price)}</span>
                     <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-black rounded-lg">
                       {Math.round((1 - course.discountPrice / course.price) * 100)}% OFF
                     </span>
@@ -196,7 +196,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                 ) : course.price === 0 ? (
                   <span className="text-3xl font-extrabold text-green-600">Free</span>
                 ) : (
-                  <span className="text-3xl font-extrabold text-zinc-900">₹{course.price?.toLocaleString()}</span>
+                  <span className="text-3xl font-extrabold text-zinc-900">{formatCurrency(course.price)}</span>
                 )}
               </div>
               {isEnrolled ? (
@@ -373,20 +373,24 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
         </div>
       )}
       {/* MODALS */}
-      <CoursePurchaseModal
-        course={course}
-        isOpen={isPurchaseModalOpen}
-        onClose={() => setIsPurchaseModalOpen(false)}
-        onProceedToPayment={handleProceedToPayment}
-      />
+      {isPurchaseModalOpen && (
+        <CoursePurchaseModal
+          course={course}
+          isOpen={isPurchaseModalOpen}
+          onClose={() => setIsPurchaseModalOpen(false)}
+          onProceedToPayment={handleProceedToPayment}
+        />
+      )}
       
-      <PaymentStepModal
-        course={course}
-        isOpen={isPaymentModalOpen}
-        onClose={() => !enrolling && setIsPaymentModalOpen(false)}
-        onPay={handlePayment}
-        isProcessing={enrolling}
-      />
+      {isPaymentModalOpen && (
+        <PaymentStepModal
+          course={course}
+          isOpen={isPaymentModalOpen}
+          onClose={() => !enrolling && setIsPaymentModalOpen(false)}
+          onPay={handlePayment}
+          isProcessing={enrolling}
+        />
+      )}
     </div>
   );
 };

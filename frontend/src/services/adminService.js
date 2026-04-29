@@ -25,8 +25,38 @@ export const getDashboardStats = async () => {
   return data;
 };
 
-export const getAllUsers = async () => {
-  const { data } = await api.get('/admin/users');
+export const getAllUsers = async (showDeleted = false) => {
+  const { data } = await api.get(`/admin/users${showDeleted ? '?showDeleted=true' : ''}`);
+  return data;
+};
+
+export const createUser = async (userData) => {
+  const { data } = await api.post('/admin/users', userData);
+  return data;
+};
+
+export const updateUser = async (id, userData) => {
+  const { data } = await api.put(`/admin/users/${id}`, userData);
+  return data;
+};
+
+export const deleteUser = async (id) => {
+  const { data } = await api.patch(`/admin/users/${id}/delete`);
+  return data;
+};
+
+export const restoreUser = async (id) => {
+  const { data } = await api.patch(`/admin/users/${id}/restore`);
+  return data;
+};
+
+export const blockUser = async (id) => {
+  const { data } = await api.patch(`/admin/users/${id}/block`);
+  return data;
+};
+
+export const unblockUser = async (id) => {
+  const { data } = await api.patch(`/admin/users/${id}/unblock`);
   return data;
 };
 

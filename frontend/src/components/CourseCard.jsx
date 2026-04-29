@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Star, Clock, Users, BookOpen, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { enrollCourse } from '../services/courseService';
 import toast from 'react-hot-toast';
 import Button from './Button';
+import CoursePurchaseModal from './CoursePurchaseModal';
+import PaymentStepModal from './PaymentStepModal';
+import { createPaymentOrder, verifyPayment } from '../services/paymentService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const CourseCard = ({ course, enrolled = false }) => {
   const navigate = useNavigate();
@@ -30,21 +33,46 @@ const CourseCard = ({ course, enrolled = false }) => {
   const hours = Math.floor(totalDuration / 60);
   const mins = totalDuration % 60;
 
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
-  const handleEnrollClick = async (e) => {
+  const handleEnrollClick = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleProceedToPayment = () => {
+    setIsPurchaseModalOpen(false);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePayment = async () => {
+    setIsEnrolling(true);
     try {
-      setIsEnrolling(true);
-      await enrollCourse(_id);
-      toast.success('Successfully enrolled!');
-      navigate(`/student/my-learning`);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to enroll');
+      const orderData = await createPaymentOrder(_id);
+      
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
+      
+      await verifyPayment({
+        paymentId: 'mock_payment_' + Math.random().toString(36).substr(2, 9),
+        orderId: orderData.orderId,
+        signature: 'mock_signature',
+        courseId: _id
+      });
+
+      toast.success('Payment Successful!');
+      setTimeout(() => {
+        toast.success('Enrollment Completed');
+        navigate('/student/my-learning');
+      }, 1000);
+      
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Payment failed. Please try again.');
     } finally {
       setIsEnrolling(false);
+      setIsPaymentModalOpen(false);
     }
   };
 
@@ -109,14 +137,14 @@ const CourseCard = ({ course, enrolled = false }) => {
           <div className="flex items-center justify-between pt-4 border-t border-surface-100">
             <div className="text-right">
               {discountPrice > 0 && discountPrice < price ? (
-                <div className="flex flex-col">
-                  <span className="text-xs text-surface-400 line-through">₹{price?.toLocaleString()}</span>
-                  <span className="font-bold text-primary-600 text-lg">₹{discountPrice?.toLocaleString()}</span>
-                </div>
+                <>
+                  <span className="text-xs text-surface-400 line-through">{formatCurrency(price)}</span>
+                  <span className="font-bold text-primary-600 text-lg">{formatCurrency(discountPrice)}</span>
+                </>
               ) : price === 0 ? (
-                <span className="font-bold text-success text-lg">Free</span>
+                <span className="font-bold text-emerald-500 text-lg">Free</span>
               ) : (
-                <span className="font-bold text-surface-900 text-lg">₹{price?.toLocaleString()}</span>
+                <span className="font-bold text-surface-900 text-lg">{formatCurrency(price)}</span>
               )}
             </div>
 
@@ -141,6 +169,28 @@ const CourseCard = ({ course, enrolled = false }) => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* MODALS (stops propagation to prevent card click) */}
+      <div onClick={(e) => e.stopPropagation()}>
+        {isPurchaseModalOpen && (
+          <CoursePurchaseModal
+            course={course}
+            isOpen={isPurchaseModalOpen}
+            onClose={() => setIsPurchaseModalOpen(false)}
+            onProceedToPayment={handleProceedToPayment}
+          />
+        )}
+        
+        {isPaymentModalOpen && (
+          <PaymentStepModal
+            course={course}
+            isOpen={isPaymentModalOpen}
+            onClose={() => !isEnrolling && setIsPaymentModalOpen(false)}
+            onPay={handlePayment}
+            isProcessing={isEnrolling}
+          />
+        )}
       </div>
     </div>
   );

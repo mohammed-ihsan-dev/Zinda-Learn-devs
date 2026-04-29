@@ -7,6 +7,10 @@ import {
   getAllUsers,
   blockUser,
   unblockUser,
+  deleteUser,
+  restoreUser,
+  createUser,
+  updateUser,
   getAllCourses,
   deleteCourse,
   togglePublishStatus,
@@ -27,8 +31,12 @@ router.delete('/instructor/:id', rejectInstructor);
 
 // 2. User Management
 router.get('/users', getAllUsers);
+router.post('/users', createUser);
+router.put('/users/:id', updateUser);
 router.patch('/users/:id/block', blockUser);
 router.patch('/users/:id/unblock', unblockUser);
+router.patch('/users/:id/delete', deleteUser);
+router.patch('/users/:id/restore', restoreUser);
 
 // 3. Course Management
 router.get('/courses', getAllCourses);

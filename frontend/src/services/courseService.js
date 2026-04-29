@@ -5,10 +5,7 @@ export const getCourses = async () => {
   return response.data;
 };
 
-export const enrollCourse = async (courseId) => {
-  const response = await api.post(`/courses/${courseId}/enroll`);
-  return response.data;
-};
+
 
 export const getCourseById = async (id) => {
   const response = await api.get(`/courses/${id}`);

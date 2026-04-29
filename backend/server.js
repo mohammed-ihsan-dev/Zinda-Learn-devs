@@ -12,6 +12,7 @@ import messageRoutes from './routes/messages.js';
 import instructorRoutes from './routes/instructor.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 // Load env vars
 dotenv.config();
@@ -49,6 +50,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

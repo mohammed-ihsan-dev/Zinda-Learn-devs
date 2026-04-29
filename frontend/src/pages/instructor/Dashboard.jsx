@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getInstructorCourses } from '../../services/instructorService';
+import { formatCurrency } from '../../utils/currencyFormatter';
 import { BookOpen, Users, DollarSign, TrendingUp, PlusCircle, Eye, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -11,8 +12,8 @@ const InstructorDashboard = () => {
   const [stats, setStats] = useState({
     totalCourses: '0',
     totalStudents: '0',
-    totalRevenue: '$0',
-    monthlyEarnings: '$0'
+    totalRevenue: '₹0',
+    monthlyEarnings: '₹0'
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,8 +35,8 @@ const InstructorDashboard = () => {
       setStats({
         totalCourses: fetchedCourses.length,
         totalStudents,
-        totalRevenue: `$${totalEarnings}`,
-        monthlyEarnings: `$0` 
+        totalRevenue: formatCurrency(totalEarnings),
+        monthlyEarnings: formatCurrency(0) // Mock monthly for now
       });
     } catch (error) {
       toast.error('Failed to fetch dashboard data');

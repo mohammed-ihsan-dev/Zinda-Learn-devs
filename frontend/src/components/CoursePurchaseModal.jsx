@@ -1,8 +1,21 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2, Clock, BookOpen, Star, Loader2 } from 'lucide-react';
 import Button from './Button';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const CoursePurchaseModal = ({ course, isOpen, onClose, onProceedToPayment }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const totalLessons = course.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0;
@@ -16,11 +29,23 @@ const CoursePurchaseModal = ({ course, isOpen, onClose, onProceedToPayment }) =>
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl relative animate-scale-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div 
+        className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl relative z-[10000]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button 
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors z-10"
         >
           <X className="w-5 h-5 text-zinc-600" />
@@ -58,16 +83,16 @@ const CoursePurchaseModal = ({ course, isOpen, onClose, onProceedToPayment }) =>
             
             <div className="mt-8">
               <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-2">Total Price</p>
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-3">
                 {course.discountPrice > 0 && course.discountPrice < course.price ? (
                   <>
-                    <span className="text-3xl font-extrabold text-zinc-900">₹{course.discountPrice?.toLocaleString()}</span>
-                    <span className="text-lg text-zinc-400 line-through mb-1">₹{course.price?.toLocaleString()}</span>
+                    <span className="text-3xl font-extrabold text-zinc-900">{formatCurrency(course.discountPrice)}</span>
+                    <span className="text-lg text-zinc-400 line-through mb-1">{formatCurrency(course.price)}</span>
                   </>
                 ) : course.price === 0 ? (
-                  <span className="text-3xl font-extrabold text-green-600">Free</span>
+                  <span className="text-3xl font-extrabold text-emerald-500">Free</span>
                 ) : (
-                  <span className="text-3xl font-extrabold text-zinc-900">₹{course.price?.toLocaleString()}</span>
+                  <span className="text-3xl font-extrabold text-zinc-900">{formatCurrency(course.price)}</span>
                 )}
               </div>
             </div>
@@ -92,10 +117,22 @@ const CoursePurchaseModal = ({ course, isOpen, onClose, onProceedToPayment }) =>
             </div>
             
             <div className="flex flex-col gap-3 mt-auto">
-              <Button onClick={onProceedToPayment} className="!py-4 text-base font-bold rounded-xl w-full">
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onProceedToPayment();
+                }} 
+                className="!py-4 text-base font-bold rounded-xl w-full"
+              >
                 Continue to Payment
               </Button>
-              <button onClick={onClose} className="py-4 text-zinc-500 font-medium hover:text-zinc-800 transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }} 
+                className="py-4 text-zinc-500 font-medium hover:text-zinc-800 transition-colors"
+              >
                 Cancel
               </button>
             </div>
@@ -104,6 +141,11 @@ const CoursePurchaseModal = ({ course, isOpen, onClose, onProceedToPayment }) =>
       </div>
     </div>
   );
+
+  const portalRoot = document.getElementById('modal-root');
+  if (!portalRoot) return modalContent; // Fallback if modal-root doesn't exist
+
+  return createPortal(modalContent, portalRoot);
 };
 
 export default CoursePurchaseModal;

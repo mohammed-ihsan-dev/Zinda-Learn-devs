@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const MyCourses = () => {
   const [courses, setCourses] = useState([]);
@@ -140,7 +141,7 @@ const MyCourses = () => {
                       {course.title}
                     </h3>
                     <span className="text-xl font-bold text-purple-600">
-                      ${course.price || 0}
+                      {formatCurrency(course.price || 0)}
                     </span>
                   </div>
 

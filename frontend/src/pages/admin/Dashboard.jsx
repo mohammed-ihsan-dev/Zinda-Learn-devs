@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { getDashboardStats } from '../../services/adminService';
-import { Users, GraduationCap, BookOpen, DollarSign, ArrowUp, Rocket, BookPlus, ShieldCheck, Settings } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, DollarSign, ArrowUp, Rocket, BookPlus, ShieldCheck, Settings, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
-    totalUsers: '1.2M',
-    totalCourses: '128.5K',
-    pendingApprovals: '15.4K', // mapped to Tutors for design
-    revenue: '$2.4M'
+    totalUsers: 0,
+    totalCourses: 0,
+    pendingApprovals: 0,
+    revenue: 0,
+    userGrowth: [],
+    revenueBreakdown: [],
+    recentActivity: [],
+    latestInsight: null
   });
-  const [loading, setLoading] = useState(false); // Design shows loaded state
+  const [loading, setLoading] = useState(true);
 
-  // Keeping original fetch logic commented/mocked to match design numbers exactly
-  /*
   useEffect(() => {
     fetchStats();
   }, []);
@@ -25,8 +27,12 @@ const AdminDashboard = () => {
         setStats({
           totalUsers: data.totalUsers || 0,
           totalCourses: data.totalCourses || 0,
-          pendingApprovals: data.totalApprovedInstructors || 0,
-          revenue: 12000
+          pendingApprovals: data.pendingTutors || 0,
+          revenue: data.totalRevenue || 0,
+          userGrowth: data.userGrowth || [],
+          revenueBreakdown: data.revenueBreakdown || [],
+          recentActivity: data.recentActivity || [],
+          latestInsight: data.latestInsight || null
         });
       }
     } catch (error) {
@@ -35,14 +41,72 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-  */
+
+  const formatNumber = (num) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num;
+  };
 
   const statCards = [
-    { label: 'TOTAL USERS', value: stats.totalUsers, icon: Users, change: '+12.5%' },
-    { label: 'TUTORS', value: stats.pendingApprovals, icon: GraduationCap, change: '+4.2%' },
-    { label: 'COURSES', value: stats.totalCourses, icon: BookOpen, change: '+18.1%' },
-    { label: 'REVENUE', value: stats.revenue, icon: DollarSign, change: '+24.0%' },
+    { label: 'TOTAL USERS', value: formatNumber(stats.totalUsers), icon: Users, change: 'Live' },
+    { label: 'PENDING TUTORS', value: formatNumber(stats.pendingApprovals), icon: GraduationCap, change: 'Live' },
+    { label: 'COURSES', value: formatNumber(stats.totalCourses), icon: BookOpen, change: 'Live' },
+    { label: 'REVENUE', value: `₹${formatNumber(stats.revenue)}`, icon: DollarSign, change: 'Live' },
   ];
+
+  const colors = ['bg-purple-400', 'bg-purple-500', 'bg-pink-400', 'bg-purple-700', 'bg-indigo-500'];
+
+  const generateChartPath = () => {
+    if (!stats.userGrowth || stats.userGrowth.length === 0) {
+      return {
+        path: "M 0 150 Q 50 140 100 120 T 200 80 T 300 140 T 400 40 T 500 100",
+        fill: "M 0 150 Q 50 140 100 120 T 200 80 T 300 140 T 400 40 T 500 100 L 500 200 L 0 200 Z",
+        peakValue: "1.2M",
+        peakX: 400,
+        peakY: 40
+      };
+    }
+
+    const data = stats.userGrowth;
+    const maxUsers = Math.max(...data.map(d => d.users), 5); // Minimum 5 to avoid flat line at bottom if all counts are 0
+    const w = 500;
+    const h = 200;
+    const paddingY = 40; // padding top and bottom
+
+    let maxPoint = { x: 0, y: 0, val: -1 };
+
+    const points = data.map((d, i) => {
+      const x = data.length > 1 ? (i / (data.length - 1)) * w : w / 2;
+      const y = h - paddingY - ((d.users / maxUsers) * (h - paddingY * 2));
+      
+      if (d.users >= maxPoint.val) {
+        maxPoint = { x, y, val: d.users };
+      }
+      return { x, y };
+    });
+
+    // Generate smooth cubic bezier curve
+    let path = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const curr = points[i];
+      const next = points[i + 1];
+      const controlX = (curr.x + next.x) / 2;
+      path += ` C ${controlX} ${curr.y}, ${controlX} ${next.y}, ${next.x} ${next.y}`;
+    }
+
+    const fill = `${path} L ${w} ${h} L 0 ${h} Z`;
+
+    return {
+      path,
+      fill,
+      peakValue: maxPoint.val.toLocaleString(),
+      peakX: maxPoint.x,
+      peakY: maxPoint.y
+    };
+  };
+
+  const chartData = generateChartPath();
 
   return (
     <div className="space-y-8 animate-fade-in relative pb-10">
@@ -55,7 +119,7 @@ const AdminDashboard = () => {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
         </div>
       ) : (
         <>
@@ -87,14 +151,8 @@ const AdminDashboard = () => {
                   <h3 className="text-lg font-bold text-white">User Growth Trends</h3>
                   <p className="text-xs text-zinc-400">Active monthly users across all regions</p>
                 </div>
-                <div className="flex bg-[#121212] rounded-lg p-1 border border-[#27272a]">
-                  <button className="px-3 py-1 text-xs font-medium text-zinc-400 hover:text-white transition-colors">12M</button>
-                  <button className="px-3 py-1 text-xs font-medium bg-[#27272a] text-white rounded-md">6M</button>
-                  <button className="px-3 py-1 text-xs font-medium text-zinc-400 hover:text-white transition-colors">30D</button>
-                </div>
               </div>
               <div className="flex-1 min-h-[250px] relative flex items-end justify-between px-2 pb-6">
-                {/* SVG Curve Mockup */}
                 <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 500 200">
                   <defs>
                     <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
@@ -102,25 +160,31 @@ const AdminDashboard = () => {
                       <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <path d="M 0 150 Q 50 140 100 120 T 200 80 T 300 140 T 400 40 T 500 100 L 500 200 L 0 200 Z" fill="url(#gradient)" />
-                  <path d="M 0 150 Q 50 140 100 120 T 200 80 T 300 140 T 400 40 T 500 100" fill="none" stroke="#d8b4fe" strokeWidth="4" strokeLinecap="round" />
+                  <path d={chartData.fill} fill="url(#gradient)" />
+                  <path d={chartData.path} fill="none" stroke="#d8b4fe" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                   
-                  {/* Peak Marker */}
-                  <circle cx="400" cy="40" r="6" fill="#121212" stroke="#d8b4fe" strokeWidth="3" />
+                  {stats.userGrowth.length > 0 && (
+                    <circle cx={chartData.peakX} cy={chartData.peakY} r="6" fill="#121212" stroke="#d8b4fe" strokeWidth="3" />
+                  )}
                 </svg>
-                {/* Label Peak */}
-                <div className="absolute top-[10%] right-[16%] bg-[#d8b4fe] text-purple-950 text-[10px] font-bold px-2 py-1 rounded-md">
-                  Peak: 1.2M
+                
+                <div 
+                  className="absolute bg-[#d8b4fe] text-purple-950 text-[10px] font-bold px-2 py-1 rounded-md transform -translate-x-1/2 -translate-y-[150%]"
+                  style={{ left: `${(chartData.peakX / 500) * 100}%`, top: `${(chartData.peakY / 200) * 100}%` }}
+                >
+                  Peak: {chartData.peakValue}
                 </div>
                 
-                {/* X Axis Labels */}
                 <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] font-bold text-zinc-500 px-6">
-                  <span>JAN</span>
-                  <span>MAR</span>
-                  <span>MAY</span>
-                  <span>JUL</span>
-                  <span>SEP</span>
-                  <span>NOV</span>
+                  {stats.userGrowth.length > 0 ? (
+                    stats.userGrowth.map((g, i) => (
+                      <span key={i}>{g.month.toUpperCase()}</span>
+                    ))
+                  ) : (
+                    <>
+                      <span>JAN</span><span>MAR</span><span>MAY</span><span>JUL</span><span>SEP</span><span>NOV</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -132,42 +196,25 @@ const AdminDashboard = () => {
                 <p className="text-xs text-zinc-400 mb-6">Earnings by course category</p>
                 
                 <div className="space-y-5">
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-2">
-                      <span className="text-zinc-300">Design & UI</span>
-                      <span className="text-white">$940K</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#27272a] rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-400 rounded-full" style={{ width: '85%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-2">
-                      <span className="text-zinc-300">Programming</span>
-                      <span className="text-white">$720K</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#27272a] rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-500 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-2">
-                      <span className="text-zinc-300">Business</span>
-                      <span className="text-white">$410K</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#27272a] rounded-full overflow-hidden">
-                      <div className="h-full bg-pink-400 rounded-full" style={{ width: '40%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-2">
-                      <span className="text-zinc-300">Marketing</span>
-                      <span className="text-white">$330K</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#27272a] rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-700 rounded-full" style={{ width: '30%' }}></div>
-                    </div>
-                  </div>
+                  {stats.revenueBreakdown.length > 0 ? (
+                    stats.revenueBreakdown.slice(0, 4).map((item, idx) => {
+                      const maxAmount = stats.revenueBreakdown[0].amount || 1;
+                      const percentage = Math.max((item.amount / maxAmount) * 100, 5);
+                      return (
+                        <div key={idx}>
+                          <div className="flex justify-between text-xs font-bold mb-2">
+                            <span className="text-zinc-300">{item.category}</span>
+                            <span className="text-white">₹{formatNumber(item.amount)}</span>
+                          </div>
+                          <div className="h-2 w-full bg-[#27272a] rounded-full overflow-hidden">
+                            <div className={`h-full ${colors[idx % colors.length]} rounded-full`} style={{ width: `${percentage}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-zinc-500 text-center mt-10">No revenue data available.</p>
+                  )}
                 </div>
               </div>
               <button className="w-full mt-8 py-3 bg-[#27272a] hover:bg-[#323238] text-white text-xs font-bold rounded-xl transition-colors">
@@ -184,38 +231,25 @@ const AdminDashboard = () => {
                 <button className="text-xs font-bold text-purple-400 hover:text-purple-300">View All</button>
               </div>
               <div className="space-y-6">
-                <div className="flex gap-4 items-start relative before:content-[''] before:absolute before:left-5 before:top-10 before:w-[1px] before:h-8 before:bg-[#27272a]">
-                  <div className="w-10 h-10 rounded-xl bg-[#25252b] flex items-center justify-center text-purple-400 shrink-0 z-10 border border-[#27272a]">
-                    <BookPlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">New Course Published: <span className="text-purple-400 font-normal">UI Mastery</span></p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Instructor: Jordan Smith • Category: Design</p>
-                    <p className="text-[10px] font-bold text-zinc-600 mt-2 tracking-wider">12 MINUTES AGO</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 items-start relative before:content-[''] before:absolute before:left-5 before:top-10 before:w-[1px] before:h-8 before:bg-[#27272a]">
-                  <div className="w-10 h-10 rounded-xl bg-[#25252b] flex items-center justify-center text-indigo-400 shrink-0 z-10 border border-[#27272a]">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">New Tutor Verified: <span className="text-indigo-400 font-normal">Elena Vance</span></p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Background: Senior Product Designer at Vertex</p>
-                    <p className="text-[10px] font-bold text-zinc-600 mt-2 tracking-wider">2 HOURS AGO</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 items-start relative">
-                  <div className="w-10 h-10 rounded-xl bg-[#25252b] flex items-center justify-center text-pink-400 shrink-0 z-10 border border-[#27272a]">
-                    <Settings className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">System Maintenance Scheduled</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Estimated downtime: 45 minutes on Sunday 2:00 AM UTC</p>
-                    <p className="text-[10px] font-bold text-zinc-600 mt-2 tracking-wider">5 HOURS AGO</p>
-                  </div>
-                </div>
+                {stats.recentActivity.length > 0 ? (
+                  stats.recentActivity.map((activity, idx) => {
+                    const isLast = idx === stats.recentActivity.length - 1;
+                    return (
+                      <div key={activity.id} className={`flex gap-4 items-start relative ${!isLast ? "before:content-[''] before:absolute before:left-5 before:top-10 before:w-[1px] before:h-8 before:bg-[#27272a]" : ""}`}>
+                        <div className={`w-10 h-10 rounded-xl bg-[#25252b] flex items-center justify-center shrink-0 z-10 border border-[#27272a] ${activity.type === 'course' ? 'text-purple-400' : 'text-indigo-400'}`}>
+                          {activity.type === 'course' ? <BookPlus className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{activity.title}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">{activity.subtitle} • Status: {activity.status}</p>
+                          <p className="text-[10px] font-bold text-zinc-600 mt-2 tracking-wider">{new Date(activity.date).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-zinc-500">No recent activity found.</p>
+                )}
               </div>
             </div>
 
@@ -223,9 +257,11 @@ const AdminDashboard = () => {
               {/* Editor's Insight */}
               <div className="bg-gradient-to-br from-[#d8b4fe] to-[#c084fc] rounded-2xl p-6 flex flex-col justify-between h-[200px]">
                 <div>
-                  <p className="text-[10px] font-bold text-purple-900 tracking-widest uppercase mb-3">Editor's Insight</p>
-                  <h3 className="text-xl font-bold text-black leading-tight">
-                    Retention rates have increased by 15% following the UI update.
+                  <p className="text-[10px] font-bold text-purple-900 tracking-widest uppercase mb-3">
+                    {stats.latestInsight?.title || "Editor's Insight"}
+                  </p>
+                  <h3 className="text-xl font-bold text-black leading-tight line-clamp-3">
+                    {stats.latestInsight?.description || "Retention rates have increased by 15% following the UI update."}
                   </h3>
                 </div>
                 <div>

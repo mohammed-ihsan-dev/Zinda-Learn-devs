@@ -2,61 +2,6 @@ import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
 import User from "../models/User.js";
 
-// Enroll in a course
-export const enroll = async (req, res) => {
-  try {
-    const { courseId } = req.body;
-
-    const course = await Course.findById(courseId);
-
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found"
-      });
-    }
-
-    const existing = await Enrollment.findOne({
-      user: req.user.id,
-      course: courseId
-    });
-
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Already enrolled in this course"
-      });
-    }
-
-    const enrollment = await Enrollment.create({
-      user: req.user.id,
-      course: courseId,
-      amountPaid: course.discountPrice || course.price
-    });
-
-    await Promise.all([
-      Course.findByIdAndUpdate(courseId, {
-        $inc: { totalStudents: 1 },
-        $push: { students: req.user.id }
-      }),
-      User.findByIdAndUpdate(req.user.id, {
-        $push: { enrolledCourses: courseId }
-      })
-    ]);
-
-    res.status(201).json({
-      success: true,
-      message: "Enrolled successfully",
-      enrollment
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
 // Get user enrollments
 export const getMyEnrollments = async (req, res) => {
   try {

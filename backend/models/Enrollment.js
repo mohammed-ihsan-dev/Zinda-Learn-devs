@@ -44,6 +44,11 @@ const enrollmentSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  currency: {
+    type: String,
+    default: 'INR',
+    enum: ['INR']
+  },
   paymentId: {
     type: String
   }

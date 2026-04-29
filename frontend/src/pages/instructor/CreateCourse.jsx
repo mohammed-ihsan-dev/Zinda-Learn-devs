@@ -21,13 +21,24 @@ const CreateCourse = () => {
     title: '',
     description: '',
     shortDescription: '',
-    category: 'Design & Arts',
+    category: 'development',
     level: 'Beginner',
     price: 99,
     thumbnail: '',
-    currency: 'USD ($)',
+    currency: 'INR',
     isFree: false
   });
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.category) newErrors.category = 'Category is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -35,6 +46,10 @@ const CreateCourse = () => {
       ...prev, 
       [name]: type === 'checkbox' ? checked : value 
     }));
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -43,9 +58,16 @@ const CreateCourse = () => {
       return toast.error('You must be approved by an admin to create courses');
     }
 
+    if (!validateForm()) {
+      return toast.error('Please fix the errors in the form');
+    }
+
     try {
       setLoading(true);
-      await createCourse(formData);
+      await createCourse({
+        ...formData,
+        category: formData.category.toLowerCase()
+      });
       toast.success('Course created successfully!');
       navigate('/instructor/my-courses');
     } catch (error) {
@@ -77,18 +99,31 @@ const CreateCourse = () => {
 
           <div className="space-y-8">
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Course Title</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Course Title *</label>
               <input 
                 type="text" 
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                required
                 placeholder="e.g. Advanced Editorial Design for Digital Media" 
-                className="w-full bg-slate-50/50 border border-slate-100 rounded-[18px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner"
+                className={`w-full bg-slate-50/50 border ${errors.title ? 'border-red-500' : 'border-slate-100'} rounded-[18px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner`}
               />
+              {errors.title && <p className="text-red-500 text-xs mt-2 font-medium">{errors.title}</p>}
             </div>
             
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Full Description *</label>
+              <textarea 
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Comprehensive details about what students will learn..." 
+                rows="5"
+                className={`w-full bg-slate-50/50 border ${errors.description ? 'border-red-500' : 'border-slate-100'} rounded-[18px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner resize-y`}
+              ></textarea>
+              {errors.description && <p className="text-red-500 text-xs mt-2 font-medium">{errors.description}</p>}
+            </div>
+
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Short Description</label>
               <textarea 
@@ -103,21 +138,24 @@ const CreateCourse = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Category</label>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Category *</label>
                 <div className="relative">
                   <select 
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full bg-slate-50/50 border border-slate-100 rounded-[18px] px-6 py-4 text-sm appearance-none focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner"
+                    className={`w-full bg-slate-50/50 border ${errors.category ? 'border-red-500' : 'border-slate-100'} rounded-[18px] px-6 py-4 text-sm appearance-none focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner`}
                   >
-                    <option>Design & Arts</option>
-                    <option>Development</option>
-                    <option>Business</option>
-                    <option>Marketing</option>
+                    <option value="development">Development</option>
+                    <option value="business">Business</option>
+                    <option value="design">Design</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="it">IT</option>
+                    <option value="finance">Finance</option>
                   </select>
                   <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
+                {errors.category && <p className="text-red-500 text-xs mt-2 font-medium">{errors.category}</p>}
               </div>
 
               <div>
@@ -183,7 +221,7 @@ const CreateCourse = () => {
         <div className="bg-white rounded-[32px] p-10 shadow-sm border border-slate-100">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-              <span className="text-purple-600 font-bold text-lg">$</span>
+              <span className="text-purple-600 font-bold text-lg">₹</span>
             </div>
             <h2 className="text-xl font-bold text-slate-800">Pricing & Access</h2>
           </div>
@@ -198,9 +236,7 @@ const CreateCourse = () => {
                   onChange={handleChange}
                   className="w-full bg-slate-50/50 border border-slate-100 rounded-[18px] px-6 py-4 text-sm appearance-none focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner"
                 >
-                  <option>USD ($)</option>
-                  <option>EUR (€)</option>
-                  <option>INR (₹)</option>
+                  <option value="INR">INR (₹)</option>
                 </select>
                 <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>

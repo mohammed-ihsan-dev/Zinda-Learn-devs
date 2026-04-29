@@ -59,6 +59,11 @@ const courseSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  currency: {
+    type: String,
+    default: 'INR',
+    enum: ['INR']
+  },
   thumbnail: {
     type: String,
     default: ''
@@ -75,7 +80,7 @@ const courseSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Please provide a category'],
-    enum: ['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'UI/UX Design', 'DevOps', 'Cybersecurity', 'Cloud Computing', 'Blockchain', 'Game Development', 'Other']
+    enum: ['development', 'business', 'design', 'marketing', 'it', 'finance']
   },
   level: {
     type: String,

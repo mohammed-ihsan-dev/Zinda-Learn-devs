@@ -53,7 +53,17 @@ export const courseService = {
   },
 
   createCourse: async (courseData, instructorId) => {
-    return await Course.create({ ...courseData, instructor: instructorId });
+    const course = await Course.create({ ...courseData, instructor: instructorId });
+    // Trigger notification
+    import('./notification.service.js').then(({ notificationService }) => {
+      notificationService.createNotification({
+        userId: instructorId,
+        title: "Course Created",
+        message: `Your course "${course.title}" has been created successfully.`,
+        type: "success"
+      }).catch(console.error);
+    });
+    return course;
   },
 
   updateCourse: async (id, updateData, user) => {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import {
   LayoutDashboard, BookOpen, PlusCircle, Settings, LogOut, Menu, X,
   Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, User
@@ -20,6 +21,7 @@ const InstructorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -69,7 +71,8 @@ const InstructorLayout = () => {
         {/* Menu */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {instructorMenuItems.map((item) => {
-            const isActive = location.pathname.includes(item.path);
+            const isActive = location.pathname.includes(item.path) || 
+              (item.label === 'Courses' && (location.pathname.includes('/instructor/courses') || location.pathname.includes('/instructor/create-course')));
             return (
               <Link
                 key={item.label}
@@ -131,7 +134,11 @@ const InstructorLayout = () => {
             <div className="flex items-center gap-6">
               <Link to="/instructor/notifications" className="relative text-slate-400 hover:text-purple-600 transition-colors">
                 <Bell className="w-5 h-5" />
-                <span className="absolute 0 0 w-2 h-2 bg-purple-500 rounded-full border-2 border-white"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-purple-500 rounded-full text-white text-[10px] font-bold border-2 border-white">
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
               
               <div className="relative" ref={menuRef}>

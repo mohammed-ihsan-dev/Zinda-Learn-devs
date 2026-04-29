@@ -17,6 +17,17 @@ export const approveInstructor = async (req, res) => {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
     const instructor = await adminService.approveInstructor(req.params.id);
     if (!instructor) return res.status(404).json({ success: false, message: "Instructor not found" });
+
+    // Trigger notification
+    import('../services/notification.service.js').then(({ notificationService }) => {
+      notificationService.createNotification({
+        userId: req.params.id,
+        title: "Account Approved",
+        message: "Congratulations! Your instructor account has been approved. You can now create courses.",
+        type: "success"
+      }).catch(console.error);
+    });
+
     res.status(200).json({ success: true, message: "Instructor approved", data: instructor });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -37,6 +48,46 @@ export const getAllUsers = async (req, res) => {
   try {
     const { users, total } = await adminService.getAllUsers(req.query);
     res.status(200).json({ success: true, total, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createUser = async (req, res) => {
+  try {
+    const user = await adminService.createUser(req.body);
+    res.status(201).json({ success: true, message: "User created", data: user });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    const user = await adminService.updateUser(req.params.id, req.body);
+    res.status(200).json({ success: true, message: "User updated", data: user });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    const adminId = req.user.id || req.user._id; // Get from JWT protect middleware
+    await adminService.deleteUser(req.params.id, adminId);
+    res.status(200).json({ success: true, message: "User soft deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const restoreUser = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    await adminService.restoreUser(req.params.id);
+    res.status(200).json({ success: true, message: "User restored successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

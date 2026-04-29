@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getInstructorCourses } from '../../services/instructorService';
+import { formatCurrency } from '../../utils/currencyFormatter';
 import { DollarSign, TrendingUp, ArrowUpRight, CreditCard, MoreVertical, Download } from 'lucide-react';
 
 const Earnings = () => {
@@ -49,7 +50,7 @@ const Earnings = () => {
           {loading ? (
             <div className="h-8 w-32 bg-slate-100 rounded-lg animate-pulse"></div>
           ) : (
-            <h3 className="text-3xl font-bold text-slate-900">₹{totalEarnings.toLocaleString()}</h3>
+            <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(totalEarnings)}</h3>
           )}
           <div className="flex items-center gap-1.5 mt-3 text-xs font-bold text-emerald-600">
             <ArrowUpRight className="w-4 h-4" /> +18.2% this month
@@ -62,7 +63,7 @@ const Earnings = () => {
             <TrendingUp className="w-5 h-5" />
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Month</p>
-          <h3 className="text-3xl font-bold text-slate-900">₹{(totalEarnings * 0.35).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
+          <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(Math.round(totalEarnings * 0.35))}</h3>
           <div className="flex items-center gap-1.5 mt-3 text-xs font-bold text-emerald-600">
             <ArrowUpRight className="w-4 h-4" /> +9.1% vs last month
           </div>
@@ -74,7 +75,7 @@ const Earnings = () => {
             <CreditCard className="w-5 h-5" />
           </div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pending Payout</p>
-          <h3 className="text-3xl font-bold text-slate-900">₹{(totalEarnings * 0.12).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
+          <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(Math.round(totalEarnings * 0.12))}</h3>
           <div className="flex items-center gap-1.5 mt-3 text-xs font-bold text-slate-400">
             <span className="w-2 h-2 rounded-full bg-yellow-400"></span> Processing — 3-5 days
           </div>
@@ -106,7 +107,7 @@ const Earnings = () => {
                       <span className="text-sm text-slate-700">{tx.student}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-sm font-bold text-slate-900">₹{tx.amount.toLocaleString()}</td>
+                  <td className="px-5 py-4 text-sm font-bold text-slate-900">{formatCurrency(tx.amount)}</td>
                   <td className="px-5 py-4 text-sm text-slate-500">{tx.date}</td>
                   <td className="px-5 py-4">
                     <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-100">{tx.method}</span>

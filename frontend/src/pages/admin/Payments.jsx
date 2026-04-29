@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Calendar, ChevronDown, Download, Plus, MoreVertical, CreditCard, Wallet, TrendingUp } from 'lucide-react';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const Payments = () => {
   const transactions = [
-    { id: 'ATX-943950', user: 'Sarah Jenkins', amount: '$129.00', date: 'Oct 24, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=11' },
-    { id: 'ATX-943951', user: 'Marcus Chen', amount: '$49.50', date: 'Oct 24, 2023', status: 'FAILED', method: 'PayPal', avatar: 'https://i.pravatar.cc/150?u=12' },
-    { id: 'ATX-943952', user: 'David Miller', amount: '$899.00', date: 'Oct 25, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=13' },
-    { id: 'ATX-943953', user: 'Elena Rodriguez', amount: '$215.00', date: 'Oct 25, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=14' },
-    { id: 'ATX-943954', user: 'Jordan Smith', amount: '$12.99', date: 'Oct 22, 2023', status: 'COMPLETED', method: 'PayPal', avatar: 'https://i.pravatar.cc/150?u=15' },
+    { id: 'ATX-943950', user: 'Sarah Jenkins', amount: 12900, date: 'Oct 24, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=11' },
+    { id: 'ATX-943951', user: 'Marcus Chen', amount: 4950, date: 'Oct 24, 2023', status: 'FAILED', method: 'PayPal', avatar: 'https://i.pravatar.cc/150?u=12' },
+    { id: 'ATX-943952', user: 'David Miller', amount: 89900, date: 'Oct 25, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=13' },
+    { id: 'ATX-943953', user: 'Elena Rodriguez', amount: 21500, date: 'Oct 25, 2023', status: 'COMPLETED', method: 'Visa', avatar: 'https://i.pravatar.cc/150?u=14' },
+    { id: 'ATX-943954', user: 'Jordan Smith', amount: 1299, date: 'Oct 22, 2023', status: 'COMPLETED', method: 'PayPal', avatar: 'https://i.pravatar.cc/150?u=15' },
   ];
 
   return (
@@ -35,7 +36,7 @@ const Payments = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Net Platform Revenue</p>
-            <h3 className="text-3xl font-bold text-white">$428,942.50</h3>
+            <h3 className="text-3xl font-bold text-white">{formatCurrency(42894250)}</h3>
           </div>
         </div>
 
@@ -51,7 +52,7 @@ const Payments = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Instructor Payouts</p>
-            <h3 className="text-3xl font-bold text-white">$294,200.00</h3>
+            <h3 className="text-3xl font-bold text-white">{formatCurrency(29420000)}</h3>
           </div>
         </div>
 
@@ -119,7 +120,7 @@ const Payments = () => {
                     <span className="text-sm font-bold text-white">{tx.user}</span>
                   </div>
                 </td>
-                <td className="p-5 text-sm font-bold text-white">{tx.amount}</td>
+                <td className="p-5 text-sm font-bold text-white">{formatCurrency(tx.amount)}</td>
                 <td className="p-5 text-sm text-zinc-400">{tx.date}</td>
                 <td className="p-5">
                   <div className="flex items-center gap-2">

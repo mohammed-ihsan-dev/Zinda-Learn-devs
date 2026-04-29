@@ -87,6 +87,16 @@ export const verifyPayment = async (req, res) => {
       User.findByIdAndUpdate(req.user.id, { $addToSet: { enrolledCourses: courseId } })
     ]);
 
+    // Trigger notification
+    import('../services/notification.service.js').then(({ notificationService }) => {
+      notificationService.createNotification({
+        userId: req.user.id,
+        title: "Course Enrolled",
+        message: `You have successfully enrolled in "${course.title}". Happy learning!`,
+        type: "success"
+      }).catch(console.error);
+    });
+
     res.status(200).json({
       success: true,
       message: "Payment verified and enrolled successfully",

@@ -52,6 +52,18 @@ export const getCourse = async (req, res) => {
 // Create course
 export const createCourse = async (req, res) => {
   try {
+    if (!req.body.description) {
+      return res.status(400).json({ success: false, message: "Course description is required" });
+    }
+
+    const allowedCategories = ["development", "business", "design", "marketing", "it", "finance"];
+    if (req.body.category) {
+      req.body.category = req.body.category.toLowerCase().trim();
+      if (!allowedCategories.includes(req.body.category)) {
+        return res.status(400).json({ success: false, message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}` });
+      }
+    }
+
     const course = await courseService.createCourse(req.body, req.user.id);
 
     res.status(201).json({
@@ -70,6 +82,14 @@ export const createCourse = async (req, res) => {
 // Update course
 export const updateCourse = async (req, res) => {
   try {
+    const allowedCategories = ["development", "business", "design", "marketing", "it", "finance"];
+    if (req.body.category) {
+      req.body.category = req.body.category.toLowerCase().trim();
+      if (!allowedCategories.includes(req.body.category)) {
+        return res.status(400).json({ success: false, message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}` });
+      }
+    }
+
     const course = await courseService.updateCourse(req.params.id, req.body, req.user);
 
     if (!course) {
