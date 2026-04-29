@@ -79,3 +79,8 @@ export const rejectInstructor = async (id) => {
   const { data } = await api.delete(`/admin/instructor/${id}`);
   return data;
 };
+
+export const getPayments = async (params) => {
+  const { data } = await api.get('/admin/payments', { params });
+  return data;
+};

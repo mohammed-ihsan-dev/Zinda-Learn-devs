@@ -3,16 +3,16 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Shield, Settings, LogOut, Menu, X,
-  Bell, ChevronDown, CheckCircle, XCircle
+  Bell, ChevronDown, CheckCircle, XCircle, Users, GraduationCap, BookOpen, CreditCard, BarChart3
 } from 'lucide-react';
 
 const adminMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
-  { label: 'Users', icon: Shield, path: '/admin/user-management' },
-  { label: 'Tutors', icon: LayoutDashboard, path: '/admin/instructor-management' },
-  { label: 'Courses', icon: CheckCircle, path: '/admin/course-approval' },
-  { label: 'Payments', icon: Bell, path: '/admin/payments' },
-  { label: 'Reports', icon: Bell, path: '/admin/analytics' },
+  { label: 'Users', icon: Users, path: '/admin/user-management' },
+  { label: 'Tutors', icon: GraduationCap, path: '/admin/instructor-management' },
+  { label: 'Courses', icon: BookOpen, path: '/admin/course-approval' },
+  { label: 'Payments', icon: CreditCard, path: '/admin/payments' },
+  { label: 'Reports', icon: BarChart3, path: '/admin/analytics' },
   { label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 

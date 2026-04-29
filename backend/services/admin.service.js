@@ -268,5 +268,20 @@ export const adminService = {
       recentActivity,
       latestInsight
     };
+  },
+
+  getPayments: async ({ page = 1, limit = 50 }) => {
+    const Enrollment = mongoose.model("Enrollment");
+    const query = { paymentStatus: "completed" };
+    
+    const payments = await Enrollment.find(query)
+      .populate("user", "name email avatar")
+      .populate("course", "title")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Enrollment.countDocuments(query);
+    return { payments, total };
   }
 };

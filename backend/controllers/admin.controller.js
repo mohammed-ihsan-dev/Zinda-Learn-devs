@@ -184,3 +184,12 @@ export const getDashboardStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getPayments = async (req, res) => {
+  try {
+    const { payments, total } = await adminService.getPayments(req.query);
+    res.status(200).json({ success: true, total, data: payments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

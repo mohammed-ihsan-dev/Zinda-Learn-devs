@@ -17,7 +17,8 @@ import {
   getPendingCourses,
   approveCourse,
   declineCourse,
-  getDashboardStats
+  getDashboardStats,
+  getPayments
 } from '../controllers/admin.controller.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -46,7 +47,8 @@ router.patch('/courses/:id/status', updateCourseStatus);
 router.patch('/courses/:id/approve', approveCourse);
 router.patch('/courses/:id/decline', declineCourse);
 
-// 4. Dashboard Stats
+// 4. Dashboard & Finances
 router.get('/dashboard', getDashboardStats);
+router.get('/payments', getPayments);
 
 export default router;
