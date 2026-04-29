@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Button from './Button';
 import CoursePurchaseModal from './CoursePurchaseModal';
-import PaymentStepModal from './PaymentStepModal';
-import { createPaymentOrder, verifyPayment } from '../services/paymentService';
+import { enrollInCourse } from '../services/courseService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
 const CourseCard = ({ course, enrolled = false }) => {
@@ -33,46 +32,31 @@ const CourseCard = ({ course, enrolled = false }) => {
   const hours = Math.floor(totalDuration / 60);
   const mins = totalDuration % 60;
 
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
-  const handleEnrollClick = (e) => {
+  const handleEnrollClick = async (e) => {
     e.stopPropagation();
     e.preventDefault();
-    setIsPurchaseModalOpen(true);
-  };
-
-  const handleProceedToPayment = () => {
-    setIsPurchaseModalOpen(false);
-    setIsPaymentModalOpen(true);
-  };
-
-  const handlePayment = async () => {
+    
+    if (isEnrolling) return;
+    
     setIsEnrolling(true);
+    const loadingToast = toast.loading('Enrolling in course...');
+    
     try {
-      const orderData = await createPaymentOrder(_id);
-      
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
-      
-      await verifyPayment({
-        paymentId: 'mock_payment_' + Math.random().toString(36).substr(2, 9),
-        orderId: orderData.orderId,
-        signature: 'mock_signature',
-        courseId: _id
-      });
+      // Direct enrollment via dedicated endpoint
+      await enrollInCourse(_id);
 
-      toast.success('Payment Successful!');
+      toast.success('Successfully Enrolled!', { id: loadingToast });
+      
       setTimeout(() => {
-        toast.success('Enrollment Completed');
         navigate('/student/my-learning');
       }, 1000);
       
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Payment failed. Please try again.');
+      toast.error(err.response?.data?.message || 'Enrollment failed. Please try again.', { id: loadingToast });
     } finally {
       setIsEnrolling(false);
-      setIsPaymentModalOpen(false);
     }
   };
 
@@ -169,28 +153,6 @@ const CourseCard = ({ course, enrolled = false }) => {
             )}
           </div>
         </div>
-      </div>
-
-      {/* MODALS (stops propagation to prevent card click) */}
-      <div onClick={(e) => e.stopPropagation()}>
-        {isPurchaseModalOpen && (
-          <CoursePurchaseModal
-            course={course}
-            isOpen={isPurchaseModalOpen}
-            onClose={() => setIsPurchaseModalOpen(false)}
-            onProceedToPayment={handleProceedToPayment}
-          />
-        )}
-        
-        {isPaymentModalOpen && (
-          <PaymentStepModal
-            course={course}
-            isOpen={isPaymentModalOpen}
-            onClose={() => !isEnrolling && setIsPaymentModalOpen(false)}
-            onPay={handlePayment}
-            isProcessing={isEnrolling}
-          />
-        )}
       </div>
     </div>
   );

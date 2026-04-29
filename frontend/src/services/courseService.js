@@ -30,3 +30,8 @@ export const submitCourse = async (id) => {
   const response = await api.patch(`/courses/${id}/submit`);
   return response.data;
 };
+
+export const enrollInCourse = async (courseId) => {
+  const response = await api.post('/enrollments/enroll', { courseId });
+  return response.data;
+};

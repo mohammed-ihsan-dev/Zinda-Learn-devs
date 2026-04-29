@@ -128,3 +128,60 @@ export const getInstructorStats = async (req, res) => {
     });
   }
 };
+
+// @desc    Direct Enrollment (Free/No Payment Session)
+// @route   POST /api/enrollments/enroll
+// @access  Private
+export const enrollInCourse = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
+
+    // Check if already enrolled
+    const existing = await Enrollment.findOne({ user: req.user.id, course: courseId });
+    if (existing && (existing.paymentStatus === 'completed' || existing.paymentStatus === 'free')) {
+      return res.status(400).json({ success: false, message: "Already enrolled in this course" });
+    }
+
+    // Create enrollment
+    const enrollment = await Enrollment.create({
+      user: req.user.id,
+      course: courseId,
+      paymentStatus: 'free',
+      amountPaid: 0,
+      enrolledAt: new Date()
+    });
+
+    // Update course and user
+    await Promise.all([
+      Course.findByIdAndUpdate(courseId, { $inc: { totalStudents: 1 } }),
+      User.findByIdAndUpdate(req.user.id, { $addToSet: { enrolledCourses: courseId } })
+    ]);
+
+    // Trigger notification
+    try {
+      const { notificationService } = await import('../services/notification.service.js');
+      await notificationService.createNotification({
+        userId: req.user.id,
+        title: "Course Enrolled",
+        message: `You have successfully enrolled in "${course.title}". Enjoy your learning journey!`,
+        type: "success"
+      });
+    } catch (notifErr) {
+      console.error("Notification failed:", notifErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Enrolled successfully",
+      enrollment
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
