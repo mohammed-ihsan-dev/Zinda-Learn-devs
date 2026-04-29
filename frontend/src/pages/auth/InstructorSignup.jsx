@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ShieldCheck, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +23,7 @@ const InstructorSignup = () => {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [showWeakPassModal, setShowWeakPassModal] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -33,6 +34,28 @@ const InstructorSignup = () => {
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  const passwordStrength = useMemo(() => {
+    const pwd = formData.password;
+    if (!pwd) return { score: 0, label: '', color: 'bg-slate-200' };
+    
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+    const levels = [
+      { label: 'Very Weak', color: 'bg-red-500' },
+      { label: 'Weak', color: 'bg-red-500' },
+      { label: 'Fair', color: 'bg-orange-500' },
+      { label: 'Good', color: 'bg-yellow-500' },
+      { label: 'Strong', color: 'bg-green-500' },
+      { label: 'Excellent', color: 'bg-emerald-500' },
+    ];
+    return { score, ...levels[score] };
+  }, [formData.password]);
 
   const handleSendOTP = async () => {
     if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -72,6 +95,25 @@ const InstructorSignup = () => {
     }
   };
 
+  const executeRegistration = async () => {
+    setLoading(true);
+    try {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'instructor'
+      });
+      toast.success('Account created successfully!');
+      navigate('/instructor/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+      setShowWeakPassModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
@@ -95,20 +137,10 @@ const InstructorSignup = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: 'instructor'
-      });
-      toast.success('Account created successfully!');
-      navigate('/instructor/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setLoading(false);
+    if (passwordStrength.score < 4) {
+      setShowWeakPassModal(true);
+    } else {
+      executeRegistration();
     }
   };
 
@@ -142,7 +174,37 @@ const InstructorSignup = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-white font-sans">
+    <div className="min-h-screen flex bg-white font-sans relative">
+      {/* Weak Password Modal */}
+      {showWeakPassModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[32px] p-10 max-w-sm w-full shadow-2xl animate-slide-up border border-slate-100">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Weak Password</h3>
+            <p className="text-slate-500 mb-8 leading-relaxed text-sm font-medium">
+              Your password is not strong enough. Using a weak password makes your instructor account vulnerable. Do you want to continue anyway?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => executeRegistration()} 
+                className="w-full py-4 bg-purple-600 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all flex items-center justify-center"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue Anyway'}
+              </button>
+              <button 
+                onClick={() => setShowWeakPassModal(false)} 
+                className="w-full py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-all"
+              >
+                Try a Stronger One
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Panel */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-[#7c3aed] flex-col overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
@@ -303,12 +365,31 @@ const InstructorSignup = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                <div className="h-1 bg-purple-500 rounded-full w-1/3"></div>
-                <div className="h-1 bg-slate-200 rounded-full w-1/3"></div>
-                <div className="h-1 bg-slate-200 rounded-full w-1/3"></div>
-                <span className="text-[8px] font-bold text-purple-600 uppercase ml-2">SECURE</span>
-              </div>
+              {formData.password && (
+                <div className="mt-3">
+                  <div className="flex gap-1.5 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                          i < passwordStrength.score ? passwordStrength.color : 'bg-slate-100'
+                        }`}
+                      ></div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center px-0.5">
+                    <p className={`text-[9px] font-black uppercase tracking-[0.15em] ${
+                      passwordStrength.score >= 4 ? 'text-emerald-600' : 
+                      passwordStrength.score >= 3 ? 'text-amber-600' : 'text-rose-500'
+                    }`}>
+                      Strength: {passwordStrength.label}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      {passwordStrength.score}/5 points
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

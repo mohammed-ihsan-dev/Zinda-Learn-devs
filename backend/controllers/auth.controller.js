@@ -81,6 +81,14 @@ export const register = async (req, res) => {
     user.name = name;
     user.password = password;
     user.role = role || "student";
+    
+    // Explicitly set approval status for instructors
+    if (user.role === 'instructor') {
+      user.isApproved = false;
+    } else {
+      user.isApproved = true;
+    }
+
     await user.save();
 
     const token = user.generateToken();
@@ -295,14 +303,16 @@ export const googleLogin = async (req, res) => {
       // 3. Create new user if not exists
       const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
       
+      const role = req.body.role || "student";
       user = await User.create({
         name,
         email,
         profilePic: photo || "",
         avatar: photo || "",
-        role: req.body.role || "student",
+        role: role,
         password: randomPassword,
-        isVerified: true // Google users are considered verified
+        isVerified: true, // Google users are considered verified
+        isApproved: role !== 'instructor'
       });
     }
 

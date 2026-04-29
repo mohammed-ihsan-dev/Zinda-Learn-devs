@@ -182,7 +182,41 @@ const InstructorLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-8 overflow-x-hidden">
+        <main className="flex-1 p-8 overflow-x-hidden relative">
+          {!user?.isApproved ? (
+            <div className="absolute inset-0 z-20 bg-slate-50/60 backdrop-blur-[2px] flex items-center justify-center p-6">
+              <div className="bg-white rounded-[40px] p-12 max-w-xl w-full shadow-2xl shadow-purple-500/10 border border-slate-100 text-center animate-scale-in">
+                <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse">
+                  <Bell className="w-10 h-10 text-amber-500" />
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Pending Admin Approval</h2>
+                <p className="text-slate-500 mb-8 leading-relaxed font-medium">
+                  Thank you for joining Zinda Learn! Your instructor account is currently being reviewed by our team. 
+                  This usually takes <span className="text-purple-600 font-bold">24-48 hours</span>.
+                </p>
+                <div className="space-y-4">
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4 text-left">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                      <PlusCircle className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Complete your profile</p>
+                      <p className="text-[11px] text-slate-500">Go to settings to add your bio and expertise.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/instructor/settings')}
+                    className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all"
+                  >
+                    Go to Settings
+                  </button>
+                </div>
+                <p className="mt-8 text-xs text-slate-400 font-medium italic">
+                  You'll be notified via email once your account is activated.
+                </p>
+              </div>
+            </div>
+          ) : null}
           <Outlet />
         </main>
       </div>
