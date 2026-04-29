@@ -3,7 +3,6 @@ import { Star, Clock, Users, BookOpen, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Button from './Button';
-import CoursePurchaseModal from './CoursePurchaseModal';
 import { enrollInCourse } from '../services/courseService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
