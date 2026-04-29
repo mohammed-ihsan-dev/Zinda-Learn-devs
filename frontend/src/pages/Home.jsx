@@ -75,23 +75,23 @@ const Home = () => {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
-          <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-            <div className="flex-1 animate-slide-up">
+          <div className="flex flex-col items-center text-center">
+            <div className="max-w-3xl animate-slide-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-sm text-white font-medium mb-8 border border-white/20">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
                 Trusted by 50,000+ learners worldwide
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold font-display text-white leading-[1.1] mb-8">
+              <h1 className="text-4xl sm:text-6xl lg:text-8xl font-bold font-display text-white leading-[1.1] mb-8">
                 Master New Skills.
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-primary-100 italic">Transform Your</span>
                 <br />
                 Career Today.
               </h1>
-              <p className="text-lg sm:text-xl text-white/90 mb-12 max-w-xl leading-relaxed font-medium">
+              <p className="text-lg sm:text-xl text-white/90 mb-12 max-w-2xl mx-auto leading-relaxed font-medium">
                 Access 500+ premium courses from industry experts. Learn at your own pace with interactive content, live classes, and personalized mentoring.
               </p>
-              <div className="flex flex-wrap items-center gap-6">
+              <div className="flex flex-wrap items-center justify-center gap-6">
                 <Link to="/register">
                   <Button className="h-16 px-10 !text-white rounded-2xl shadow-2xl hover:shadow-[0_25px_50px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 border-none font-bold text-lg tracking-tight">
                     Start Learning Free
@@ -107,7 +107,7 @@ const Home = () => {
               </div>
 
               {/* Stats */}
-              <div className="flex flex-wrap items-center gap-12 mt-20 pt-12 border-t border-white/20">
+              <div className="flex flex-wrap items-center justify-center gap-12 mt-20 pt-12 border-t border-white/20">
                 {[
                   { value: '50K+', label: 'Students' },
                   { value: '500+', label: 'Courses' },
@@ -120,76 +120,6 @@ const Home = () => {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Hero Card Showcase */}
-            <div className="hidden lg:block relative w-[480px]">
-              <div className="relative z-10 animate-float">
-                {/* Main Card */}
-                <div className="bg-white/40 backdrop-blur-3xl rounded-[3rem] p-5 shadow-2xl border border-white/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl">
-                  <div className="relative overflow-hidden rounded-[2rem] mb-6">
-                    <img
-                      src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&height=600&fit=crop"
-                      alt="Collaborative learning"
-                      className="w-full h-[280px] object-cover"
-                    />
-                    {/* Floating Badge */}
-                    <div className="absolute top-4 right-4 bg-primary-600 text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest shadow-xl border border-white/20">
-                      Top Rated
-                    </div>
-                  </div>
-
-                  <div className="px-3 pb-4">
-                    <h3 className="text-2xl font-extrabold text-surface-900 mb-2">Live Interactive Sessions</h3>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="flex -space-x-3">
-                        {[1, 2, 3, 4].map((i) => (
-                          <img 
-                            key={i}
-                            src={`https://i.pravatar.cc/100?u=${i}`} 
-                            alt="Student" 
-                            className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm"
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm font-bold text-surface-600">50,000+ Students Joined</span>
-                    </div>
-                    
-                    <p className="text-surface-600 text-sm leading-relaxed font-medium">
-                      Join a global community and learn from the best in the industry with real-time feedback.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Floating Rating Badge */}
-                <div className="absolute -bottom-8 -left-8 bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-2xl border border-white/50 animate-bounce-slow">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      ))}
-                    </div>
-                    <p className="text-lg font-black text-surface-900 leading-none">4.9/5.0</p>
-                    <p className="text-[10px] font-bold text-surface-400 uppercase tracking-tighter">Verified Plateform Rating</p>
-                  </div>
-                </div>
-
-                {/* Floating Category Badge */}
-                <div className="absolute -top-6 -right-6 bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-white/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-primary-100 flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-primary-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-surface-900">Premium Courses</p>
-                      <p className="text-xs font-medium text-surface-500">Expert-led content</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Decorative Glow */}
-              <div className="absolute -inset-10 bg-gradient-to-tr from-primary-500/20 to-purple-500/20 rounded-full blur-[80px] -z-10"></div>
             </div>
           </div>
         </div>

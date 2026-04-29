@@ -43,6 +43,7 @@ import Payments from './pages/admin/Payments';
 import MyLearning from './pages/student/MyLearning';
 import BrowseCourses from './pages/student/BrowseCourses';
 import Messages from './pages/student/Messages';
+import StudentNotifications from './pages/student/Notifications';
 
 function App() {
   return (
@@ -67,7 +68,8 @@ function App() {
               <Route path="dashboard" element={<StudentDashboard />} />
               <Route path="my-learning" element={<MyLearning />} />
               <Route path="browse-courses" element={<BrowseCourses />} />
-              <Route path="messages" element={<Messages />} />
+               <Route path="messages" element={<Messages />} />
+              <Route path="notifications" element={<StudentNotifications />} />
               <Route path="live-classes" element={<div>Live Classes Page</div>} />
               <Route path="progress" element={<div>Progress Page</div>} />
               <Route path="certificates" element={<div>Certificates Page</div>} />

@@ -18,7 +18,7 @@ export const approveInstructor = async (req, res) => {
     const instructor = await adminService.approveInstructor(req.params.id);
     if (!instructor) return res.status(404).json({ success: false, message: "Instructor not found" });
 
-    // Trigger notification
+    
     import('../services/notification.service.js').then(({ notificationService }) => {
       notificationService.createNotification({
         userId: req.params.id,
