@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import admin from "../config/firebaseAdmin.js";
 import sendEmail from "../utils/sendEmail.js";
+import * as otpService from "../services/otpService.js";
 
 // Send OTP
 export const sendOTP = async (req, res) => {
@@ -8,36 +9,28 @@ export const sendOTP = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ success: false, message: "Email is required" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 1 * 60 * 1000); // 1 minute
-
     let user = await User.findOne({ email });
     if (user && user.isVerified && user.password) {
       return res.status(400).json({ success: false, message: "Email already registered" });
     }
 
-    if (!user) {
-      user = new User({ email });
-    }
-
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    await user.save();
-
     try {
+      const otp = otpService.generateOTP();
+      await otpService.saveOTP(email, otp);
+
       await sendEmail({
         email,
         subject: "Verification OTP - Zinda Learn",
-        message: `Your OTP is ${otp}. It expires in 1 minute.`,
-        html: `<h3>Verification OTP</h3><p>Your OTP is <b>${otp}</b>. It expires in 1 minute.</p>`
+        message: `Your OTP is ${otp}. It expires in 5 minutes.`,
+        html: `<h3>Verification OTP</h3><p>Your OTP is <b>${otp}</b>. It expires in 5 minutes.</p>`
       });
       res.status(200).json({ success: true, message: "OTP sent successfully" });
     } catch (err) {
-      console.error("Email Sending Error:", err);
-      user.otp = undefined;
-      user.otpExpiry = undefined;
-      await user.save();
-      return res.status(500).json({ success: false, message: "Failed to send email" });
+      console.error("OTP Generation/Sending Error:", err);
+      if (err.message.includes('wait before requesting')) {
+        return res.status(429).json({ success: false, message: err.message });
+      }
+      return res.status(500).json({ success: false, message: "Failed to process OTP request" });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -50,8 +43,16 @@ export const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
 
-    const user = await User.findOne({ email, otp, otpExpiry: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+    try {
+      await otpService.verifyOTP(email, otp);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({ email });
+    }
 
     user.isVerified = true;
     user.otp = undefined;
