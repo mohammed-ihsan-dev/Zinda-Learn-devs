@@ -64,11 +64,10 @@ const VideoPlayerPage = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2 capitalize ${
-                  activeTab === tab
+                className={`pb-2 capitalize ${activeTab === tab
                     ? "text-purple-600 border-b-2 border-purple-600"
                     : "text-zinc-500"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -164,9 +163,8 @@ const VideoPlayerPage = () => {
                 {module.items.map((lesson, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-center gap-3 p-2 rounded-xl ${
-                      lesson.active ? "bg-purple-100" : ""
-                    }`}
+                    className={`flex items-center gap-3 p-2 rounded-xl ${lesson.active ? "bg-purple-100" : ""
+                      }`}
                   >
                     <LessonIcon
                       lesson={lesson}

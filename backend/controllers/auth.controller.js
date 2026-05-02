@@ -6,10 +6,12 @@ import * as otpService from "../services/otpService.js";
 // Send OTP
 export const sendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+    const { email: rawEmail } = req.body;
+    if (!rawEmail) return res.status(400).json({ success: false, message: "Email is required" });
 
-    let user = await User.findOne({ email });
+    const email = rawEmail.toLowerCase().trim();
+
+    let user = await User.findOne({ email }).select("+password");
     if (user && user.isVerified && user.password) {
       return res.status(400).json({ success: false, message: "Email already registered" });
     }
@@ -68,9 +70,10 @@ export const verifyOTP = async (req, res) => {
 // Register user
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email: rawEmail, password, role } = req.body;
+    const email = rawEmail.toLowerCase().trim();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user || !user.isVerified) {
       return res.status(400).json({ success: false, message: "Email not verified" });
     }
@@ -108,6 +111,12 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists"
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -305,16 +314,25 @@ export const googleLogin = async (req, res) => {
       const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
       
       const role = req.body.role || "student";
-      user = await User.create({
-        name,
-        email,
-        profilePic: photo || "",
-        avatar: photo || "",
-        role: role,
-        password: randomPassword,
-        isVerified: true, // Google users are considered verified
-        isApproved: role !== 'instructor'
-      });
+      try {
+        user = await User.create({
+          name,
+          email,
+          profilePic: photo || "",
+          avatar: photo || "",
+          role: role,
+          password: randomPassword,
+          isVerified: true, // Google users are considered verified
+          isApproved: role !== 'instructor'
+        });
+      } catch (createError) {
+        if (createError.code === 11000) {
+          // If user was created by another request in the meantime
+          user = await User.findOne({ email });
+        } else {
+          throw createError;
+        }
+      }
     }
 
     // 4. Generate JWT for our app

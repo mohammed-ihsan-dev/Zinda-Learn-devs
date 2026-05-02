@@ -42,7 +42,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
       // Direct enrollment via dedicated endpoint
       await enrollInCourse(course._id);
 
-      toast.success('Successfully Enrolled! 🎉', { id: loadingToast });
+      toast.success('Successfully Enrolled!', { id: loadingToast });
       
       setTimeout(() => {
         navigate('/student/my-learning');
@@ -138,7 +138,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                 </Button>
               ) : (
                 <Button onClick={handleEnrollClick} loading={enrolling} className="!px-8 !py-3.5 text-base font-bold rounded-xl">
-                  Enroll Now — Free for limited time
+                  Enroll Now
                 </Button>
               )}
               <button className="px-6 py-3.5 border-2 border-zinc-200 text-zinc-700 font-bold rounded-xl hover:border-primary-400 hover:text-primary-600 transition-colors">
@@ -170,8 +170,16 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
             {/* Price box */}
             <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl font-extrabold text-green-600">Free</span>
-                <span className="text-lg text-zinc-400 line-through">{formatCurrency(course.price)}</span>
+                {course.discountPrice > 0 && course.discountPrice < course.price ? (
+                  <>
+                    <span className="text-3xl font-extrabold text-primary-600">{formatCurrency(course.discountPrice)}</span>
+                    <span className="text-lg text-zinc-400 line-through">{formatCurrency(course.price)}</span>
+                  </>
+                ) : course.price === 0 ? (
+                  <span className="text-3xl font-extrabold text-emerald-600">Free</span>
+                ) : (
+                  <span className="text-3xl font-extrabold text-zinc-900">{formatCurrency(course.price)}</span>
+                )}
               </div>
               {isEnrolled ? (
                 <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
@@ -183,7 +191,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
                   Enroll Now
                 </Button>
               )}
-              <p className="text-xs text-zinc-400 text-center mt-3">30-day money-back guarantee</p>
+              <p className="text-xs text-zinc-400 text-center mt-3">Lifetime access included</p>
             </div>
 
             {/* Includes */}

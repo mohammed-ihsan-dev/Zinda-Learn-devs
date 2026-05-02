@@ -29,6 +29,7 @@ import Students from './pages/instructor/Students';
 import Reviews from './pages/instructor/Reviews';
 import InstructorSettings from './pages/instructor/InstructorSettings';
 import Notifications from './pages/instructor/Notifications';
+import EditCourse from './pages/instructor/EditCourse';
 
 // Admin Pages
 import AdminLayout from './layouts/AdminLayout';
@@ -77,11 +78,12 @@ function App() {
             </Route>
 
             {/* Instructor Routes */}
-            <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+            <Route path="/instructor" element={<ProtectedRoute roles={['instructor', 'admin']}><InstructorLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/instructor/dashboard" replace />} />
               <Route path="dashboard" element={<InstructorDashboard />} />
               <Route path="my-courses" element={<MyCourses />} />
               <Route path="courses/:id" element={<CourseDetail />} />
+              <Route path="edit-course/:id" element={<EditCourse />} />
               <Route path="create-course" element={<CreateCourse />} />
               <Route path="earnings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Payouts coming soon</div>} />
               <Route path="students" element={<Students />} />

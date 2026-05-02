@@ -1,7 +1,7 @@
 import api from './api';
 
-export const getCourses = async () => {
-  const response = await api.get('/courses');
+export const getCourses = async (params = {}) => {
+  const response = await api.get('/courses', { params });
   return response.data;
 };
 
@@ -9,6 +9,11 @@ export const getCourses = async () => {
 
 export const getCourseById = async (id) => {
   const response = await api.get(`/courses/${id}`);
+  return response.data;
+};
+
+export const updateCourse = async (id, courseData) => {
+  const response = await api.put(`/courses/${id}`, courseData);
   return response.data;
 };
 

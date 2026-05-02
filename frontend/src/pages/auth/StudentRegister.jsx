@@ -66,9 +66,11 @@ const StudentRegister = () => {
       return;
     }
     
+    const email = formData.email.toLowerCase().trim();
+    
     setSendingOtp(true);
     try {
-      await api.post('/auth/send-otp', { email: formData.email });
+      await api.post('/auth/send-otp', { email });
       setOtpSent(true);
       setResendTimer(30);
       toast.success('OTP sent to your email!');
@@ -85,9 +87,11 @@ const StudentRegister = () => {
       return;
     }
     
+    const email = formData.email.toLowerCase().trim();
+    
     setVerifyingOtp(true);
     try {
-      await api.post('/auth/verify-otp', { email: formData.email, otp });
+      await api.post('/auth/verify-otp', { email, otp });
       setIsEmailVerified(true);
       setOtpSent(false);
       toast.success('Email verified successfully!');
@@ -115,7 +119,7 @@ const StudentRegister = () => {
     setLoading(true);
     try {
       await register({ name: formData.name, email: formData.email, password: formData.password, role: 'student' });
-      toast.success('Account created successfully! 🎉');
+      toast.success('Account created successfully!');
       navigate('/student/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
@@ -213,7 +217,10 @@ const StudentRegister = () => {
                 icon={User}
                 placeholder="Enter your full name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (errors.name) setErrors({ ...errors, name: null });
+                }}
                 error={errors.name}
               />
 
@@ -225,7 +232,10 @@ const StudentRegister = () => {
                   placeholder="Enter your email"
                   value={formData.email}
                   disabled={isEmailVerified}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    if (errors.email) setErrors({ ...errors, email: null });
+                  }}
                   error={errors.email}
                 />
                 {!isEmailVerified && (
@@ -276,7 +286,10 @@ const StudentRegister = () => {
                   icon={Lock}
                   placeholder="Create a password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    if (errors.password) setErrors({ ...errors, password: null });
+                  }}
                   error={errors.password}
                 />
                 {formData.password && (
@@ -299,7 +312,10 @@ const StudentRegister = () => {
                 icon={Shield}
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, confirmPassword: e.target.value });
+                  if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: null });
+                }}
                 error={errors.confirmPassword}
               />
 

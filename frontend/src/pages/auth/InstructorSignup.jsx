@@ -63,9 +63,11 @@ const InstructorSignup = () => {
       return;
     }
     
+    const email = formData.email.toLowerCase().trim();
+    
     setSendingOtp(true);
     try {
-      await api.post('/auth/send-otp', { email: formData.email });
+      await api.post('/auth/send-otp', { email });
       setOtpSent(true);
       setResendTimer(60);
       toast.success('OTP sent to your email!');
@@ -82,9 +84,11 @@ const InstructorSignup = () => {
       return;
     }
     
+    const email = formData.email.toLowerCase().trim();
+    
     setVerifyingOtp(true);
     try {
-      await api.post('/auth/verify-otp', { email: formData.email, otp });
+      await api.post('/auth/verify-otp', { email, otp });
       setIsEmailVerified(true);
       setOtpSent(false);
       toast.success('Email verified successfully!');

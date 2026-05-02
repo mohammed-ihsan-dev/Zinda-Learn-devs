@@ -31,7 +31,10 @@ const InstructorDashboard = () => {
       const fetchedCourses = data.courses || [];
       setCourses(fetchedCourses);
       const totalStudents = fetchedCourses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
-      const totalEarnings = fetchedCourses.reduce((acc, c) => acc + ((c.totalStudents || 0) * (c.price || 0)), 0);
+      const totalEarnings = fetchedCourses.reduce((acc, c) => {
+        const actualPrice = (c.discountPrice > 0 && c.discountPrice < c.price) ? c.discountPrice : (c.price || 0);
+        return acc + ((c.totalStudents || 0) * actualPrice);
+      }, 0);
       setStats({
         totalCourses: fetchedCourses.length,
         totalStudents,

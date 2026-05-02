@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getInstructorCourses, submitCourse } from '../../services/instructorService';
+import { getCourseById, updateCourse } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
-import { 
-  Plus, 
-  GripVertical, 
-  Edit2, 
-  Trash2, 
-  PlayCircle, 
-  FileText, 
-  ChevronDown, 
-  ChevronRight, 
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  Plus,
+  GripVertical,
+  Edit2,
+  Trash2,
+  PlayCircle,
+  FileText,
+  ChevronDown,
+  ChevronRight,
   X,
   Save,
   Clock,
@@ -22,6 +25,7 @@ import {
   Loader2,
   CheckCircle2
 } from 'lucide-react';
+import VideoUpload from '../../components/instructor/VideoUpload';
 
 // ── Create Module Modal ───────────────────────────────────────────────────────
 const CreateModuleModal = ({ onClose, onSave }) => {
@@ -47,7 +51,7 @@ const CreateModuleModal = ({ onClose, onSave }) => {
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Section Title</label>
-            <input 
+            <input
               autoFocus
               type="text"
               placeholder="e.g. Getting Started with React"
@@ -59,7 +63,7 @@ const CreateModuleModal = ({ onClose, onSave }) => {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description (Optional)</label>
-            <textarea 
+            <textarea
               rows="3"
               placeholder="Briefly describe what this section covers..."
               value={formData.description}
@@ -99,7 +103,7 @@ const CreateTestModal = ({ onClose }) => {
         <div className="p-8 space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Test Title</label>
-            <input 
+            <input
               type="text"
               placeholder="e.g. Final Assessment"
               className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium"
@@ -146,7 +150,7 @@ const CreateCouponModal = ({ onClose }) => {
         <div className="p-8 space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Coupon Code</label>
-            <input 
+            <input
               type="text"
               placeholder="e.g. SUMMER50"
               className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-bold uppercase placeholder:normal-case"
@@ -173,23 +177,78 @@ const CreateCouponModal = ({ onClose }) => {
   );
 };
 
+// ── Create Lesson Modal ───────────────────────────────────────────────────────
+const CreateLessonModal = ({ onClose, onSave, courseId }) => {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl animate-scale-in">
+        <div className="relative">
+          <button
+            onClick={onClose}
+            className="absolute -top-12 right-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <VideoUpload
+            courseId={courseId}
+            onUploadSuccess={(video) => {
+              onSave({
+                title: video.title,
+                videoUrl: video.videoUrl,
+                duration: video.duration || 0,
+                isFree: false,
+                source: video.source
+              });
+              onClose();
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Content Tab ───────────────────────────────────────────────────────────────
-const ContentTab = () => {
+const ContentTab = ({ modules = [], onUpdate }) => {
   const [selectedModule, setSelectedModule] = useState(0);
   const [showModuleModal, setShowModuleModal] = useState(false);
-  const [modules, setModules] = useState([]);
+  const [showLessonModal, setShowLessonModal] = useState(false);
 
   const handleAddModule = (newMod) => {
-    setModules(prev => [...prev, { ...newMod, id: prev.length + 1, lessons: [] }]);
+    const updatedModules = [...modules, {
+      ...newMod,
+      order: modules.length + 1,
+      lessons: []
+    }];
+    onUpdate(updatedModules);
+    setSelectedModule(modules.length);
     toast.success('Section added successfully');
+  };
+
+  const handleAddLesson = (newLesson) => {
+    const updatedModules = [...modules];
+    const currentModule = updatedModules[selectedModule];
+    currentModule.lessons = [
+      ...currentModule.lessons,
+      { ...newLesson, order: currentModule.lessons.length + 1 }
+    ];
+    onUpdate(updatedModules);
+    toast.success('Lesson added successfully');
   };
 
   return (
     <>
       {showModuleModal && (
-        <CreateModuleModal 
-          onClose={() => setShowModuleModal(false)} 
-          onSave={handleAddModule} 
+        <CreateModuleModal
+          onClose={() => setShowModuleModal(false)}
+          onSave={handleAddModule}
+        />
+      )}
+      {showLessonModal && (
+        <CreateLessonModal
+          onClose={() => setShowLessonModal(false)}
+          onSave={handleAddLesson}
+          courseId={window.location.pathname.split('/').pop()}
         />
       )}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
@@ -199,35 +258,39 @@ const ContentTab = () => {
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Course Modules</h3>
             <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-[10px] font-bold rounded-full">{modules.length} Sections</span>
           </div>
-          
+
           {modules.length > 0 ? (
             modules.map((mod, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedModule(i)}
-                className={`w-full text-left p-5 rounded-[24px] border transition-all duration-300 ${
-                  selectedModule === i 
-                    ? 'border-purple-200 bg-white shadow-xl shadow-purple-500/5 border-l-4 border-l-purple-600' 
+                className={`w-full text-left p-5 rounded-[24px] border transition-all duration-300 ${selectedModule === i
+                    ? 'border-purple-200 bg-white shadow-xl shadow-purple-500/5 border-l-4 border-l-purple-600'
                     : 'border-slate-100 bg-white hover:border-slate-200'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${selectedModule === i ? 'text-purple-600' : 'text-slate-400'}`}>
-                    Module {mod.id}
+                    Section {i + 1}
                   </span>
                   <GripVertical className="w-4 h-4 text-slate-300" />
                 </div>
                 <h4 className="font-bold text-slate-800 leading-snug mb-3">{mod.title}</h4>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-slate-50 text-slate-400 text-[9px] font-bold rounded-md">
+                    {mod.lessons?.length || 0} Lessons
+                  </span>
+                </div>
               </button>
             ))
           ) : (
             <div className="p-10 text-center bg-white border border-dashed border-slate-200 rounded-[24px]">
-               <Plus className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-               <p className="text-xs font-bold text-slate-400">No modules yet</p>
+              <Plus className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-400">No modules yet</p>
             </div>
           )}
 
-          <button 
+          <button
             onClick={() => setShowModuleModal(true)}
             className="w-full py-4 border-2 border-dashed border-slate-200 rounded-[24px] text-xs font-bold text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
           >
@@ -236,35 +299,70 @@ const ContentTab = () => {
         </div>
 
         {/* Right — Module detail */}
-        <div className="lg:col-span-8 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col items-center justify-center text-center p-12">
-            {modules.length > 0 ? (
-              <div className="w-full text-left">
-                <div className="flex items-center justify-between mb-8">
+        <div className="lg:col-span-8 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[400px] p-10">
+          {modules.length > 0 ? (
+            <div className="w-full text-left">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Managing Curriculum</span>
                   <h3 className="text-2xl font-bold text-slate-900">{modules[selectedModule].title}</h3>
-                  <div className="flex items-center gap-2">
-                    <button className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100"><Edit2 className="w-4 h-4" /></button>
-                    <button className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
-                  </div>
                 </div>
-                <div className="p-12 border-2 border-dashed border-slate-100 rounded-[32px] text-center">
-                  <PlayCircle className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500">No lessons in this section yet</p>
-                  <button className="mt-4 px-6 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-100">Add Lesson</button>
+                <div className="flex items-center gap-2">
+                  <button className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100"><Edit2 className="w-4 h-4" /></button>
+                  <button className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
-            ) : (
-              <>
-                <PlayCircle className="w-16 h-16 text-slate-100 mb-4" />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Build your curriculum</h3>
-                <p className="text-sm text-slate-500 max-w-xs">Start by adding your first section and uploading your lessons to get started.</p>
-                <button 
-                  onClick={() => setShowModuleModal(true)}
-                  className="mt-8 flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-bold rounded-2xl shadow-lg shadow-purple-200"
-                >
-                  <Plus className="w-5 h-5" /> Add First Section
-                </button>
-              </>
-            )}
+
+              {/* Lessons List */}
+              <div className="space-y-3 mb-8">
+                {modules[selectedModule].lessons?.length > 0 ? (
+                  modules[selectedModule].lessons.map((lesson, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group border border-transparent hover:border-slate-200 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors">
+                          <PlayCircle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-bold text-slate-700">{lesson.title}</h5>
+                          <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                            <span>{lesson.duration} mins</span>
+                            {lesson.isFree && <span className="text-emerald-500">Free Preview</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <button className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-12 border-2 border-dashed border-slate-100 rounded-[32px] text-center">
+                    <PlayCircle className="w-12 h-12 text-slate-100 mx-auto mb-4" />
+                    <p className="text-sm text-slate-500 font-medium">No lessons in this section yet</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowLessonModal(true)}
+                className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus className="w-5 h-5" /> Add Lesson to Section
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center">
+              <PlayCircle className="w-16 h-16 text-slate-100 mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Build your curriculum</h3>
+              <p className="text-sm text-slate-500 max-w-xs">Start by adding your first section and uploading your lessons to get started.</p>
+              <button
+                onClick={() => setShowModuleModal(true)}
+                className="mt-8 flex items-center gap-2 px-8 py-3.5 bg-purple-600 text-white font-bold rounded-2xl shadow-xl shadow-purple-500/20"
+              >
+                <Plus className="w-5 h-5" /> Add First Section
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -294,8 +392,8 @@ const TestsTab = () => {
         </div>
 
         <div className="bg-white border border-dashed border-slate-200 rounded-[32px] p-20 text-center shadow-sm">
-           <Trophy className="w-16 h-16 text-slate-100 mx-auto mb-4" />
-           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No tests added yet</p>
+          <Trophy className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No tests added yet</p>
         </div>
       </div>
     </>
@@ -312,8 +410,8 @@ const CouponsTab = () => {
       {showModal && <CreateCouponModal onClose={() => setShowModal(false)} />}
       <div className="animate-fade-in">
         <div className="flex justify-between items-center mb-8">
-           <h3 className="text-xl font-bold text-slate-900">Active Coupons</h3>
-           <button
+          <h3 className="text-xl font-bold text-slate-900">Active Coupons</h3>
+          <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all"
           >
@@ -322,8 +420,8 @@ const CouponsTab = () => {
         </div>
 
         <div className="bg-white border border-dashed border-slate-200 rounded-[32px] p-20 text-center shadow-sm">
-           <HelpCircle className="w-16 h-16 text-slate-100 mx-auto mb-4" />
-           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No active coupons</p>
+          <HelpCircle className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No active coupons</p>
         </div>
       </div>
     </>
@@ -332,6 +430,8 @@ const CouponsTab = () => {
 
 // ── Course Detail Main ────────────────────────────────────────────────────────
 const CourseDetail = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('Content');
   const [course, setCourse] = useState(null);
@@ -345,11 +445,11 @@ const CourseDetail = () => {
 
   const fetchCourse = async () => {
     try {
-      const data = await getInstructorCourses();
-      const currentCourse = data.courses.find(c => c._id === id);
-      setCourse(currentCourse);
+      const data = await getCourseById(id);
+      setCourse(data.course);
     } catch (error) {
       toast.error('Failed to fetch course details');
+      navigate('/instructor/my-courses');
     } finally {
       setLoading(false);
     }
@@ -363,6 +463,28 @@ const CourseDetail = () => {
       fetchCourse();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to submit course');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCurriculumUpdate = async (updatedModules) => {
+    try {
+      setCourse(prev => ({ ...prev, modules: updatedModules }));
+      // Auto-save logic could go here, or just wait for the explicit Save button
+      // For now, let's just update the local state.
+    } catch (error) {
+      toast.error('Failed to update curriculum');
+    }
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      setSubmitting(true);
+      await updateCourse(id, { modules: course.modules });
+      toast.success('All changes saved successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to save changes');
     } finally {
       setSubmitting(false);
     }
@@ -394,28 +516,27 @@ const CourseDetail = () => {
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner border border-slate-200">
-             {['draft', 'pending', 'published', 'declined'].map(status => (
-               <div
+            {['draft', 'pending', 'published', 'declined'].map(status => (
+              <div
                 key={status}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-extrabold transition-all duration-300 uppercase tracking-widest flex items-center gap-2 ${
-                  (course.status || 'draft') === status 
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-extrabold transition-all duration-300 uppercase tracking-widest flex items-center gap-2 ${(course.status || 'draft') === status
                     ? status === 'published' ? 'bg-emerald-500 text-white shadow-lg' :
                       status === 'pending' ? 'bg-amber-500 text-white shadow-lg' :
-                      status === 'declined' ? 'bg-rose-500 text-white shadow-lg' :
-                      'bg-white text-slate-900 shadow-lg'
+                        status === 'declined' ? 'bg-rose-500 text-white shadow-lg' :
+                          'bg-white text-slate-900 shadow-lg'
                     : 'text-slate-400 opacity-40 cursor-default'
-                }`}
-               >
-                 {status === 'published' && <CheckCircle2 className="w-3 h-3" />}
-                 {status === 'pending' && <Clock className="w-3 h-3" />}
-                 {status === 'declined' && <AlertTriangle className="w-3 h-3" />}
-                 {status}
-               </div>
-             ))}
+                  }`}
+              >
+                {status === 'published' && <CheckCircle2 className="w-3 h-3" />}
+                {status === 'pending' && <Clock className="w-3 h-3" />}
+                {status === 'declined' && <AlertTriangle className="w-3 h-3" />}
+                {status}
+              </div>
+            ))}
           </div>
 
           {course.status === 'draft' || course.status === 'declined' ? (
-            <button 
+            <button
               onClick={handleSubmitForReview}
               disabled={submitting}
               className="flex items-center gap-2.5 px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-xl shadow-purple-500/20 transition-all active:scale-95 group"
@@ -430,9 +551,23 @@ const CourseDetail = () => {
             </button>
           )}
 
-          <button className="flex items-center gap-2.5 px-6 py-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-2xl transition-all active:scale-95 group">
-            <Save className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-            Save Draft
+          {(user?.role === 'admin' || (course.instructor?._id || course.instructor) === (user?.id || user?._id)) && (
+            <button
+              onClick={() => navigate(`/instructor/edit-course/${id}`)}
+              className="flex items-center gap-2.5 px-6 py-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-2xl transition-all active:scale-95 group"
+            >
+              <Edit2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              Edit Info
+            </button>
+          )}
+
+          <button
+            onClick={handleSaveAll}
+            disabled={submitting}
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-slate-900 text-white hover:bg-slate-800 font-bold rounded-2xl shadow-xl transition-all active:scale-95 group disabled:opacity-50"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 group-hover:rotate-12 transition-transform" />}
+            Save Changes
           </button>
         </div>
       </div>
@@ -458,11 +593,10 @@ const CourseDetail = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-8 py-3 rounded-full text-xs font-bold transition-all duration-300 border-2 whitespace-nowrap ${
-              activeTab === tab
+            className={`px-8 py-3 rounded-full text-xs font-bold transition-all duration-300 border-2 whitespace-nowrap ${activeTab === tab
                 ? 'bg-purple-600 text-white border-purple-600 shadow-xl shadow-purple-500/20'
                 : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
-            }`}
+              }`}
           >
             {tab}
           </button>
@@ -471,7 +605,7 @@ const CourseDetail = () => {
 
       {/* Tab Content */}
       <div className="transition-all duration-500">
-        {activeTab === 'Content' && <ContentTab />}
+        {activeTab === 'Content' && <ContentTab modules={course.modules} onUpdate={handleCurriculumUpdate} />}
         {activeTab === 'Tests' && <TestsTab />}
         {activeTab === 'Coupons' && <CouponsTab />}
       </div>

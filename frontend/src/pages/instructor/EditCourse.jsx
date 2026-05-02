@@ -1,22 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   UploadCloud, 
-  Plus, 
   Video, 
   FileText, 
   Image as ImageIcon,
   ChevronDown,
-  Clock
+  Clock,
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
-import { createCourse } from '../../services/instructorService';
-import { useNavigate } from 'react-router-dom';
+import { getCourseById, updateCourse } from '../../services/courseService';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
-const CreateCourse = () => {
+const EditCourse = () => {
+  const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,6 +33,45 @@ const CreateCourse = () => {
     discountPrice: 0
   });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    fetchCourseDetails();
+  }, [id]);
+
+  const fetchCourseDetails = async () => {
+    try {
+      const data = await getCourseById(id);
+      const course = data.course;
+      
+      // Authorization check (frontend)
+      const userId = user.id || user._id;
+      const instructorId = course.instructor._id || course.instructor;
+
+      if (user.role !== 'admin' && instructorId !== userId) {
+        toast.error('Not authorized to edit this course');
+        navigate('/instructor/my-courses');
+        return;
+      }
+
+      setFormData({
+        title: course.title || '',
+        description: course.description || '',
+        shortDescription: course.shortDescription || '',
+        category: course.category || 'development',
+        level: course.level || 'Beginner',
+        price: course.price || 0,
+        thumbnail: course.thumbnail || '',
+        currency: course.currency || 'INR',
+        isFree: course.isFree || false,
+        discountPrice: course.discountPrice || 0
+      });
+    } catch (error) {
+      toast.error('Failed to fetch course details');
+      navigate('/instructor/my-courses');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -47,7 +89,6 @@ const CreateCourse = () => {
       ...prev, 
       [name]: type === 'checkbox' ? checked : value 
     }));
-    // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
@@ -55,37 +96,46 @@ const CreateCourse = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.isApproved) {
-      return toast.error('You must be approved by an admin to create courses');
-    }
-
     if (!validateForm()) {
       return toast.error('Please fix the errors in the form');
     }
 
     try {
-      setLoading(true);
-      await createCourse({
+      setSaving(true);
+      await updateCourse(id, {
         ...formData,
         price: Number(formData.price),
         discountPrice: Number(formData.discountPrice || 0),
         category: formData.category.toLowerCase()
       });
-      toast.success('Course created successfully!');
-      navigate('/instructor/my-courses');
+      toast.success('Course updated successfully!');
+      navigate(`/instructor/courses/${id}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create course');
+      toast.error(error.response?.data?.message || 'Failed to update course');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">Loading course data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in pb-20">
       <div className="mb-10">
-        <h1 className="text-4xl font-bold text-slate-900 mb-2 tracking-tight">Create Course</h1>
+        <Link to={`/instructor/courses/${id}`} className="flex items-center gap-2 text-slate-400 hover:text-purple-600 transition-colors text-xs font-bold uppercase tracking-widest mb-6 group">
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Course Detail
+        </Link>
+        <h1 className="text-4xl font-bold text-slate-900 mb-2 tracking-tight">Edit Course</h1>
         <p className="text-slate-500 text-base">
-          Every great course starts with a solid foundation. Fill in the details below to bring your expertise to life.
+          Update your course details and maintain your learning experience.
         </p>
       </div>
 
@@ -287,22 +337,22 @@ const CreateCourse = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center pt-10 gap-6 border-t border-slate-100">
           <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 bg-slate-50 px-5 py-2.5 rounded-xl">
             <Clock className="w-4 h-4" />
-            Curriculum can be managed after creation
+            Last updated just now
           </div>
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <button 
               type="button"
-              onClick={() => navigate('/instructor/my-courses')}
+              onClick={() => navigate(`/instructor/courses/${id}`)}
               className="flex-1 sm:flex-none px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-2xl transition-all"
             >
               Cancel
             </button>
             <button 
               type="submit"
-              disabled={loading || !user?.isApproved}
-              className="flex-1 sm:flex-none px-12 py-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-2xl shadow-xl shadow-purple-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving}
+              className="flex-1 sm:flex-none px-12 py-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-2xl shadow-xl shadow-purple-500/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create & Continue'}
+              {saving ? 'Saving Changes...' : 'Update Course'}
             </button>
           </div>
         </div>
@@ -312,4 +362,4 @@ const CreateCourse = () => {
   );
 };
 
-export default CreateCourse;
+export default EditCourse;

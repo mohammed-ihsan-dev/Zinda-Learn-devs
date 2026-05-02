@@ -24,11 +24,10 @@ const TabBar = ({ active, onChange }) => (
       <button
         key={tab}
         onClick={() => onChange(tab)}
-        className={`px-4 py-3 text-sm font-semibold transition-all relative ${
-          active === tab
+        className={`px-4 py-3 text-sm font-semibold transition-all relative ${active === tab
             ? 'text-primary-600'
             : 'text-zinc-500 hover:text-zinc-800'
-        }`}
+          }`}
       >
         {tab}
         {active === tab && (
@@ -72,9 +71,8 @@ const ModuleRow = ({ module, moduleIndex, activeLesson, completedLessons, onLess
               <button
                 key={lessonId}
                 onClick={() => onLessonClick({ moduleIndex, lessonIndex, lesson, module })}
-                className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                  isActive ? 'bg-primary-100' : 'hover:bg-zinc-50'
-                }`}
+                className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isActive ? 'bg-primary-100' : 'hover:bg-zinc-50'
+                  }`}
               >
                 {/* Status icon */}
                 <div className="mt-0.5 shrink-0">
@@ -90,9 +88,8 @@ const ModuleRow = ({ module, moduleIndex, activeLesson, completedLessons, onLess
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold leading-snug truncate ${
-                    isActive ? 'text-primary-700' : isCompleted ? 'text-zinc-500' : 'text-zinc-700'
-                  }`}>
+                  <p className={`text-xs font-semibold leading-snug truncate ${isActive ? 'text-primary-700' : isCompleted ? 'text-zinc-500' : 'text-zinc-700'
+                    }`}>
                     {String(lessonIndex + 1).padStart(2, '0')}. {lesson.title}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -161,7 +158,7 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
           moduleIndex: target.moduleIndex,
           lessonIndex: target.lessonIndex,
         });
-      } catch (_) {}
+      } catch (_) { }
     }
     onLessonClick(target);
   };
@@ -230,11 +227,10 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
           <button
             onClick={handleMarkComplete}
             disabled={localCompleted || savingProgress}
-            className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all ${
-              localCompleted
+            className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all ${localCompleted
                 ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
                 : 'bg-zinc-100 text-zinc-700 hover:bg-primary-50 hover:text-primary-700'
-            }`}
+              }`}
           >
             <CheckCircle2 className={`w-5 h-5 ${localCompleted ? 'text-green-500' : 'text-zinc-400'}`} />
             {savingProgress ? 'Saving...' : localCompleted ? 'Completed ✓' : 'Mark as Completed'}

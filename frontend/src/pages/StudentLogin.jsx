@@ -182,7 +182,10 @@ const StudentLogin = () => {
                 icon={Mail}
                 placeholder="Enter your email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (errors.email) setErrors({ ...errors, email: null });
+                }}
                 error={errors.email}
               />
 
@@ -192,7 +195,10 @@ const StudentLogin = () => {
                 icon={Lock}
                 placeholder="Enter your password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (errors.password) setErrors({ ...errors, password: null });
+                }}
                 error={errors.password}
               />
 

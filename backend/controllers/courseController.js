@@ -1,3 +1,4 @@
+import Course from "../models/Course.js";
 import { courseService } from "../services/course.service.js";
 
 // Get all courses 
@@ -52,19 +53,34 @@ export const getCourse = async (req, res) => {
 // Create course
 export const createCourse = async (req, res) => {
   try {
+    if (!req.body.title) {
+      return res.status(400).json({ success: false, message: "Course title is required" });
+    }
     if (!req.body.description) {
       return res.status(400).json({ success: false, message: "Course description is required" });
     }
 
-    const allowedCategories = ["development", "business", "design", "marketing", "it", "finance"];
+    // Normalize title and category
+    const title = req.body.title.trim().toLowerCase();
     if (req.body.category) {
       req.body.category = req.body.category.toLowerCase().trim();
-      if (!allowedCategories.includes(req.body.category)) {
-        return res.status(400).json({ success: false, message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}` });
-      }
     }
 
-    const course = await courseService.createCourse(req.body, req.user.id);
+    // Pre-check for duplicate title for this instructor
+    const existingCourse = await Course.findOne({
+      title,
+      instructor: req.user.id,
+      isDeleted: { $ne: true }
+    });
+
+    if (existingCourse) {
+      return res.status(400).json({
+        success: false,
+        message: "You already created a course with this title"
+      });
+    }
+
+    const course = await courseService.createCourse({ ...req.body, title }, req.user.id);
 
     res.status(201).json({
       success: true,
@@ -72,9 +88,15 @@ export const createCourse = async (req, res) => {
       course
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate course title for this instructor"
+      });
+    }
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Server error"
     });
   }
 };
@@ -82,11 +104,30 @@ export const createCourse = async (req, res) => {
 // Update course
 export const updateCourse = async (req, res) => {
   try {
-    const allowedCategories = ["development", "business", "design", "marketing", "it", "finance"];
-    if (req.body.category) {
-      req.body.category = req.body.category.toLowerCase().trim();
-      if (!allowedCategories.includes(req.body.category)) {
-        return res.status(400).json({ success: false, message: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}` });
+    let { title, category } = req.body;
+
+    // Normalize category if present
+    if (category) {
+      req.body.category = category.toLowerCase().trim();
+    }
+
+    // Normalize title if present and check for duplicates
+    if (title) {
+      title = title.trim().toLowerCase();
+      req.body.title = title;
+
+      const existingCourse = await Course.findOne({
+        title,
+        instructor: req.user.id,
+        _id: { $ne: req.params.id },
+        isDeleted: { $ne: true }
+      });
+
+      if (existingCourse) {
+        return res.status(400).json({
+          success: false,
+          message: "You already have a course with this title"
+        });
       }
     }
 
@@ -105,12 +146,18 @@ export const updateCourse = async (req, res) => {
       course
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate course title for this instructor"
+      });
+    }
     if (error.message === "Not authorized to update this course") {
       return res.status(403).json({ success: false, message: error.message });
     }
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Server error"
     });
   }
 };

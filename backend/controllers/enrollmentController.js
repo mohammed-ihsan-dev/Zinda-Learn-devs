@@ -15,9 +15,12 @@ export const getMyEnrollments = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
+    // Filter out enrollments where the course no longer exists
+    const validEnrollments = enrollments.filter(e => e.course !== null);
+
     res.status(200).json({
       success: true,
-      enrollments
+      enrollments: validEnrollments
     });
   } catch (error) {
     res.status(500).json({

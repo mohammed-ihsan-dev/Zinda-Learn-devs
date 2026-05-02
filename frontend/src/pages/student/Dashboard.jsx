@@ -42,7 +42,7 @@ const StudentDashboard = () => {
         {/* Abstract Gradient Overlay - Fade Left to Right */}
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-transparent z-10 w-full lg:w-3/4"></div>
         
-        {(enrollments && enrollments.length > 0) && (
+        {(enrollments && enrollments.length > 0 && enrollments[0].course) && (
           <img 
             src={enrollments[0].course?.thumbnail} 
             alt={enrollments[0].course?.title}
@@ -65,7 +65,7 @@ const StudentDashboard = () => {
                 {enrollments[0].course?.title}
               </h2>
               <p className="text-zinc-300 mb-8 max-w-xl text-lg font-light tracking-wide">
-                Module {enrollments[0].currentLesson.moduleIndex + 1} — Lesson {enrollments[0].currentLesson.lessonIndex + 1}
+                Module {(enrollments[0].currentLesson?.moduleIndex || 0) + 1} — Lesson {(enrollments[0].currentLesson?.lessonIndex || 0) + 1}
               </p>
               
               <div className="flex items-center gap-4 mb-8">
@@ -83,7 +83,7 @@ const StudentDashboard = () => {
               <div className="flex items-center gap-4 flex-wrap">
                 <Button 
                   className="!px-8 !py-3.5 !bg-white !text-zinc-900 hover:!bg-zinc-200 transition-colors font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center gap-3"
-                  onClick={() => window.location.href = `/courses/${enrollments[0].course._id}/learn`}
+                  onClick={() => window.location.href = `/courses/${enrollments[0].course?._id}/learn`}
                 >
                   <Play className="w-5 h-5 fill-zinc-900 text-zinc-900" />
                   Resume
@@ -95,7 +95,7 @@ const StudentDashboard = () => {
                   Browse Courses
                 </button>
                 <button 
-                  onClick={() => window.location.href = `/courses/${enrollments[0].course._id}`}
+                  onClick={() => window.location.href = `/courses/${enrollments[0].course?._id}`}
                   className="text-zinc-400 hover:text-white font-semibold text-sm transition-colors flex items-center gap-1.5 ml-2"
                 >
                   Course Details <ChevronRight className="w-4 h-4" />
@@ -153,8 +153,8 @@ const StudentDashboard = () => {
                 <div key={enrollment._id} className="bg-white p-4 rounded-2xl shadow-sm hover:shadow-md border border-zinc-100 flex items-center gap-5 group cursor-pointer transition-all duration-300">
                   <div className="relative overflow-hidden rounded-xl w-32 h-20 shrink-0 border border-zinc-100">
                     <img 
-                      src={enrollment.course.thumbnail} 
-                      alt={enrollment.course.title} 
+                      src={enrollment.course?.thumbnail} 
+                      alt={enrollment.course?.title} 
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -167,9 +167,9 @@ const StudentDashboard = () => {
                   
                   <div className="flex-1 min-w-0 pr-4">
                     <h3 className="font-bold text-zinc-900 truncate group-hover:text-primary-600 transition-colors mb-1.5 text-lg">
-                      {enrollment.course.title}
+                      {enrollment.course?.title}
                     </h3>
-                    <p className="text-zinc-500 text-sm mb-3 font-medium">Module {enrollment.currentLesson.moduleIndex + 1} — Lesson {enrollment.currentLesson.lessonIndex + 1}</p>
+                    <p className="text-zinc-500 text-sm mb-3 font-medium">Module {(enrollment.currentLesson?.moduleIndex || 0) + 1} — Lesson {(enrollment.currentLesson?.lessonIndex || 0) + 1}</p>
                     <div className="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden flex items-center">
                       <div 
                         className="bg-primary-500 h-full rounded-full transition-all duration-1000" 

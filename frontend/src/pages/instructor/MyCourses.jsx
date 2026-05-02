@@ -152,9 +152,22 @@ const MyCourses = () => {
                     <h3 className="font-bold text-slate-900 leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[44px]">
                       {course.title}
                     </h3>
-                    <span className="text-xl font-bold text-purple-600">
-                      {formatCurrency(course.price || 0)}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      {course.discountPrice > 0 && course.discountPrice < course.price ? (
+                        <>
+                          <span className="text-[10px] text-slate-400 line-through font-bold">
+                            {formatCurrency(course.price)}
+                          </span>
+                          <span className="text-xl font-bold text-purple-600">
+                            {formatCurrency(course.discountPrice)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xl font-bold text-purple-600">
+                          {course.price === 0 ? 'Free' : formatCurrency(course.price || 0)}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-6">

@@ -24,8 +24,8 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
+    'http://localhost:5173',
+    'http://localhost:5174',
     'https://zinda-learn.vercel.app', // update this to your actual Vercel/Netlify frontend URL if different
     'https://zindalearn.vercel.app',
     'https://bae-by-ecommerce-project-dcnu.vercel.app' // from the previous frontend url
