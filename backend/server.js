@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import connectDB from './config/db.js';
+import { initSocket } from './sockets/index.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -12,6 +14,7 @@ import messageRoutes from './routes/messages.js';
 import instructorRoutes from './routes/instructor.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import videoRoutes from './routes/video.routes.js';
 
 // Load env vars
 dotenv.config();
@@ -20,15 +23,19 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initSocket(httpServer);
 
 // Middleware
 app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://localhost:5175',
     'https://zinda-learn.vercel.app', // update this to your actual Vercel/Netlify frontend URL if different
-    'https://zindalearn.vercel.app',
-    'https://bae-by-ecommerce-project-dcnu.vercel.app' // from the previous frontend url
+    'https://zindalearn.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -49,6 +56,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/videos', videoRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -75,7 +83,7 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(` Server running on port ${PORT}`);
   console.log(` API: http://localhost:${PORT}/api`);
 });

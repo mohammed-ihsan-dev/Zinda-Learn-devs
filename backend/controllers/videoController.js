@@ -1,6 +1,7 @@
 import Video from "../models/Video.js";
 import Course from "../models/Course.js";
 import { cloudinaryService } from "../services/cloudinary.service.js";
+import fs from "fs";
 
 export const getUploadSignature = async (req, res) => {
   try {
@@ -112,6 +113,52 @@ export const getCourseVideos = async (req, res) => {
       videos
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const uploadVideo = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ success: false, message: "No video file provided" });
+    }
+
+    if (!courseId) {
+      if (file.path) fs.unlinkSync(file.path);
+      return res.status(400).json({ success: false, message: "Missing courseId" });
+    }
+
+    // 1. Validate course ownership
+    const course = await Course.findById(courseId);
+    if (!course) {
+      if (file.path) fs.unlinkSync(file.path);
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
+
+    if (course.instructor.toString() !== req.user.id && req.user.role !== 'admin') {
+      if (file.path) fs.unlinkSync(file.path);
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    // 2. Upload to Cloudinary
+    const result = await cloudinaryService.uploadVideo(file.path, courseId);
+
+    // 3. Delete temp file
+    fs.unlinkSync(file.path);
+
+    res.status(200).json({
+      success: true,
+      url: result.secure_url,
+      publicId: result.public_id,
+      duration: Math.round(result.duration || 0)
+    });
+
+  } catch (error) {
+    console.error("Backend Upload Error:", error);
+    if (req.file?.path) fs.unlinkSync(req.file.path);
     res.status(500).json({ success: false, message: error.message });
   }
 };

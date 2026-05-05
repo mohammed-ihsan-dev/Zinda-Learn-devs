@@ -46,16 +46,16 @@ const VideoUpload = ({ courseId, onUploadSuccess }) => {
       let publicId = null;
 
       if (videoData.source === 'upload') {
-        // 1. Get signature
-        const signatureData = await videoService.getSignature(courseId);
-
-        // 2. Upload to Cloudinary
-        const uploadResponse = await videoService.uploadToCloudinary(file, signatureData, (percent) => {
+        // 1. Upload to Backend (Proxy to Cloudinary)
+        const uploadResponse = await videoService.uploadVideo(file, courseId, (percent) => {
           setProgress(percent);
         });
 
-        finalVideoUrl = uploadResponse.data.secure_url;
-        publicId = uploadResponse.data.public_id;
+        finalVideoUrl = uploadResponse.url;
+        publicId = uploadResponse.publicId;
+        if (uploadResponse.duration) {
+          // You might want to update videoData with duration if needed
+        }
       }
 
       // 3. Save metadata

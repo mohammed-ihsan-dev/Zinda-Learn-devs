@@ -16,6 +16,8 @@ import InstructorSignup from './pages/auth/InstructorSignup';
 import AdminLogin from './pages/auth/AdminLogin';
 import CoursesPage from './pages/CoursesPage';
 import AboutPage from './pages/AboutPage';
+import VideoTest from './pages/test/VideoTest';
+import CourseDetailsPage from './pages/student/CourseDetailsPage';
 import StudentDashboard from './pages/student/Dashboard';
 
 // Instructor Pages
@@ -62,6 +64,8 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/courses/:id" element={<CourseDetailsPage />} />
+            <Route path="/test-video" element={<VideoTest />} />
 
             {/* Student Routes */}
             <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
@@ -69,7 +73,7 @@ function App() {
               <Route path="dashboard" element={<StudentDashboard />} />
               <Route path="my-learning" element={<MyLearning />} />
               <Route path="browse-courses" element={<BrowseCourses />} />
-               <Route path="messages" element={<Messages />} />
+              <Route path="messages" element={<Messages />} />
               <Route path="notifications" element={<StudentNotifications />} />
               <Route path="live-classes" element={<div>Live Classes Page</div>} />
               <Route path="progress" element={<div>Progress Page</div>} />
@@ -91,6 +95,7 @@ function App() {
               <Route path="messages" element={<Messages />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
+              <Route path="live-classes" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Live Classes coming soon</div>} />
             </Route>
 
             {/* Admin Routes */}

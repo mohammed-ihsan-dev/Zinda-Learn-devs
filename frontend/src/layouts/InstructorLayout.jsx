@@ -4,12 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import {
   LayoutDashboard, BookOpen, PlusCircle, Settings, LogOut, Menu, X,
-  Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, User
+  Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, User, Video
 } from 'lucide-react';
 
 const instructorMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/instructor/dashboard' },
   { label: 'Courses', icon: BookOpen, path: '/instructor/my-courses' },
+  { label: 'Live Classes', icon: Video, path: '/instructor/live-classes' },
   { label: 'Students', icon: Users, path: '/instructor/students' },
   { label: 'Payouts', icon: CreditCard, path: '/instructor/earnings' },
   { label: 'Reviews', icon: Star, path: '/instructor/reviews' },

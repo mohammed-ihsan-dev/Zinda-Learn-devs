@@ -23,21 +23,17 @@ export const videoService = {
   },
 
   /**
-   * Direct upload to Cloudinary using signed signature
+   * Upload video to backend proxy which then uploads to Cloudinary
    */
-  uploadToCloudinary: async (file, signatureData, onProgress) => {
-    const { signature, timestamp, apiKey, cloudName, folder } = signatureData;
-    
+  uploadVideo: async (file, courseId, onProgress) => {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('api_key', apiKey);
-    formData.append('timestamp', timestamp);
-    formData.append('signature', signature);
-    formData.append('folder', folder);
+    formData.append('video', file);
+    formData.append('courseId', courseId);
 
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
-
-    return await axios.post(url, formData, {
+    const response = await api.post('/videos/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
       onUploadProgress: (progressEvent) => {
         if (onProgress) {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -45,5 +41,7 @@ export const videoService = {
         }
       }
     });
+
+    return response.data;
   }
 };

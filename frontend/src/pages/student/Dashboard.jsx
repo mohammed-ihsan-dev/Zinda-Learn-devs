@@ -4,9 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 import { getMyEnrollments } from '../../services/courseService';
 import Button from '../../components/Button';
 import Loader from '../../components/Loader';
+import { useNavigate } from 'react-router-dom';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,19 +85,19 @@ const StudentDashboard = () => {
               <div className="flex items-center gap-4 flex-wrap">
                 <Button 
                   className="!px-8 !py-3.5 !bg-white !text-zinc-900 hover:!bg-zinc-200 transition-colors font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center gap-3"
-                  onClick={() => window.location.href = `/courses/${enrollments[0].course?._id}/learn`}
+                  onClick={() => navigate(`/student/my-learning?course=${enrollments[0].course?._id}`)}
                 >
                   <Play className="w-5 h-5 fill-zinc-900 text-zinc-900" />
                   Resume
                 </Button>
                 <button 
-                  onClick={() => window.location.href = '/student/browse-courses'}
+                  onClick={() => navigate('/student/browse-courses')}
                   className="px-6 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 border border-zinc-700"
                 >
                   Browse Courses
                 </button>
                 <button 
-                  onClick={() => window.location.href = `/courses/${enrollments[0].course?._id}`}
+                  onClick={() => navigate(`/courses/${enrollments[0].course?._id}`)}
                   className="text-zinc-400 hover:text-white font-semibold text-sm transition-colors flex items-center gap-1.5 ml-2"
                 >
                   Course Details <ChevronRight className="w-4 h-4" />
@@ -112,7 +114,7 @@ const StudentDashboard = () => {
               </p>
               <Button 
                 className="!px-8 !py-3.5 !bg-white !text-zinc-900 hover:!bg-zinc-200 transition-colors font-bold text-lg rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
-                onClick={() => window.location.href = '/student/browse-courses'}
+                onClick={() => navigate('/student/browse-courses')}
               >
                 Browse Courses
                 <ChevronRight className="w-5 h-5" />
@@ -186,7 +188,7 @@ const StudentDashboard = () => {
             ) : (
               <div className="bg-white p-12 rounded-2xl border border-dashed border-zinc-200 text-center shadow-sm">
                 <p className="text-zinc-500 mb-5 font-medium">No active courses yet.</p>
-                <Button variant="secondary" onClick={() => window.location.href='/student/browse-courses'} className="shadow-sm">
+                <Button variant="secondary" onClick={() => navigate('/student/browse-courses')} className="shadow-sm">
                   Browse Courses
                 </Button>
               </div>

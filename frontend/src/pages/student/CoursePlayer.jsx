@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { updateProgress } from '../../services/courseService';
 import toast from 'react-hot-toast';
+import VideoPlayer from '../../components/VideoPlayer';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 const fmtDuration = (mins) => {
@@ -181,27 +182,12 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
         <div className="lg:col-span-2 space-y-5">
 
           {/* 1. VIDEO PLAYER */}
-          <div className="relative rounded-2xl overflow-hidden shadow-lg bg-zinc-900 aspect-video group cursor-pointer">
-            {course.thumbnail && (
-              <img
-                src={course.thumbnail}
-                alt={lesson?.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80"
-              />
-            )}
-            {/* Dark gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            {/* Play button */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 rounded-full bg-primary-600 shadow-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-primary-500">
-                <Play className="w-8 h-8 text-white fill-white ml-1" />
-              </div>
-            </div>
-            {/* Lesson badge */}
-            <div className="absolute bottom-4 left-4 text-white text-sm font-semibold bg-black/40 backdrop-blur-sm px-3 py-1 rounded-lg">
-              {String(lessonIndex + 1).padStart(2, '0')}. {lesson?.title}
-            </div>
-          </div>
+          <VideoPlayer
+            videoUrl={lesson?.videoUrl}
+            source={lesson?.source}
+            thumbnail={course.thumbnail}
+            title={lesson?.title}
+          />
 
           {/* 2. NAVIGATION BUTTONS */}
           <div className="flex items-center gap-3 flex-wrap">

@@ -38,6 +38,27 @@ export const cloudinaryService = {
   },
 
   /**
+   * Upload a video to Cloudinary from the backend
+   * @param {string} filePath - Path to the local file
+   * @param {string} courseId - Course ID for folder structure
+   * @returns {Promise<Object>} Cloudinary upload result
+   */
+  uploadVideo: async (filePath, courseId) => {
+    try {
+      const folder = `zinda-learn/courses/${courseId}/videos`;
+      const result = await cloudinary.uploader.upload(filePath, {
+        resource_type: 'video',
+        folder: folder,
+        chunk_size: 6000000, // 6MB chunks
+      });
+      return result;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Delete a video from Cloudinary
    * @param {string} publicId - Cloudinary public_id
    */
