@@ -44,6 +44,33 @@ export const rejectInstructor = async (req, res) => {
   }
 };
 
+export const getStudents = async (req, res) => {
+  try {
+    const { students, total } = await adminService.getStudents(req.query);
+    res.status(200).json({ success: true, total, data: students });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getStudentStats = async (req, res) => {
+  try {
+    const stats = await adminService.getStudentStats();
+    res.status(200).json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getTutors = async (req, res) => {
+  try {
+    const { tutors, total } = await adminService.getTutors(req.query);
+    res.status(200).json({ success: true, total, data: tutors });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getAllUsers = async (req, res) => {
   try {
     const { users, total } = await adminService.getAllUsers(req.query);

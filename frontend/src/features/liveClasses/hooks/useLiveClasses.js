@@ -1,0 +1,82 @@
+import { useState, useEffect } from 'react';
+import socketService from '../../../services/socket';
+import liveClassService from '../services/liveClassService';
+import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
+
+export const useLiveClasses = () => {
+  const { token } = useAuth();
+  const [liveClasses, setLiveClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLiveClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await liveClassService.getStudentLiveClasses();
+      if (response.success) {
+        setLiveClasses(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch live classes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+    }
+    
+    fetchLiveClasses();
+
+    // Socket listeners handlers
+    const handleStarted = ({ liveClassId, title }) => {
+      toast.success(`Live Class Started: ${title}`, {
+        icon: '🔴',
+        duration: 5000
+      });
+      // Update state if exists, otherwise refetch to get the new live class
+      setLiveClasses(prev => {
+        const exists = prev.find(c => c._id === liveClassId);
+        if (exists) {
+          return prev.map(c => c._id === liveClassId ? { ...c, status: 'LIVE' } : c);
+        } else {
+          fetchLiveClasses(); // Fetch if it's a new class we didn't have
+          return prev;
+        }
+      });
+    };
+
+    const handleEnded = ({ liveClassId, title }) => {
+      toast.error(`Live Class Ended: ${title}`, {
+        icon: '⚪',
+        duration: 5000
+      });
+      setLiveClasses(prev => prev.map(c => 
+        c._id === liveClassId ? { ...c, status: 'ENDED' } : c
+      ));
+    };
+
+    const handleScheduled = ({ title }) => {
+      toast.success(`New Live Class Scheduled: ${title}`, {
+        icon: '📅'
+      });
+      fetchLiveClasses();
+    };
+
+    // Bind listeners using global service helpers
+    socketService.onLiveClassStarted(handleStarted);
+    socketService.onLiveClassEnded(handleEnded);
+    socketService.onLiveClassScheduled(handleScheduled);
+
+    return () => {
+      // Cleanup listeners
+      socketService.offLiveClassStarted();
+      socketService.offLiveClassEnded();
+      socketService.offLiveClassScheduled();
+    };
+  }, [token]);
+
+  return { liveClasses, loading, refetch: fetchLiveClasses };
+};

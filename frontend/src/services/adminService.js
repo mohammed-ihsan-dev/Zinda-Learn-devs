@@ -1,12 +1,17 @@
 import api from './api';
 
-export const getAllCourses = async () => {
-  const { data } = await api.get('/admin/courses');
+export const getAllCourses = async (params) => {
+  const { data } = await api.get('/admin/courses', { params });
   return data;
 };
 
 export const getPendingCourses = async () => {
   const { data } = await api.get('/admin/courses/pending');
+  return data;
+};
+
+export const deleteCourse = async (id) => {
+  const { data } = await api.delete(`/admin/courses/${id}`);
   return data;
 };
 
@@ -30,8 +35,18 @@ export const getDashboardStats = async () => {
   return data;
 };
 
-export const getAllUsers = async (showDeleted = false) => {
-  const { data } = await api.get(`/admin/users${showDeleted ? '?showDeleted=true' : ''}`);
+export const getStudents = async (params) => {
+  const { data } = await api.get('/admin/students', { params });
+  return data;
+};
+
+export const getStudentStats = async () => {
+  const { data } = await api.get('/admin/students/stats');
+  return data;
+};
+
+export const getTutors = async (params) => {
+  const { data } = await api.get('/admin/tutors', { params });
   return data;
 };
 

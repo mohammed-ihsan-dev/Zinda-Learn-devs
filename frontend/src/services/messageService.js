@@ -29,3 +29,15 @@ export const markAsRead = async (conversationId) => {
   const response = await api.put(`/messages/${conversationId}/read`);
   return response.data;
 };
+
+export const uploadMessageFile = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', 'zinda-learn/messages');
+  const response = await api.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};

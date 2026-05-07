@@ -445,9 +445,18 @@ const CourseDetail = () => {
 
   const fetchCourse = async () => {
     try {
+      console.log(`[COURSE_DETAIL] Fetching course with ID: ${id}`);
       const data = await getCourseById(id);
-      setCourse(data.course);
+      console.log(`[COURSE_DETAIL] Received data:`, data);
+      
+      if (data) {
+        setCourse(data);
+      } else {
+        console.error('[COURSE_DETAIL] No course data received');
+        toast.error('Course data is empty');
+      }
     } catch (error) {
+      console.error('[COURSE_DETAIL] Fetch error:', error);
       toast.error('Failed to fetch course details');
       navigate('/instructor/my-courses');
     } finally {

@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { socketAuth } from './socketMiddleware.js';
+import { callHandlers } from './callHandlers.js';
 
 let io;
 
@@ -53,6 +54,9 @@ export const initSocket = (server) => {
     socket.on('markAsSeen', ({ conversationId, messageIds }) => {
       socket.to(conversationId).emit('messageSeen', { conversationId, userId, messageIds });
     });
+
+    // 6. Voice Call Handlers
+    callHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`🔥 Socket Disconnected: ${userId}`);

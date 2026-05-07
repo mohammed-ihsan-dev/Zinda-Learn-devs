@@ -25,13 +25,13 @@ const CourseCard = ({ course, enrolled = false }) => {
     modules = [],
   } = course;
 
-  const totalLessons = modules.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0);
-  const totalDuration = modules.reduce(
+  const totalLessonsCount = course.totalLessons || modules.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0);
+  const totalDurationSeconds = course.totalDuration || modules.reduce(
     (acc, mod) => acc + (mod.lessons?.reduce((a, l) => a + (l.duration || 0), 0) || 0),
     0
   );
-  const hours = Math.floor(totalDuration / 60);
-  const mins = totalDuration % 60;
+  const hours = Math.floor(totalDurationSeconds / 60);
+  const mins = totalDurationSeconds % 60;
 
   const [isEnrolling, setIsEnrolling] = useState(false);
 
@@ -68,7 +68,7 @@ const CourseCard = ({ course, enrolled = false }) => {
   };
 
   const handleCardClick = () => {
-    navigate(enrolled ? `/student/courses/${_id}/learn` : `/courses/${_id}`);
+    navigate(enrolled ? `/student/my-learning?course=${_id}` : `/courses/${_id}`);
   };
 
   return (
@@ -120,7 +120,7 @@ const CourseCard = ({ course, enrolled = false }) => {
           </span>
           <span className="flex items-center gap-1">
             <BookOpen className="w-3.5 h-3.5" />
-            {totalLessons} lessons
+            {totalLessonsCount} lessons
           </span>
         </div>
 

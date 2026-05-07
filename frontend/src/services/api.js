@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const baseURL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5001/api' : 'https://zinda-learn-backend.onrender.com/api');
+const baseURL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5005/api' : 'https://zinda-learn-backend.onrender.com/api');
 
 const api = axios.create({
   baseURL,

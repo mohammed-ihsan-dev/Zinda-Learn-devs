@@ -15,6 +15,8 @@ import Footer from "../components/Footer";
 import CourseCard from "../components/CourseCard";
 import Loader from "../components/Loader";
 import { useCourses } from "../hooks/useCourses";
+import { useAuth } from "../context/AuthContext";
+import { getMyEnrollments } from "../services/courseService";
 import { Link } from "react-router-dom";
 
 const CATEGORIES = ['All', 'Development', 'Business', 'Design', 'Marketing', 'IT', 'Finance'];
@@ -28,6 +30,8 @@ const SORT_OPTIONS = [
 ];
 
 const CoursesPage = () => {
+  const { isAuthenticated } = useAuth();
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -35,6 +39,23 @@ const CoursesPage = () => {
   const [selectedSort, setSelectedSort] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Fetch enrollments if logged in
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (isAuthenticated) {
+        try {
+          const data = await getMyEnrollments();
+          if (data.success && data.enrollments) {
+            setEnrolledCourseIds(data.enrollments.map(e => e.course._id));
+          }
+        } catch (err) {
+          console.error("Failed to fetch enrollments", err);
+        }
+      }
+    };
+    fetchEnrollments();
+  }, [isAuthenticated]);
 
   // Debounce search term
   useEffect(() => {
@@ -199,7 +220,11 @@ const CoursesPage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {courses.map((course) => (
-                <CourseCard key={course._id} course={course} />
+                <CourseCard 
+                  key={course._id} 
+                  course={course} 
+                  enrolled={enrolledCourseIds.includes(course._id)}
+                />
               ))}
             </div>
 

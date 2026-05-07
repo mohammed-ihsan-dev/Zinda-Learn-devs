@@ -13,12 +13,21 @@ const messageSchema = new mongoose.Schema({
   },
   text: {
     type: String,
-    required: [true, 'Message text is required'],
+    required: false,
     trim: true
   },
+  messageType: {
+    type: String,
+    enum: ['text', 'image', 'audio', 'file'],
+    default: 'text'
+  },
+  audioUrl: String,
+  audioDuration: Number,
   attachments: [{
     url: String,
-    resource_type: String,
+    name: String,
+    type: String,
+    format: String,
     publicId: String
   }],
   readBy: [{

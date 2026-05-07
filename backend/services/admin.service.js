@@ -17,7 +17,90 @@ export const adminService = {
     return await User.findByIdAndDelete(id);
   },
 
-  // 2. User Management
+  // 1.5 Student Management
+  getStudents: async ({ search, status, page = 1, limit = 20 }) => {
+    const query = { role: "student", deletedAt: null };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ];
+    }
+    
+    if (status === 'blocked') query.isBlocked = true;
+    if (status === 'active') query.isBlocked = false;
+
+    const students = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await User.countDocuments(query);
+
+    // Fetch enrollment insights for each student
+    const Enrollment = mongoose.model("Enrollment");
+    const studentsWithInsights = await Promise.all(students.map(async (student) => {
+      const enrollments = await Enrollment.find({ user: student._id });
+      const totalSpent = enrollments.reduce((sum, enr) => sum + (enr.amountPaid || 0), 0);
+      const avgProgress = enrollments.length > 0 
+        ? Math.round(enrollments.reduce((sum, enr) => sum + (enr.progress || 0), 0) / enrollments.length)
+        : 0;
+
+      return {
+        ...student.toObject(),
+        enrolledCount: enrollments.length,
+        totalSpent,
+        avgProgress
+      };
+    }));
+
+    return { students: studentsWithInsights, total };
+  },
+
+  getStudentStats: async () => {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [totalStudents, activeStudents, newStudents, enrollments] = await Promise.all([
+      User.countDocuments({ role: "student", deletedAt: null }),
+      User.countDocuments({ role: "student", deletedAt: null, isBlocked: false }),
+      User.countDocuments({ role: "student", deletedAt: null, createdAt: { $gte: startOfMonth } }),
+      mongoose.model("Enrollment").find()
+    ]);
+
+    const avgCompletion = enrollments.length > 0
+      ? Math.round(enrollments.reduce((sum, enr) => sum + (enr.progress || 0), 0) / enrollments.length)
+      : 0;
+
+    return {
+      totalStudents,
+      activeStudents,
+      newStudents,
+      avgCompletion
+    };
+  },
+  getTutors: async ({ search, page = 1, limit = 20 }) => {
+    const query = { role: "instructor", deletedAt: null, isApproved: true };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const tutors = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await User.countDocuments(query);
+    return { tutors, total };
+  },
   getAllUsers: async ({ role, email, page = 1, limit = 50, showDeleted }) => {
     const query = {};
     if (role) query.role = role;
@@ -97,14 +180,20 @@ export const adminService = {
   },
 
   // 3. Course Management
-  getAllCourses: async ({ page = 1, limit = 10 }) => {
-    const courses = await Course.find()
+  getAllCourses: async ({ status, search, page = 1, limit = 10 }) => {
+    const query = {};
+    if (status) query.status = status;
+    if (search) {
+      query.title = { $regex: search, $options: "i" };
+    }
+
+    const courses = await Course.find(query)
       .populate("instructor", "name email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
-    const total = await Course.countDocuments();
+    const total = await Course.countDocuments(query);
     return { courses, total };
   },
 
@@ -176,6 +265,8 @@ export const adminService = {
       totalInstructors,
       totalCourses,
       pendingTutors,
+      pendingCoursesCount,
+      totalEnrollments,
       enrollments,
       latestUsers,
       latestCourses
@@ -185,6 +276,8 @@ export const adminService = {
       User.countDocuments({ role: "instructor" }),
       Course.countDocuments(),
       User.countDocuments({ role: "instructor", isApproved: false }),
+      Course.countDocuments({ status: "pending" }),
+      mongoose.model("Enrollment").countDocuments({ paymentStatus: "completed" }),
       mongoose.model("Enrollment").find({ paymentStatus: "completed" }).populate("course"),
       User.find({ role: "instructor" }).sort({ createdAt: -1 }).limit(5).select("name email createdAt isApproved role"),
       Course.find().populate("instructor", "name").sort({ createdAt: -1 }).limit(5).select("title category createdAt status")
@@ -262,6 +355,8 @@ export const adminService = {
       totalInstructors,
       totalCourses,
       pendingTutors,
+      pendingCoursesCount,
+      totalEnrollments,
       totalRevenue,
       userGrowth,
       revenueBreakdown,

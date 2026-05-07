@@ -65,7 +65,7 @@ const canMessage = async (senderId, receiverId, courseId) => {
 // @route   POST /api/messages
 export const sendMessage = async (req, res) => {
   try {
-    const { receiverId, courseId, text, attachments } = req.body;
+    const { receiverId, courseId, text, attachments, messageType, audioUrl, audioDuration } = req.body;
     
     if (!req.user || !req.user._id) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -73,8 +73,13 @@ export const sendMessage = async (req, res) => {
 
     const senderId = req.user._id;
 
-    if (!receiverId || !courseId || !text) {
-      return res.status(400).json({ success: false, message: 'Receiver, Course, and Text are required' });
+    if (!receiverId || !courseId) {
+      return res.status(400).json({ success: false, message: 'Receiver and Course are required' });
+    }
+
+    // Text is required ONLY for text messages
+    if (messageType === 'text' && !text) {
+       return res.status(400).json({ success: false, message: 'Text is required for text messages' });
     }
 
     console.log(`[MSG_DEBUG] Sending message from ${senderId} to ${receiverId} for course ${courseId}`);
@@ -105,12 +110,15 @@ export const sendMessage = async (req, res) => {
       sender: senderId,
       text,
       attachments,
+      messageType: messageType || 'text',
+      audioUrl,
+      audioDuration,
       readBy: [senderId]
     });
 
     // 4. Update lastMessage in Conversation (for inbox sorting)
     conversation.lastMessage = {
-      text,
+      text: messageType === 'audio' ? '🎵 Voice Message' : (messageType === 'image' ? '🖼️ Image' : text),
       sender: senderId,
       createdAt: msg.createdAt
     };
@@ -288,7 +296,7 @@ export const markAsRead = async (req, res) => {
 // @route   POST /api/messages/broadcast
 export const broadcastMessage = async (req, res) => {
   try {
-    const { courseId, text, attachments } = req.body;
+    const { courseId, text, attachments, messageType, audioUrl, audioDuration } = req.body;
     const senderId = req.user.id;
 
     const course = await Course.findById(courseId);
@@ -328,13 +336,16 @@ export const broadcastMessage = async (req, res) => {
       const msg = await Message.create({
         conversation: conversation._id,
         sender: senderId,
-        text: `[BROADCAST] ${text}`,
+        text: messageType === 'audio' ? `[BROADCAST] Voice Message` : `[BROADCAST] ${text}`,
         attachments,
+        messageType: messageType || 'text',
+        audioUrl,
+        audioDuration,
         readBy: [senderId]
       });
 
       conversation.lastMessage = {
-        text: `[BROADCAST] ${text}`,
+        text: messageType === 'audio' ? `🎵 [BROADCAST] Voice Message` : `[BROADCAST] ${text}`,
         sender: senderId,
         createdAt: msg.createdAt
       };

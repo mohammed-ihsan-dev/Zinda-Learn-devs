@@ -3,6 +3,9 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { CallProvider } from './features/calls/context/CallContext';
+import CallModal from './features/calls/components/CallModal';
+import IncomingCallModal from './features/calls/components/IncomingCallModal';
 
 // Layouts
 import StudentLayout from './layouts/StudentLayout';
@@ -32,12 +35,18 @@ import Reviews from './pages/instructor/Reviews';
 import InstructorSettings from './pages/instructor/InstructorSettings';
 import Notifications from './pages/instructor/Notifications';
 import EditCourse from './pages/instructor/EditCourse';
+import InstructorLiveClasses from './features/liveClasses/pages/InstructorLiveClasses';
+import CreateLiveClass from './features/liveClasses/pages/CreateLiveClass';
+import EditLiveClass from './features/liveClasses/pages/EditLiveClass';
+import StudentLiveClasses from './features/liveClasses/pages/StudentLiveClasses';
+import LiveClassDetail from './features/liveClasses/pages/LiveClassDetail';
+
 
 // Admin Pages
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
-import CourseApproval from './pages/admin/CourseApproval';
-import UserManagement from './pages/admin/UserManagement';
+import CoursesManagement from './pages/admin/CoursesManagement';
+import StudentsManagement from './pages/admin/StudentsManagement';
 import InstructorManagement from './pages/admin/InstructorManagement';
 import Analytics from './pages/admin/Analytics';
 import Settings from './pages/admin/Settings';
@@ -52,9 +61,12 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <Router>
-          <Toaster position="top-center" reverseOrder={false} />
-          <Routes>
+        <CallProvider>
+          <Router>
+            <Toaster position="top-center" reverseOrder={false} />
+            <CallModal />
+            <IncomingCallModal />
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<StudentLogin />} />
@@ -75,7 +87,9 @@ function App() {
               <Route path="browse-courses" element={<BrowseCourses />} />
               <Route path="messages" element={<Messages />} />
               <Route path="notifications" element={<StudentNotifications />} />
-              <Route path="live-classes" element={<div>Live Classes Page</div>} />
+              <Route path="live-classes" element={<StudentLiveClasses />} />
+              <Route path="live-classes/:id" element={<LiveClassDetail />} />
+
               <Route path="progress" element={<div>Progress Page</div>} />
               <Route path="certificates" element={<div>Certificates Page</div>} />
               <Route path="settings" element={<div>Settings Page</div>} />
@@ -95,15 +109,18 @@ function App() {
               <Route path="messages" element={<Messages />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="settings" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Settings coming soon</div>} />
-              <Route path="live-classes" element={<div className="p-8 bg-white rounded-3xl border border-slate-100 text-slate-500 font-bold text-center">Live Classes coming soon</div>} />
+              <Route path="live-classes" element={<InstructorLiveClasses />} />
+              <Route path="live-classes/create" element={<CreateLiveClass />} />
+              <Route path="live-classes/edit/:id" element={<EditLiveClass />} />
+
             </Route>
 
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="course-approval" element={<CourseApproval />} />
-              <Route path="user-management" element={<UserManagement />} />
+              <Route path="courses" element={<CoursesManagement />} />
+              <Route path="students" element={<StudentsManagement />} />
               <Route path="instructor-management" element={<InstructorManagement />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="payments" element={<Payments />} />
@@ -114,8 +131,9 @@ function App() {
             <Route path="*" element={<div className="min-h-screen flex items-center justify-center">404 - Page Not Found</div>} />
           </Routes>
         </Router>
-      </NotificationProvider>
-    </AuthProvider>
+      </CallProvider>
+    </NotificationProvider>
+  </AuthProvider>
   );
 }
 

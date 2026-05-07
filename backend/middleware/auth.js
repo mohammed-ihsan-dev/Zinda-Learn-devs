@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 // Protect routes (verify token)
+// Protect routes (verify token)
 export const protect = async (req, res, next) => {
   try {
     let token;
@@ -47,9 +48,45 @@ export const protect = async (req, res, next) => {
   }
 };
 
+// Optional protect (don't error if no token)
+export const optionalProtect = async (req, res, next) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (user) {
+      req.user = user;
+    }
+    next();
+  } catch (error) {
+    // If token is invalid, just proceed without req.user
+    next();
+  }
+};
+
 // Role-based access control
 export const authorize = (...roles) => {
   return (req, res, next) => {
+    // Check if user exists
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized - User data missing"
+      });
+    }
+
     // Check role
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({

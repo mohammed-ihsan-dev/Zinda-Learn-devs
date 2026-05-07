@@ -57,6 +57,25 @@ export const cloudinaryService = {
       throw error;
     }
   },
+  
+  /**
+   * Upload a file to Cloudinary (image or document)
+   * @param {string} filePath - Path to local file
+   * @param {string} folder - Folder name
+   * @returns {Promise<Object>}
+   */
+  uploadFile: async (filePath, folder = 'zinda-learn/others') => {
+    try {
+      const result = await cloudinary.uploader.upload(filePath, {
+        resource_type: 'auto',
+        folder: folder
+      });
+      return result;
+    } catch (error) {
+      console.error('Cloudinary file upload error:', error);
+      throw error;
+    }
+  },
 
   /**
    * Delete a video from Cloudinary

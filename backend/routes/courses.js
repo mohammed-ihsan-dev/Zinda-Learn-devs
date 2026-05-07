@@ -9,11 +9,11 @@ import {
   getInstructorCourses,
   submitCourse
 } from '../controllers/courseController.js';
-import { protect, isInstructor, isApprovedInstructor, authorize } from '../middleware/auth.js';
+import { protect, isInstructor, isApprovedInstructor, authorize, optionalProtect } from '../middleware/auth.js';
 
 // Public routes
 router.get('/', getCourses);
-router.get('/:id', getCourse);
+router.get('/:id', optionalProtect, getCourse);
 
 // Instructor routes
 router.get('/instructor/my-courses', protect, isInstructor, getInstructorCourses);

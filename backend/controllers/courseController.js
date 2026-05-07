@@ -29,7 +29,7 @@ export const getCourses = async (req, res) => {
 // Get single course
 export const getCourse = async (req, res) => {
   try {
-    const course = await courseService.getCourseById(req.params.id);
+    const course = await courseService.getCourseById(req.params.id, req.user?.id);
 
     if (!course) {
       return res.status(404).json({

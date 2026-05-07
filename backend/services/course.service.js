@@ -48,11 +48,30 @@ export const courseService = {
       Course.countDocuments(query)
     ]);
 
-    return { courses, total };
+    const coursesWithVirtuals = courses.map(course => course.toObject({ virtuals: true }));
+
+    return { courses: coursesWithVirtuals, total };
   },
 
-  getCourseById: async (id) => {
-    return await Course.findOne({ _id: id, isDeleted: { $ne: true } }).populate("instructor", "name avatar bio");
+  getCourseById: async (id, userId = null) => {
+    const course = await Course.findOne({ _id: id, isDeleted: { $ne: true } })
+      .populate("instructor", "name avatar bio");
+    
+    if (!course) return null;
+
+    // Convert to object to add dynamic properties
+    const courseObj = course.toObject({ virtuals: true });
+
+    if (userId) {
+      const enrollment = await Enrollment.findOne({ user: userId, course: id });
+      courseObj.enrolled = !!enrollment;
+      courseObj.enrollment = enrollment;
+    } else {
+      courseObj.enrolled = false;
+      courseObj.enrollment = null;
+    }
+
+    return courseObj;
   },
 
   getCourseBySlug: async (slug) => {

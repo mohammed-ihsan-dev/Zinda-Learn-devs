@@ -41,7 +41,7 @@ const EditCourse = () => {
   const fetchCourseDetails = async () => {
     try {
       const data = await getCourseById(id);
-      const course = data.course;
+      const course = data;
       
       // Authorization check (frontend)
       const userId = user.id || user._id;

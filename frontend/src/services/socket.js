@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
 
 class SocketService {
   socket = null;
@@ -83,6 +83,24 @@ class SocketService {
     }
   }
 
+  onLiveClassStarted(callback) {
+    if (this.socket) {
+      this.socket.on('liveClassStarted', callback);
+    }
+  }
+
+  onLiveClassEnded(callback) {
+    if (this.socket) {
+      this.socket.on('liveClassEnded', callback);
+    }
+  }
+
+  onLiveClassScheduled(callback) {
+    if (this.socket) {
+      this.socket.on('liveClassScheduled', callback);
+    }
+  }
+
   markAsSeen(conversationId, messageIds) {
     if (this.socket) {
       this.socket.emit('markAsSeen', { conversationId, messageIds });
@@ -108,6 +126,79 @@ class SocketService {
 
   offNotification() {
     this.socket?.off('newNotification');
+  }
+
+  offLiveClassStarted() {
+    this.socket?.off('liveClassStarted');
+  }
+
+  offLiveClassEnded() {
+    this.socket?.off('liveClassEnded');
+  }
+
+  offLiveClassScheduled() {
+    this.socket?.off('liveClassScheduled');
+  }
+
+  // Voice Call Signaling
+  emitCallUser(data) {
+    this.socket?.emit('call-user', data);
+  }
+
+  emitAcceptCall(data) {
+    this.socket?.emit('accept-call', data);
+  }
+
+  emitRejectCall(data) {
+    this.socket?.emit('reject-call', data);
+  }
+
+  emitWebRTCOffer(data) {
+    this.socket?.emit('webrtc-offer', data);
+  }
+
+  emitWebRTCAnswer(data) {
+    this.socket?.emit('webrtc-answer', data);
+  }
+
+  emitIceCandidate(data) {
+    this.socket?.emit('ice-candidate', data);
+  }
+
+  emitEndCall(data) {
+    this.socket?.emit('end-call', data);
+  }
+
+  onIncomingCall(callback) {
+    this.socket?.on('incoming-call', callback);
+  }
+
+  onCallAccepted(callback) {
+    this.socket?.on('call-accepted', callback);
+  }
+
+  onCallRejected(callback) {
+    this.socket?.on('call-rejected', callback);
+  }
+
+  onCallEnded(callback) {
+    this.socket?.on('call-ended', callback);
+  }
+
+  onWebRTCOffer(callback) {
+    this.socket?.on('webrtc-offer', callback);
+  }
+
+  onWebRTCAnswer(callback) {
+    this.socket?.on('webrtc-answer', callback);
+  }
+
+  onIceCandidate(callback) {
+    this.socket?.on('ice-candidate', callback);
+  }
+
+  onCallError(callback) {
+    this.socket?.on('call-error', callback);
   }
 }
 

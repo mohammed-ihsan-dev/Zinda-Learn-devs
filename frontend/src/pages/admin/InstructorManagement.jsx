@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Download, FileText, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getPendingInstructors, getAllUsers, approveInstructor, rejectInstructor } from '../../services/adminService';
+import { getPendingInstructors, getTutors, approveInstructor, rejectInstructor } from '../../services/adminService';
 import { toast } from 'react-hot-toast';
 
 const InstructorManagement = () => {
@@ -18,9 +18,8 @@ const InstructorManagement = () => {
       const pendingRes = await getPendingInstructors();
       setPendingRequests(pendingRes.data || []);
       
-      const allUsersRes = await getAllUsers();
-      const instructors = (allUsersRes.data || []).filter(u => u.role === 'instructor' && u.isApproved);
-      setActiveTutors(instructors);
+      const tutorsRes = await getTutors();
+      setActiveTutors(tutorsRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {

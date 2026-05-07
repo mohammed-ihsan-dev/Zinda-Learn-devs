@@ -18,9 +18,20 @@ export const getMyEnrollments = async (req, res) => {
     // Filter out enrollments where the course no longer exists
     const validEnrollments = enrollments.filter(e => e.course !== null);
 
+    // Convert to object to include virtuals on the course
+    const enrollmentsWithVirtuals = validEnrollments.map(e => {
+      const obj = e.toObject();
+      if (obj.course) {
+        // We need to manually ensure virtuals if the standard toObject doesn't catch them deep
+        const course = e.course;
+        obj.course = course.toObject({ virtuals: true });
+      }
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      enrollments: validEnrollments
+      enrollments: enrollmentsWithVirtuals
     });
   } catch (error) {
     res.status(500).json({

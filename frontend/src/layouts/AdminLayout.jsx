@@ -8,9 +8,9 @@ import {
 
 const adminMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
-  { label: 'Users', icon: Users, path: '/admin/user-management' },
+  { label: 'Students', icon: Users, path: '/admin/students' },
   { label: 'Tutors', icon: GraduationCap, path: '/admin/instructor-management' },
-  { label: 'Courses', icon: BookOpen, path: '/admin/course-approval' },
+  { label: 'Courses', icon: BookOpen, path: '/admin/courses' },
   { label: 'Payments', icon: CreditCard, path: '/admin/payments' },
   { label: 'Reports', icon: BarChart3, path: '/admin/analytics' },
   { label: 'Settings', icon: Settings, path: '/admin/settings' },

@@ -8,22 +8,29 @@ import {
   Megaphone,
   Plus,
   MessageCircle,
-  BookOpen
+  BookOpen,
+  Phone
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useCall } from "../../features/calls/context/CallContext";
+import VoiceRecorder from "../../features/calls/components/VoiceRecorder";
+import AudioMessage from "../../features/calls/components/AudioMessage";
 import { 
   getConversations, 
   getMessages, 
   sendMessage, 
   getEligibleContacts,
   broadcastMessage,
-  markAsRead
+  markAsRead,
+  uploadMessageFile
 } from "../../services/messageService";
 import socketService from "../../services/socket";
 import toast from "react-hot-toast";
+import EmojiPicker from 'emoji-picker-react';
 
 const Messages = () => {
   const { user: currentUser } = useAuth();
+  const { startCall, isConnected: isCallConnected, isCalling } = useCall();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -33,10 +40,26 @@ const Messages = () => {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [eligibleContacts, setEligibleContacts] = useState([]);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   
   const [typingUsers, setTypingUsers] = useState({});
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -141,7 +164,7 @@ const Messages = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!text.trim() || !selectedConversation) return;
+    if ((!text.trim() && attachments.length === 0) || !selectedConversation) return;
 
     // Safety Checks: Ensure we have a valid course and receiver context
     const courseId = selectedConversation.course?._id;
@@ -149,11 +172,15 @@ const Messages = () => {
 
     if (currentUser.role === 'student') {
       // Students ALWAYS message the instructor of the course
-      receiverId = selectedConversation.course?.instructor;
+      receiverId = selectedConversation.course?.instructor?._id || selectedConversation.course?.instructor;
     } else {
       // Instructors message the student in the conversation
-      const otherUser = selectedConversation.participants.find(p => p._id !== currentUser.id);
-      receiverId = otherUser?._id;
+      const otherUser = selectedConversation.participants.find(p => {
+        const pId = typeof p === 'object' ? (p._id || p.id) : p;
+        const cId = currentUser?._id || currentUser?.id;
+        return pId && cId && pId.toString() !== cId.toString();
+      });
+      receiverId = otherUser?._id || otherUser?.id;
     }
 
     if (!receiverId || !courseId) {
@@ -162,19 +189,23 @@ const Messages = () => {
     }
 
     const messageContent = text;
+    const messageAttachments = attachments;
     setText("");
+    setAttachments([]);
+    setShowEmojiPicker(false);
 
     try {
       const data = await sendMessage({
         receiverId,
         courseId,
-        text: messageContent
+        text: messageContent,
+        attachments: messageAttachments
       });
       
       // Add message immediately for sender (Optimistic UI)
       setMessages(prev => [...prev, {
         ...data.message,
-        sender: { _id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar }
+        sender: { _id: (currentUser?._id || currentUser?.id), name: currentUser.name, avatar: currentUser.avatar }
       }]);
       
       fetchConversations();
@@ -186,7 +217,6 @@ const Messages = () => {
       setText(messageContent);
     }
   };
-
   const handleStartNewChat = async (contact) => {
     try {
       // Create or find conversation
@@ -204,6 +234,54 @@ const Messages = () => {
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || "Failed to start chat";
       toast.error(errorMsg);
+    }
+  };
+
+  const handleSendVoiceMessage = async (audioBlob, duration) => {
+    if (!selectedConversation) return;
+
+    try {
+      setIsUploading(true);
+      const loadingToast = toast.loading("Sending voice message...");
+      
+      const file = new File([audioBlob], "voice_message.webm", { type: "audio/webm" });
+      const uploadData = await uploadMessageFile(file);
+
+      // Safety Checks: Ensure we have a valid course and receiver context
+      const courseId = selectedConversation.course?._id;
+      let receiverId = null;
+
+      if (currentUser.role === 'student') {
+        receiverId = selectedConversation.course?.instructor?._id || selectedConversation.course?.instructor;
+      } else {
+        const otherUser = selectedConversation.participants.find(p => {
+          const pId = typeof p === 'object' ? (p._id || p.id) : p;
+          const cId = currentUser?._id || currentUser?.id;
+          return pId && cId && pId.toString() !== cId.toString();
+        });
+        receiverId = otherUser?._id || otherUser?.id;
+      }
+
+      const data = await sendMessage({
+        receiverId,
+        courseId,
+        messageType: 'audio',
+        audioUrl: uploadData.url,
+        audioDuration: duration
+      });
+
+      setMessages(prev => [...prev, {
+        ...data.message,
+        sender: { _id: (currentUser?._id || currentUser?.id), name: currentUser.name, avatar: currentUser.avatar }
+      }]);
+      
+      toast.success("Voice message sent!", { id: loadingToast });
+      fetchConversations();
+    } catch (error) {
+      console.error("Error sending voice message:", error);
+      toast.error("Failed to send voice message");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -225,6 +303,43 @@ const Messages = () => {
       </div>
     );
   }
+
+  const handleEmojiClick = (emojiData) => {
+    setText(prev => prev + emojiData.emoji);
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      return toast.error("File size must be less than 10MB");
+    }
+
+    try {
+      setIsUploading(true);
+      const loadingToast = toast.loading("Uploading file...");
+      const data = await uploadMessageFile(file);
+      
+      setAttachments(prev => [...prev, {
+        url: data.url,
+        name: data.originalName,
+        type: data.resourceType,
+        format: data.format
+      }]);
+      
+      toast.success("File uploaded!", { id: loadingToast });
+    } catch (error) {
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleInputChange = (e) => {
     setText(e.target.value);
@@ -283,7 +398,11 @@ const Messages = () => {
         <div className="flex-1 overflow-y-auto">
           {conversations.length > 0 ? (
             conversations.map((conv) => {
-              const otherUser = conv.participants.find(p => p._id !== currentUser.id);
+              const otherUser = conv.participants.find(p => {
+                const pId = typeof p === 'object' ? (p._id || p.id) : p;
+                const cId = currentUser?._id || currentUser?.id;
+                return pId && cId && pId.toString() !== cId.toString();
+              });
               const isSelected = selectedConversation?._id === conv._id;
               
               return (
@@ -314,7 +433,7 @@ const Messages = () => {
                       <BookOpen size={10} /> {conv.course?.title}
                     </p>
                     <p className="text-xs text-gray-500 truncate leading-relaxed">
-                      {conv.lastMessage?.sender === currentUser.id ? "You: " : ""}{conv.lastMessage?.text}
+                      {conv.lastMessage?.sender === (currentUser?._id || currentUser?.id) ? "You: " : ""}{conv.lastMessage?.text}
                     </p>
                   </div>
                 </div>
@@ -335,7 +454,11 @@ const Messages = () => {
           <>
             {/* HEADER */}
             {(() => {
-              const otherUser = selectedConversation.participants.find(p => p._id !== currentUser.id);
+              const otherUser = selectedConversation.participants.find(p => {
+                const pId = typeof p === 'object' ? (p._id || p.id) : p;
+                const cId = currentUser?._id || currentUser?.id;
+                return pId && cId && pId.toString() !== cId.toString();
+              });
               return (
                 <div className="flex items-center justify-between px-8 py-6 bg-white border-b border-gray-100 shadow-sm z-10">
                   <div className="flex items-center gap-4">
@@ -354,11 +477,29 @@ const Messages = () => {
                       </div>
                     </div>
                   </div>
-                  {typingUsers[selectedConversation._id] && (
-                    <div className="px-4 py-1.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold animate-pulse uppercase tracking-widest">
-                      {typingUsers[selectedConversation._id]} is typing...
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {typingUsers[selectedConversation._id] && (
+                      <div className="px-4 py-1.5 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold animate-pulse uppercase tracking-widest hidden md:block">
+                        {typingUsers[selectedConversation._id]} is typing...
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => startCall(
+                        otherUser?._id || otherUser?.id, 
+                        otherUser?.name, 
+                        otherUser?.avatar, 
+                        selectedConversation._id
+                      )}
+                      disabled={isCallConnected || isCalling}
+                      className="p-3 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl transition-all shadow-lg shadow-purple-200 group relative"
+                      title="Voice Call"
+                    >
+                      <Phone size={20} />
+                      <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        Voice Call
+                      </span>
+                    </button>
+                  </div>
                 </div>
               );
             })()}
@@ -417,9 +558,13 @@ const Messages = () => {
                                 : "text-gray-700 rounded-[22px] rounded-bl-none border border-gray-100"
                             }`}
                           >
-                            <p className="text-[14.5px] leading-relaxed font-medium whitespace-pre-wrap break-words">
-                              {msg.text}
-                            </p>
+                            {msg.messageType === 'audio' ? (
+                              <AudioMessage url={msg.audioUrl} duration={msg.audioDuration} isMe={isMe} />
+                            ) : (
+                              <p className="text-[14.5px] leading-relaxed font-medium whitespace-pre-wrap break-words">
+                                {msg.text}
+                              </p>
+                            )}
                           </div>
                           
                           <div className={`flex items-center mt-1.5 px-1 gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
@@ -447,6 +592,23 @@ const Messages = () => {
                               </div>
                             )}
                           </div>
+
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className={`mt-2 flex flex-wrap gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+                              {msg.attachments.map((file, i) => (
+                                <a 
+                                  key={i}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-100 rounded-xl shadow-sm hover:bg-gray-50 transition-all group"
+                                >
+                                  <Paperclip size={14} className="text-purple-600" />
+                                  <span className="text-[11px] font-bold text-gray-700 truncate max-w-[150px]">{file.name}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -463,40 +625,82 @@ const Messages = () => {
               )}
               <div ref={messagesEndRef} />
             </div>            {/* INPUT AREA */}
-            <div className="p-6 bg-white border-t border-gray-100 flex items-center gap-4">
-              <div className="flex gap-1">
-                <button className="p-3 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-all duration-200">
-                  <Paperclip size={20} />
-                </button>
-                <button className="p-3 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-all duration-200">
-                  <Smile size={20} />
+            <div className="p-6 bg-white border-t border-gray-100 flex flex-col gap-4">
+              {/* Attachment Previews */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-2">
+                  {attachments.map((file, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full border border-purple-100 group relative">
+                      <Paperclip size={12} />
+                      <span className="text-[10px] font-bold truncate max-w-[100px]">{file.name}</span>
+                      <button 
+                        onClick={() => removeAttachment(i)}
+                        className="w-4 h-4 bg-purple-200 rounded-full flex items-center justify-center hover:bg-purple-300 transition-colors"
+                      >
+                        <Plus size={10} className="rotate-45" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-4">
+                <div className="flex gap-1">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="p-3 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-all duration-200 disabled:opacity-50"
+                  >
+                    <Paperclip size={20} />
+                  </button>
+                  <div className="relative" ref={emojiPickerRef}>
+                    <button 
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-3 rounded-full transition-all duration-200 ${showEmojiPicker ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                    >
+                      <Smile size={20} />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-4 z-[100] shadow-2xl scale-90 origin-bottom-left">
+                        <EmojiPicker onEmojiClick={handleEmojiClick} />
+                      </div>
+                    )}
+                  </div>
+                  <VoiceRecorder onSend={handleSendVoiceMessage} />
+                </div>
+
+                <div className="flex-1 relative group">
+                  <input
+                    value={text}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    placeholder="Type your message here..."
+                    disabled={isUploading}
+                    className="w-full px-6 py-3.5 bg-gray-50 border border-gray-100 rounded-[30px] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:bg-white focus:border-cyan-200 transition-all font-medium placeholder:text-gray-400 disabled:opacity-50"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSendMessage}
+                  disabled={(!text.trim() && attachments.length === 0) || isUploading}
+                  style={{
+                    background: (text.trim() || attachments.length > 0) ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' : '#f3f4f6'
+                  }}
+                  className={`p-4 rounded-full transition-all duration-300 transform active:scale-90 ${
+                    (text.trim() || attachments.length > 0)
+                      ? "text-white shadow-lg shadow-cyan-200 rotate-0"
+                      : "text-gray-300 cursor-not-allowed"
+                  }`}
+                >
+                  <Send size={20} className={(text.trim() || attachments.length > 0) ? "translate-x-0.5 -translate-y-0.5" : ""} />
                 </button>
               </div>
-
-              <div className="flex-1 relative group">
-                <input
-                  value={text}
-                  onChange={handleInputChange}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                  placeholder="Type your message here..."
-                  className="w-full px-6 py-3.5 bg-gray-50 border border-gray-100 rounded-[30px] text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:bg-white focus:border-cyan-200 transition-all font-medium placeholder:text-gray-400"
-                />
-              </div>
-
-              <button
-                onClick={handleSendMessage}
-                disabled={!text.trim()}
-                style={{
-                  background: text.trim() ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' : '#f3f4f6'
-                }}
-                className={`p-4 rounded-full transition-all duration-300 transform active:scale-90 ${
-                  text.trim()
-                    ? "text-white shadow-lg shadow-cyan-200 rotate-0"
-                    : "text-gray-300 cursor-not-allowed"
-                }`}
-              >
-                <Send size={20} className={text.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
-              </button>
             </div>
           </>
         ) : (

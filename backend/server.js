@@ -15,6 +15,9 @@ import instructorRoutes from './routes/instructor.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import videoRoutes from './routes/video.routes.js';
+import liveClassRoutes from './modules/liveClasses/routes/liveClass.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+
 
 // Load env vars
 dotenv.config();
@@ -57,6 +60,9 @@ app.use('/api/instructor', instructorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/live-classes', liveClassRoutes);
+app.use('/api/upload', uploadRoutes);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -81,7 +87,7 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5005;
 
 httpServer.listen(PORT, () => {
   console.log(` Server running on port ${PORT}`);

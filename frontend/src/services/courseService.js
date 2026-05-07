@@ -9,7 +9,8 @@ export const getCourses = async (params = {}) => {
 
 export const getCourseById = async (id) => {
   const response = await api.get(`/courses/${id}`);
-  return response.data;
+  // Handle both { success, course } and { success, data: { course } } or { success, data }
+  return response.data.course || response.data.data || response.data;
 };
 
 export const updateCourse = async (id, courseData) => {

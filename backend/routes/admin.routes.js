@@ -18,7 +18,10 @@ import {
   approveCourse,
   declineCourse,
   getDashboardStats,
-  getPayments
+  getPayments,
+  getStudents,
+  getStudentStats,
+  getTutors
 } from '../controllers/admin.controller.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -30,10 +33,10 @@ router.get('/instructors/pending', getPendingInstructors);
 router.put('/instructor/:id/approve', approveInstructor);
 router.delete('/instructor/:id', rejectInstructor);
 
-// 2. User Management
-router.get('/users', getAllUsers);
-router.post('/users', createUser);
-router.put('/users/:id', updateUser);
+// 2. Student Management
+router.get('/students', getStudents);
+router.get('/students/stats', getStudentStats);
+router.get('/tutors', getTutors);
 router.patch('/users/:id/block', blockUser);
 router.patch('/users/:id/unblock', unblockUser);
 router.patch('/users/:id/delete', deleteUser);
