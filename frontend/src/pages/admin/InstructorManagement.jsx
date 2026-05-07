@@ -1,38 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, FileText, MoreVertical, ChevronLeft, ChevronRight, UserCheck, ShieldCheck } from 'lucide-react';
+import { Plus, Download, FileText, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPendingInstructors, getTutors, approveInstructor, rejectInstructor } from '../../services/adminService';
 import { toast } from 'react-hot-toast';
-import Pagination from '../../components/common/Pagination';
 
 const InstructorManagement = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [activeTutors, setActiveTutors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-    limit: 10
-  });
 
   useEffect(() => {
     fetchData();
-  }, [currentPage]);
+  }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const pendingRes = await getPendingInstructors();
       setPendingRequests(pendingRes.data || []);
-      
-      const tutorsRes = await getTutors({ page: currentPage, limit: 10 });
+
+      const tutorsRes = await getTutors();
       setActiveTutors(tutorsRes.data || []);
-      if (tutorsRes.pagination) {
-        setPagination(tutorsRes.pagination);
-      }
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -61,75 +48,79 @@ const InstructorManagement = () => {
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade-in pb-10 space-y-12">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+    <div className="animate-fade-in pb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Tutor Management</h1>
-          <p className="text-zinc-500 font-medium max-w-2xl">
+          <h1 className="text-3xl font-bold text-white mb-2">Tutor Management</h1>
+          <p className="text-zinc-400 text-sm max-w-2xl">
             Oversee pending applications and monitor active tutor performance.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-6 py-3 bg-[#1c1c21] hover:bg-[#27272a] text-zinc-300 text-xs font-black uppercase tracking-widest rounded-2xl border border-[#27272a] transition-all">
-            Export Data
+          <button className="px-5 py-2.5 bg-[#1c1c21] hover:bg-[#27272a] text-white text-xs font-bold rounded-xl border border-[#27272a] transition-colors">
+            Export Report
           </button>
-          <button className="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-purple-200 transition-all active:scale-95">
+          <button className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all flex items-center gap-2">
             Add New Tutor
           </button>
         </div>
       </div>
 
       {/* Pending Requests */}
-      <div>
-        <div className="flex items-center gap-3 mb-8">
-           <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-              <ShieldCheck size={20} />
-           </div>
-           <div>
-              <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Onboarding</h2>
-              <p className="text-lg font-black text-white tracking-tight">Pending Requests ({pendingRequests.length})</p>
-           </div>
+      <div className="mb-12">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]"></div>
+          <h2 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PENDING REQUESTS ({pendingRequests.length})</h2>
         </div>
 
         {pendingRequests.length === 0 ? (
-          <div className="bg-[#1c1c21] border border-dashed border-[#27272a] rounded-[32px] p-16 text-center">
-            <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">No pending requests at the moment.</p>
+          <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-10 text-center">
+            <p className="text-zinc-500 text-sm">No pending requests at the moment.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pendingRequests.map(req => (
-              <div key={req._id} className="bg-[#1c1c21] border border-[#27272a] rounded-[32px] p-8 flex flex-col hover:border-purple-500/30 transition-all group">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-4">
-                    <img src={req.avatar || `https://ui-avatars.com/api/?name=${req.name}&background=random`} alt={req.name} className="w-14 h-14 rounded-2xl object-cover border border-[#27272a] shadow-lg shadow-black/20" />
+              <div key={req._id} className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-5 flex flex-col hover:border-[#3f3f46] transition-colors">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <img src={req.avatar || `https://ui-avatars.com/api/?name=${req.name}&background=random`} alt={req.name} className="w-10 h-10 rounded-full object-cover border border-[#27272a]" />
                     <div>
-                      <h3 className="text-base font-black text-white tracking-tight">{req.name}</h3>
-                      <p className="text-[10px] text-purple-400 font-black tracking-widest uppercase">{req.email}</p>
+                      <h3 className="text-sm font-bold text-white">{req.name}</h3>
+                      <p className="text-[10px] text-purple-400 font-bold tracking-wider">{req.email}</p>
                     </div>
                   </div>
-                  <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20 uppercase tracking-widest">
-                    Pending
+                  <span className="text-[9px] font-bold text-zinc-500 bg-[#121212] px-2 py-1 rounded-md border border-[#27272a]">
+                    NEW
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed mb-6 flex-1 font-medium italic">
-                  "{req.bio || 'No bio provided for this applicant.'}"
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4 flex-1">
+                  {req.bio || 'No bio provided.'}
                 </p>
+                {req.resume && (
+                  <div className="flex items-center gap-2 bg-[#121212] p-2.5 rounded-lg border border-[#27272a] mb-5">
+                    <FileText className="w-4 h-4 text-purple-400" />
+                    <span className="text-[10px] font-bold text-zinc-300 truncate">Resume.pdf</span>
+                  </div>
+                )}
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => handleReject(req._id)}
-                    className="flex-1 py-4 bg-[#121212] hover:bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-rose-500/20 transition-all"
+                    className="flex-1 py-2.5 bg-[#121212] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl border border-[#27272a] transition-colors"
                   >
                     Reject
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleApprove(req._id)}
-                    className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-purple-900/20 transition-all"
+                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-[0_0_10px_rgba(147,51,234,0.3)] transition-colors"
                   >
                     Approve
                   </button>
@@ -141,71 +132,50 @@ const InstructorManagement = () => {
       </div>
 
       {/* Active Tutors */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-3">
-           <div className="w-10 h-10 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-              <UserCheck size={20} />
-           </div>
-           <div>
-              <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Community</h2>
-              <p className="text-lg font-black text-white tracking-tight">Active Instructors ({pagination.totalItems})</p>
-           </div>
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">ACTIVE TUTORS ({activeTutors.length})</h2>
         </div>
 
-        <div className="bg-[#1c1c21] border border-[#27272a] rounded-[40px] overflow-hidden shadow-2xl shadow-black/20">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#27272a] bg-[#121212]/50">
-                  <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Tutor Details</th>
-                  <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Contact</th>
-                  <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Joined</th>
-                  <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#27272a]">
-                {loading && activeTutors.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="p-20 text-center">
-                       <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
-                    </td>
-                  </tr>
-                ) : activeTutors.map(tutor => (
-                  <tr key={tutor._id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="p-8">
-                      <div className="flex items-center gap-5">
-                        <img src={tutor.avatar || `https://ui-avatars.com/api/?name=${tutor.name}&background=random`} alt={tutor.name} className="w-12 h-12 rounded-2xl object-cover border border-[#27272a] shadow-md group-hover:scale-105 transition-transform" />
-                        <div>
-                          <p className="text-sm font-black text-white leading-none mb-1.5">{tutor.name}</p>
-                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Certified Instructor</p>
-                        </div>
+        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#27272a] bg-[#121212]/50">
+                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">TUTOR DETAILS</th>
+                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center">EMAIL</th>
+                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center">JOINED</th>
+                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#27272a]">
+              {activeTutors.map(tutor => (
+                <tr key={tutor._id} className="hover:bg-[#25252b] transition-colors group">
+                  <td className="p-5">
+                    <div className="flex items-center gap-4">
+                      <img src={tutor.avatar || `https://ui-avatars.com/api/?name=${tutor.name}&background=random`} alt={tutor.name} className="w-10 h-10 rounded-full object-cover border border-[#27272a]" />
+                      <div>
+                        <p className="text-sm font-bold text-white">{tutor.name}</p>
+                        <p className="text-[10px] text-zinc-500">Instructor</p>
                       </div>
-                    </td>
-                    <td className="p-8 text-center">
-                      <span className="text-xs font-bold text-zinc-400">{tutor.email}</span>
-                    </td>
-                    <td className="p-8 text-center">
-                      <span className="text-xs font-bold text-zinc-400">
-                        {new Date(tutor.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </span>
-                    </td>
-                    <td className="p-8 text-right">
-                      <button className="text-zinc-500 hover:text-white transition-colors p-3 hover:bg-white/5 rounded-2xl">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="p-10 border-t border-[#27272a] bg-[#1c1c21]">
-            <Pagination 
-              pagination={pagination} 
-              onPageChange={handlePageChange} 
-            />
-          </div>
+                    </div>
+                  </td>
+                  <td className="p-5 text-center">
+                    <span className="text-xs text-zinc-400">{tutor.email}</span>
+                  </td>
+                  <td className="p-5 text-center">
+                    <span className="text-xs text-zinc-400">
+                      {new Date(tutor.createdAt).toLocaleDateString()}
+                    </span>
+                  </td>
+                  <td className="p-5 text-right">
+                    <button className="text-zinc-500 hover:text-white transition-colors p-2">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

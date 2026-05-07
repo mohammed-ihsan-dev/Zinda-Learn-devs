@@ -15,40 +15,22 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import liveClassService from '../services/liveClassService';
-import Pagination from '../../../components/common/Pagination';
 
 const InstructorLiveClasses = () => {
   const [liveClasses, setLiveClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-    limit: 9
-  });
 
   useEffect(() => {
     fetchLiveClasses();
-  }, [currentPage, filter]);
+  }, []);
 
   const fetchLiveClasses = async () => {
     try {
       setLoading(true);
-      const params = {
-        page: currentPage,
-        limit: 9,
-        status: filter === 'ALL' ? '' : filter
-      };
-      const response = await liveClassService.getInstructorLiveClasses(params);
+      const response = await liveClassService.getInstructorLiveClasses();
       if (response.success) {
         setLiveClasses(response.data);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
       }
     } catch (error) {
       toast.error('Failed to fetch live classes');
@@ -56,16 +38,6 @@ const InstructorLiveClasses = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleFilterChange = (f) => {
-    setFilter(f);
-    setCurrentPage(1);
   };
 
   const handleStartClass = async (id) => {
@@ -105,7 +77,19 @@ const InstructorLiveClasses = () => {
     }
   };
 
-  if (loading && liveClasses.length === 0) {
+  const filteredClasses = liveClasses.filter(c => {
+    if (filter === 'ALL') return true;
+    return c.status === filter;
+  });
+
+  const stats = {
+    total: liveClasses.length,
+    upcoming: liveClasses.filter(c => c.status === 'UPCOMING').length,
+    live: liveClasses.filter(c => c.status === 'LIVE').length,
+    completed: liveClasses.filter(c => c.status === 'ENDED').length
+  };
+
+  if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col justify-center items-center gap-4">
         <div className="relative">
@@ -114,13 +98,13 @@ const InstructorLiveClasses = () => {
             <Video size={20} className="text-purple-600 animate-pulse" />
           </div>
         </div>
-        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Loading Sessions...</p>
+        <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Loading Sessions...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700 pb-20">
+    <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-12 gap-6">
         <div>
@@ -141,13 +125,20 @@ const InstructorLiveClasses = () => {
         </Link>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <StatCard title="Upcoming" value={stats.upcoming} icon={<Clock />} color="bg-amber-500" />
+        <StatCard title="Live Now" value={stats.live} icon={<Video />} color="bg-rose-500" pulse />
+        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 />} color="bg-emerald-500" />
+      </div>
+
       {/* Filters & Navigation */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 bg-white/50 backdrop-blur-sm p-2 rounded-[28px] border border-slate-100/50">
         <div className="flex items-center gap-1 w-full md:w-auto">
           {['ALL', 'UPCOMING', 'LIVE', 'ENDED'].map(f => (
             <button
               key={f}
-              onClick={() => handleFilterChange(f)}
+              onClick={() => setFilter(f)}
               className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${filter === f
                 ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
                 : 'text-slate-500 hover:bg-slate-50'
@@ -159,19 +150,19 @@ const InstructorLiveClasses = () => {
         </div>
 
         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">
-          Showing {pagination.totalItems} sessions
+          Showing {filteredClasses.length} sessions
         </div>
       </div>
 
       {/* Classes Grid */}
-      {liveClasses.length === 0 ? (
+      {filteredClasses.length === 0 ? (
         <div className="bg-white rounded-[40px] border border-slate-100 p-20 text-center shadow-sm">
           <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
             <Video className="text-slate-200" size={40} />
           </div>
           <h3 className="text-2xl font-black text-slate-900 mb-2">No Sessions Found</h3>
           <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium text-sm leading-relaxed">
-            Try adjusting your filters or schedule your first live interaction with your students today.
+            Ready to teach? Schedule your first live interaction with your students today.
           </p>
           <Link
             to="/instructor/live-classes/create"
@@ -181,28 +172,34 @@ const InstructorLiveClasses = () => {
           </Link>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {liveClasses.map((liveClass) => (
-              <LiveClassCard
-                key={liveClass._id}
-                liveClass={liveClass}
-                onStart={() => handleStartClass(liveClass._id)}
-                onEnd={() => handleEndClass(liveClass._id)}
-                onDelete={() => handleDeleteClass(liveClass._id)}
-              />
-            ))}
-          </div>
-          
-          <Pagination 
-            pagination={pagination} 
-            onPageChange={handlePageChange} 
-          />
-        </>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredClasses.map((liveClass) => (
+            <LiveClassCard
+              key={liveClass._id}
+              liveClass={liveClass}
+              onStart={() => handleStartClass(liveClass._id)}
+              onEnd={() => handleEndClass(liveClass._id)}
+              onDelete={() => handleDeleteClass(liveClass._id)}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 };
+
+const StatCard = ({ title, value, icon, color, pulse }) => (
+  <div className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
+    <div className={`absolute top-0 right-0 w-32 h-32 ${color} opacity-[0.03] rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500`}></div>
+    <div className="flex items-center justify-between mb-4 relative z-10">
+      <div className={`p-4 rounded-2xl ${color} bg-opacity-10 ${pulse ? 'animate-pulse' : ''} text-[${color}]`}>
+        {React.cloneElement(icon, { size: 22, className: color.replace('bg-', 'text-') })}
+      </div>
+      <span className="text-3xl font-black text-slate-900 tracking-tighter">{value}</span>
+    </div>
+    <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">{title}</h3>
+  </div>
+);
 
 const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
   const statusConfig = {

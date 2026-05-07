@@ -3,37 +3,26 @@ import { Calendar, ChevronDown, Download, Plus, MoreVertical, CreditCard, Wallet
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { getPayments, getDashboardStats } from '../../services/adminService';
 import { toast } from 'react-hot-toast';
-import Pagination from '../../components/common/Pagination';
 
 const Payments = () => {
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-    limit: 10
-  });
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0 });
 
   useEffect(() => {
     fetchData();
-  }, [currentPage]);
+  }, [pagination.page]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [paymentsRes, statsRes] = await Promise.all([
-        getPayments({ page: currentPage, limit: 10 }),
+        getPayments({ page: pagination.page, limit: pagination.limit }),
         getDashboardStats()
       ]);
       setTransactions(paymentsRes.data || []);
-      if (paymentsRes.pagination) {
-        setPagination(paymentsRes.pagination);
-      }
+      setPagination(prev => ({ ...prev, total: paymentsRes.total || 0 }));
       setStats(statsRes.data);
     } catch (error) {
       toast.error('Failed to load financial data');
@@ -42,190 +31,179 @@ const Payments = () => {
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
-    <div className="animate-fade-in pb-10 space-y-12">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+    <div className="animate-fade-in pb-10">
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Financial Ledger</h1>
-          <p className="text-zinc-500 font-medium max-w-2xl">
+          <h1 className="text-3xl font-bold text-white mb-2">Financial Ledger</h1>
+          <p className="text-zinc-400 text-sm max-w-2xl">
             Oversee global transactions and platform revenue performance.
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <StatSummaryCard 
-          title="Net Revenue" 
-          value={formatCurrency(stats?.totalRevenue || 0)} 
-          icon={Wallet} 
-          trend="12.4%" 
-          color="purple" 
-        />
-        <StatSummaryCard 
-          title="Platform Margin (15%)" 
-          value={formatCurrency((stats?.totalRevenue || 0) * 0.15)} 
-          icon={CreditCard} 
-          trend="8.2%" 
-          color="blue" 
-        />
-        <StatSummaryCard 
-          title="Total Enrollments" 
-          value={pagination.totalItems.toLocaleString()} 
-          icon={TrendingUp} 
-          trend="18.5%" 
-          color="rose" 
-        />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl"></div>
+          <div className="flex justify-between items-start mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-purple-400">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> 12.4%
+            </span>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Net Platform Revenue</p>
+            <h3 className="text-3xl font-bold text-white">{formatCurrency(stats?.totalRevenue || 0)}</h3>
+          </div>
+        </div>
+
+        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
+          <div className="flex justify-between items-start mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-blue-400">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> 8.2%
+            </span>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Platform Margin (15%)</p>
+            <h3 className="text-3xl font-bold text-white">{formatCurrency((stats?.totalRevenue || 0) * 0.15)}</h3>
+          </div>
+        </div>
+
+        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl"></div>
+          <div className="flex justify-between items-start mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-rose-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> 18.5%
+            </span>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Enrollments</p>
+            <h3 className="text-3xl font-bold text-white">{pagination.total.toLocaleString()}</h3>
+          </div>
+        </div>
       </div>
 
       {/* Filters & Actions */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-[#1c1c21] p-3 rounded-[32px] border border-[#27272a] shadow-xl shadow-black/20">
-        <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto hide-scrollbar">
-          <button className="flex items-center gap-3 px-6 py-3 bg-[#121212] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all whitespace-nowrap">
-            <Calendar className="w-4 h-4 text-purple-500" />
-            Lifetime Range
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
+            <Calendar className="w-4 h-4 text-zinc-500" />
+            Oct 1, 2023 - Oct 31, 2023
             <ChevronDown className="w-4 h-4 ml-2" />
           </button>
-          <button className="flex items-center gap-3 px-6 py-3 bg-[#121212] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all whitespace-nowrap">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
             All Statuses
             <ChevronDown className="w-4 h-4 ml-2" />
           </button>
         </div>
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          <button className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-6 py-3 bg-[#121212] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all">
-            <Download className="w-4 h-4" />
-            Export
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
+            Export CSV
           </button>
-          <button className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-purple-900/20 transition-all active:scale-95">
-            <Plus className="w-4 h-4" />
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 text-white text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all">
             New Payout
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-[#1c1c21] border border-[#27272a] rounded-[40px] overflow-hidden shadow-2xl shadow-black/40">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="border-b border-[#27272a] bg-[#121212]/50">
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Transaction ID</th>
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Recipient Details</th>
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Amount</th>
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Date</th>
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Status</th>
-                <th className="p-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Action</th>
+      <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr className="border-b border-[#27272a]">
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">TRANSACTION ID</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">USER</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AMOUNT</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">DATE</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">STATUS</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">METHOD</th>
+              <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#27272a]/50">
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-20 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-4" />
+                  <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">Loading transactions...</p>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#27272a]/50">
-              {loading && transactions.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="p-20 text-center">
-                    <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
-                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Auditing Ledger...</p>
-                  </td>
-                </tr>
-              ) : transactions.length > 0 ? transactions.map((tx) => (
-                <tr key={tx._id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="p-8">
-                     <span className="px-3 py-1.5 bg-[#121212] border border-[#27272a] rounded-xl text-[10px] font-black text-zinc-500 font-mono tracking-wider group-hover:text-purple-400 group-hover:border-purple-500/30 transition-all">
-                        #{tx.razorpayOrderId?.split('_')[1] || tx._id.slice(-8).toUpperCase()}
-                     </span>
-                  </td>
-                  <td className="p-8">
-                    <div className="flex items-center gap-4">
-                      <img 
-                        src={tx.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.user?.name || 'User')}&background=random`} 
-                        alt={tx.user?.name} 
-                        className="w-10 h-10 rounded-2xl object-cover border border-[#27272a] shadow-lg shadow-black/20" 
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-white mb-1 leading-none">{tx.user?.name || 'Unknown User'}</span>
-                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wide line-clamp-1 max-w-[200px]">{tx.course?.title || 'Course Purchase'}</span>
-                      </div>
+            ) : transactions.length > 0 ? transactions.map((tx) => (
+              <tr key={tx._id} className="hover:bg-[#25252b] transition-colors group">
+                <td className="p-5 text-sm font-mono text-zinc-400">#{tx.razorpayOrderId?.split('_')[1] || tx._id.slice(-8).toUpperCase()}</td>
+                <td className="p-5">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={tx.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.user?.name || 'User')}&background=random`}
+                      alt={tx.user?.name}
+                      className="w-8 h-8 rounded-full object-cover border border-[#27272a]"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-white">{tx.user?.name || 'Unknown User'}</span>
+                      <span className="text-[10px] text-zinc-500">{tx.course?.title || 'Unknown Course'}</span>
                     </div>
-                  </td>
-                  <td className="p-8 text-center">
-                     <span className="text-base font-black text-emerald-400 tracking-tight">{formatCurrency(tx.amountPaid)}</span>
-                  </td>
-                  <td className="p-8 text-center">
-                     <div className="flex flex-col items-center">
-                        <span className="text-xs font-black text-zinc-300">{new Date(tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                        <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mt-1">{new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                     </div>
-                  </td>
-                  <td className="p-8 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#121212] border border-[#27272a] rounded-xl">
-                      <div className={`w-1.5 h-1.5 rounded-full ${tx.paymentStatus === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`}></div>
-                      <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${tx.paymentStatus === 'completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {tx.paymentStatus}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-8 text-right">
-                    <button className="text-zinc-500 hover:text-white transition-colors p-3 hover:bg-white/5 rounded-2xl">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="6" className="p-20 text-center">
-                    <CreditCard className="w-16 h-16 text-zinc-800 mx-auto mb-6" />
-                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">No financial history found</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  </div>
+                </td>
+                <td className="p-5 text-sm font-bold text-white">{formatCurrency(tx.amountPaid)}</td>
+                <td className="p-5 text-sm text-zinc-400">{new Date(tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td className="p-5">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${tx.paymentStatus === 'completed' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]'}`}></div>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${tx.paymentStatus === 'completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {tx.paymentStatus}
+                    </span>
+                  </div>
+                </td>
+                <td className="p-5">
+                  <span className="flex items-center gap-2 text-sm text-zinc-300">
+                    <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center text-[8px] font-bold text-white italic">R</div>
+                    Razorpay
+                  </span>
+                </td>
+                <td className="p-5 text-right">
+                  <button className="text-zinc-500 hover:text-white transition-colors p-2">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan="7" className="p-20 text-center">
+                  <CreditCard className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+                  <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">No transactions found</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        <div className="p-4 border-t border-[#27272a] bg-[#121212]/30 flex justify-between items-center">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+            Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total.toLocaleString()} transactions
+          </span>
+          <div className="flex gap-1">
+            <button
+              disabled={pagination.page === 1}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+              className="w-6 h-6 flex items-center justify-center rounded bg-[#1c1c21] border border-[#27272a] text-zinc-400 hover:text-white transition-colors text-xs font-bold disabled:opacity-30"
+            >‹</button>
+            <button className="w-6 h-6 flex items-center justify-center rounded bg-purple-600 text-white font-bold text-xs shadow-[0_0_10px_rgba(147,51,234,0.3)]">{pagination.page}</button>
+            <button
+              disabled={pagination.page * pagination.limit >= pagination.total}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+              className="w-6 h-6 flex items-center justify-center rounded bg-[#1c1c21] border border-[#27272a] text-zinc-400 hover:bg-[#27272a] hover:text-white transition-colors text-xs font-bold disabled:opacity-30"
+            >›</button>
+          </div>
         </div>
-        
-        <div className="p-10 border-t border-[#27272a] bg-[#1c1c21]">
-           <Pagination 
-             pagination={pagination} 
-             onPageChange={handlePageChange} 
-           />
-        </div>
-      </div>
-      
-      {/* Footer Info */}
-      {!loading && transactions.length > 0 && (
-        <div className="flex items-center justify-center">
-           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-[#1c1c21] px-6 py-3 rounded-2xl border border-[#27272a]">
-              Displaying {transactions.length} of {pagination.totalItems} platform transactions
-           </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const StatSummaryCard = ({ title, value, icon: Icon, trend, color }) => {
-  const colors = {
-    purple: 'text-purple-400 bg-purple-500/10 shadow-purple-500/20',
-    blue: 'text-blue-400 bg-blue-500/10 shadow-blue-500/20',
-    rose: 'text-rose-400 bg-rose-500/10 shadow-rose-500/20'
-  };
-
-  return (
-    <div className="bg-[#1c1c21] border border-[#27272a] rounded-[40px] p-8 group hover:border-purple-500/30 transition-all relative overflow-hidden shadow-2xl shadow-black/40">
-      <div className={`absolute -right-8 -top-8 w-40 h-40 ${colors[color].split(' ')[1]} rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity duration-700`}></div>
-      <div className="flex justify-between items-start mb-8 relative z-10">
-        <div className={`w-14 h-14 rounded-3xl ${colors[color].split(' ').slice(0,2).join(' ')} flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
-          <Icon className="w-7 h-7" />
-        </div>
-        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 flex items-center gap-1.5 uppercase tracking-widest">
-          <ArrowUpRight className="w-3 h-3" /> {trend}
-        </span>
-      </div>
-      <div className="relative z-10">
-        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">{title}</p>
-        <h3 className="text-4xl font-black text-white tracking-tighter">{value}</h3>
       </div>
     </div>
   );

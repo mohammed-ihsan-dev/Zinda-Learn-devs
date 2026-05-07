@@ -5,8 +5,8 @@ export const createCourse = async (courseData) => {
   return data;
 };
 
-export const getInstructorCourses = async (params = {}) => {
-  const { data } = await api.get('/courses/instructor/my-courses', { params });
+export const getInstructorCourses = async () => {
+  const { data } = await api.get('/courses/instructor/my-courses');
   return data;
 };
 
@@ -25,7 +25,7 @@ export const submitCourse = async (id) => {
   return data;
 };
 
-export const getInstructorStudents = async (params = {}) => {
-  const { data } = await api.get('/instructor/students', { params });
+export const getInstructorStudents = async () => {
+  const { data } = await api.get('/instructor/students');
   return data;
 };

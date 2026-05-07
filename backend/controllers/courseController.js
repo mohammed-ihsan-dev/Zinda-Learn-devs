@@ -4,12 +4,19 @@ import { courseService } from "../services/course.service.js";
 // Get all courses 
 export const getCourses = async (req, res) => {
   try {
-    const { courses, pagination } = await courseService.getPublishedCourses(req.query);
+    const { page = 1, limit = 12 } = req.query;
+
+    const { courses, total } = await courseService.getPublishedCourses(req.query);
 
     res.status(200).json({
       success: true,
       courses,
-      pagination
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -184,12 +191,12 @@ export const deleteCourse = async (req, res) => {
 
 // Get instructor courses
 export const getInstructorCourses = async (req, res) => {
-    const { courses, pagination } = await courseService.getInstructorCourses(req.user.id, req.query);
+  try {
+    const courses = await courseService.getInstructorCourses(req.user.id);
 
     res.status(200).json({
       success: true,
-      courses,
-      pagination
+      courses
     });
   } catch (error) {
     res.status(500).json({
@@ -201,12 +208,12 @@ export const getInstructorCourses = async (req, res) => {
 
 // Get all courses (admin)
 export const getAllCoursesAdmin = async (req, res) => {
-    const { courses, pagination } = await courseService.getAllCoursesAdmin(req.query);
+  try {
+    const courses = await courseService.getAllCoursesAdmin();
 
     res.status(200).json({
       success: true,
-      courses,
-      pagination
+      courses
     });
   } catch (error) {
     res.status(500).json({

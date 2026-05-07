@@ -18,8 +18,8 @@ export const updateCourse = async (id, courseData) => {
   return response.data;
 };
 
-export const getMyEnrollments = async (params = {}) => {
-  const response = await api.get('/enrollments', { params });
+export const getMyEnrollments = async () => {
+  const response = await api.get('/enrollments');
   return response.data;
 };
 

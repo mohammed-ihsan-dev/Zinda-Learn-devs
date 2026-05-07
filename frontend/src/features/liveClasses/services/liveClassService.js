@@ -27,14 +27,14 @@ const liveClassService = {
     return response.data;
   },
 
-  getInstructorLiveClasses: async (params = {}) => {
-    const response = await api.get('/live-classes/instructor/all', { params });
+  getInstructorLiveClasses: async () => {
+    const response = await api.get('/live-classes/instructor/all');
     return response.data;
   },
 
   // Student APIs
-  getStudentLiveClasses: async (params = {}) => {
-    const response = await api.get('/live-classes/student/all', { params });
+  getStudentLiveClasses: async () => {
+    const response = await api.get('/live-classes/student/all');
     return response.data;
   },
 

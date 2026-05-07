@@ -5,49 +5,33 @@ import User from "../models/User.js";
 // Get user enrollments
 export const getMyEnrollments = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
-
-    const [enrollments, total] = await Promise.all([
-      Enrollment.find({ user: req.user.id })
-        .populate({
-          path: "course",
-          populate: {
-            path: "instructor",
-            select: "name avatar bio"
-          }
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      Enrollment.countDocuments({ user: req.user.id })
-    ]);
+    const enrollments = await Enrollment.find({ user: req.user.id })
+      .populate({
+        path: "course",
+        populate: {
+          path: "instructor",
+          select: "name avatar bio"
+        }
+      })
+      .sort({ createdAt: -1 });
 
     // Filter out enrollments where the course no longer exists
     const validEnrollments = enrollments.filter(e => e.course !== null);
 
+    // Convert to object to include virtuals on the course
     const enrollmentsWithVirtuals = validEnrollments.map(e => {
       const obj = e.toObject();
       if (obj.course) {
+        // We need to manually ensure virtuals if the standard toObject doesn't catch them deep
         const course = e.course;
         obj.course = course.toObject({ virtuals: true });
       }
       return obj;
     });
 
-    const totalPages = Math.ceil(total / limit);
-
     res.status(200).json({
       success: true,
-      enrollments: enrollmentsWithVirtuals,
-      pagination: {
-        currentPage: Number(page),
-        totalPages,
-        totalItems: total,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-        limit: Number(limit)
-      }
+      enrollments: enrollmentsWithVirtuals
     });
   } catch (error) {
     res.status(500).json({
@@ -220,22 +204,15 @@ export const enrollInCourse = async (req, res) => {
 // @access  Private/Instructor
 export const getInstructorStudents = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
-
     const courses = await Course.find({ instructor: req.user.id });
     const courseIds = courses.map(c => c._id);
 
-    const [enrollments, total] = await Promise.all([
-      Enrollment.find({ course: { $in: courseIds } })
-        .populate("user", "name email avatar")
-        .populate("course", "title")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      Enrollment.countDocuments({ course: { $in: courseIds } })
-    ]);
+    const enrollments = await Enrollment.find({ course: { $in: courseIds } })
+      .populate("user", "name email avatar")
+      .populate("course", "title")
+      .sort({ createdAt: -1 });
 
+    // Format the data to return a list of students with their enrollment info
     const students = enrollments.map(e => ({
       _id: e.user?._id,
       name: e.user?.name,
@@ -247,19 +224,9 @@ export const getInstructorStudents = async (req, res) => {
       isCompleted: e.isCompleted
     }));
 
-    const totalPages = Math.ceil(total / limit);
-
     res.status(200).json({
       success: true,
-      students,
-      pagination: {
-        currentPage: Number(page),
-        totalPages,
-        totalItems: total,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-        limit: Number(limit)
-      }
+      students
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
