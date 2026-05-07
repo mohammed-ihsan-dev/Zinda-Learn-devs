@@ -7,6 +7,7 @@ import {
 import { getStudents, getStudentStats, blockUser, unblockUser } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
 import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
+import Pagination from '../../components/common/Pagination';
 import toast from 'react-hot-toast';
 
 const StudentsManagement = () => {
@@ -16,7 +17,14 @@ const StudentsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalStudents, setTotalStudents] = useState(0);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
 
   const fetchStudents = async () => {
     try {
@@ -27,8 +35,10 @@ const StudentsManagement = () => {
         page: currentPage,
         limit: 10
       });
-      setStudents(data.data);
-      setTotalStudents(data.total);
+      setStudents(data.data || []);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (error) {
       toast.error('Failed to fetch students');
     } finally {
@@ -66,6 +76,11 @@ const StudentsManagement = () => {
     } catch (error) {
       toast.error('Action failed');
     }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const columns = [
@@ -160,11 +175,11 @@ const StudentsManagement = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Students Management</h1>
-        <p className="text-zinc-500">Manage enrolled students, monitor learning activity, and control student access.</p>
+        <h1 className="text-3xl font-black text-white mb-2 tracking-tight">Students Management</h1>
+        <p className="text-zinc-500 font-medium">Manage enrolled students, monitor learning activity, and control student access.</p>
       </div>
 
       {/* Analytics */}
@@ -196,77 +211,66 @@ const StudentsManagement = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-2xl border border-[#27272a]">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-3xl border border-[#27272a]">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-purple-500 transition-colors" />
           <input 
             type="text" 
             placeholder="Search students by name or email..." 
-            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-xl p-1">
-            <button 
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'all' ? 'bg-[#27272a] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              All
-            </button>
-            <button 
-              onClick={() => setStatusFilter('active')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'active' ? 'bg-[#27272a] text-emerald-400 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Active
-            </button>
-            <button 
-              onClick={() => setStatusFilter('blocked')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'blocked' ? 'bg-[#27272a] text-rose-400 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Blocked
-            </button>
+          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-2xl p-1.5">
+            {['all', 'active', 'blocked'].map((status) => (
+              <button 
+                key={status}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setCurrentPage(1);
+                }}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  statusFilter === status 
+                    ? 'bg-[#27272a] text-white shadow-xl' 
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <DataTable 
-        columns={columns} 
-        data={students} 
-        loading={loading}
-        emptyMessage="No students found"
-      />
+      <div className="bg-[#1c1c21] rounded-[40px] border border-[#27272a] overflow-hidden shadow-2xl">
+        <DataTable 
+          columns={columns} 
+          data={students} 
+          loading={loading}
+          emptyMessage="No students found"
+        />
+        
+        <div className="p-8 border-t border-[#27272a] bg-[#1c1c21]">
+          <Pagination 
+            pagination={pagination} 
+            onPageChange={handlePageChange} 
+          />
+        </div>
+      </div>
 
-      {/* Pagination (Simplified for now) */}
-      {totalStudents > 10 && (
-        <div className="flex items-center justify-between px-2">
-          <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">
-            Showing {students.length} of {totalStudents} students
-          </p>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-sm font-bold text-zinc-200 px-4">{currentPage}</span>
-            <button 
-              disabled={students.length < 10}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+      {/* Results Info */}
+      {!loading && students.length > 0 && (
+        <div className="flex items-center justify-center">
+           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-[#1c1c21] px-4 py-2 rounded-full border border-[#27272a]">
+              Showing {students.length} of {pagination.totalItems} students
+           </p>
         </div>
       )}
     </div>

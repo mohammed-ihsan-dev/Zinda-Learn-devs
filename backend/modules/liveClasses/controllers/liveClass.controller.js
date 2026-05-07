@@ -156,20 +156,38 @@ export const getInstructorLiveClasses = async (req, res) => {
 
     // Use lean() for performance and avoid complex Mongoose document issues
     // Added fallback sorting and filtering
-    const liveClasses = await LiveClass.find({
-      instructor: instructorId,
-      isDeleted: { $ne: true }
-    })
-      .populate('course', 'title thumbnail')
-      .sort({ scheduledDate: -1 })
-      .lean();
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
 
-    console.log(`[LIVE_CLASS_DEBUG] Successfully found ${liveClasses.length} classes for ${instructorId}`);
+    const [liveClasses, total] = await Promise.all([
+      LiveClass.find({
+        instructor: instructorId,
+        isDeleted: { $ne: true }
+      })
+        .populate('course', 'title thumbnail')
+        .sort({ scheduledDate: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      LiveClass.countDocuments({
+        instructor: instructorId,
+        isDeleted: { $ne: true }
+      })
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
 
     return res.status(200).json({
       success: true,
-      count: liveClasses.length,
-      data: liveClasses
+      data: liveClasses,
+      pagination: {
+        currentPage: Number(page),
+        totalPages,
+        totalItems: total,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit: Number(limit)
+      }
     });
 
   } catch (error) {
@@ -203,23 +221,42 @@ export const getStudentLiveClasses = async (req, res) => {
       console.log(`[LIVE_CLASS_DEBUG] Enrolled Course IDs: ${enrolledCourseIds.join(', ')}`);
     }
 
-    // 2. Get live classes for these courses
-    const liveClasses = await LiveClass.find({
-      course: { $in: enrolledCourseIds },
-      isDeleted: { $ne: true },
-      status: { $ne: 'CANCELLED' }
-    })
-      .populate('instructor', 'name avatar')
-      .populate('course', 'title thumbnail')
-      .sort({ scheduledDate: 1 })
-      .lean();
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
 
-    console.log(`[LIVE_CLASS_DEBUG] Found ${liveClasses.length} live classes for student ${req.user._id}`);
+    // 2. Get live classes for these courses
+    const [liveClasses, total] = await Promise.all([
+      LiveClass.find({
+        course: { $in: enrolledCourseIds },
+        isDeleted: { $ne: true },
+        status: { $ne: 'CANCELLED' }
+      })
+        .populate('instructor', 'name avatar')
+        .populate('course', 'title thumbnail')
+        .sort({ scheduledDate: 1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      LiveClass.countDocuments({
+        course: { $in: enrolledCourseIds },
+        isDeleted: { $ne: true },
+        status: { $ne: 'CANCELLED' }
+      })
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
       success: true,
-      count: liveClasses.length,
-      data: liveClasses
+      data: liveClasses,
+      pagination: {
+        currentPage: Number(page),
+        totalPages,
+        totalItems: total,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit: Number(limit)
+      }
     });
   } catch (error) {
     console.error('[LIVE_CLASS_ERROR] Error in getStudentLiveClasses:', error);

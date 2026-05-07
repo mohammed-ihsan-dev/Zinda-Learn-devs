@@ -1,34 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import socketService from '../../../services/socket';
 import liveClassService from '../services/liveClassService';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
-export const useLiveClasses = () => {
+export const useLiveClasses = (initialParams = {}) => {
   const { token } = useAuth();
   const [liveClasses, setLiveClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
 
-  const fetchLiveClasses = async () => {
+  const fetchLiveClasses = useCallback(async (params = initialParams) => {
     try {
       setLoading(true);
-      const response = await liveClassService.getStudentLiveClasses();
+      const response = await liveClassService.getStudentLiveClasses(params);
       if (response.success) {
         setLiveClasses(response.data);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch live classes:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [initialParams]);
 
   useEffect(() => {
     if (token) {
       socketService.connect(token);
     }
     
-    fetchLiveClasses();
+    fetchLiveClasses(initialParams);
 
     // Socket listeners handlers
     const handleStarted = ({ liveClassId, title }) => {
@@ -42,7 +53,7 @@ export const useLiveClasses = () => {
         if (exists) {
           return prev.map(c => c._id === liveClassId ? { ...c, status: 'LIVE' } : c);
         } else {
-          fetchLiveClasses(); // Fetch if it's a new class we didn't have
+          fetchLiveClasses(initialParams); // Fetch if it's a new class we didn't have
           return prev;
         }
       });
@@ -62,7 +73,7 @@ export const useLiveClasses = () => {
       toast.success(`New Live Class Scheduled: ${title}`, {
         icon: '📅'
       });
-      fetchLiveClasses();
+      fetchLiveClasses(initialParams);
     };
 
     // Bind listeners using global service helpers
@@ -76,7 +87,7 @@ export const useLiveClasses = () => {
       socketService.offLiveClassEnded();
       socketService.offLiveClassScheduled();
     };
-  }, [token]);
+  }, [token, fetchLiveClasses, JSON.stringify(initialParams)]);
 
-  return { liveClasses, loading, refetch: fetchLiveClasses };
+  return { liveClasses, loading, pagination, refetch: fetchLiveClasses };
 };

@@ -31,13 +31,12 @@ export const adminService = {
     if (status === 'blocked') query.isBlocked = true;
     if (status === 'active') query.isBlocked = false;
 
-    const students = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    const total = await User.countDocuments(query);
+    const { items: students, pagination } = await paginate(User, query, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      select: "-password"
+    });
 
     // Fetch enrollment insights for each student
     const Enrollment = mongoose.model("Enrollment");
@@ -56,7 +55,7 @@ export const adminService = {
       };
     }));
 
-    return { students: studentsWithInsights, total };
+    return { students: studentsWithInsights, pagination };
   },
 
   getStudentStats: async () => {
@@ -92,14 +91,14 @@ export const adminService = {
       ];
     }
 
-    const tutors = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    const { items: tutors, pagination } = await paginate(User, query, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      select: "-password"
+    });
 
-    const total = await User.countDocuments(query);
-    return { tutors, total };
+    return { tutors, pagination };
   },
   getAllUsers: async ({ role, email, page = 1, limit = 50, showDeleted }) => {
     const query = {};
@@ -113,16 +112,15 @@ export const adminService = {
       query.deletedAt = null;
     }
 
-    const users = await User.find(query)
-      .select("-password")
-      .populate("deletedBy", "name email")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    const { items: users, pagination } = await paginate(User, query, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      select: "-password",
+      populate: { path: "deletedBy", select: "name email" }
+    });
 
-    const total = await User.countDocuments(query);
-
-    return { users, total };
+    return { users, pagination };
   },
 
   createUser: async (userData) => {
@@ -187,14 +185,14 @@ export const adminService = {
       query.title = { $regex: search, $options: "i" };
     }
 
-    const courses = await Course.find(query)
-      .populate("instructor", "name email")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    const { items: courses, pagination } = await paginate(Course, query, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      populate: { path: "instructor", select: "name email" }
+    });
 
-    const total = await Course.countDocuments(query);
-    return { courses, total };
+    return { courses, pagination };
   },
 
   deleteCourse: async (id) => {
@@ -369,14 +367,16 @@ export const adminService = {
     const Enrollment = mongoose.model("Enrollment");
     const query = { paymentStatus: "completed" };
     
-    const payments = await Enrollment.find(query)
-      .populate("user", "name email avatar")
-      .populate("course", "title")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    const { items: payments, pagination } = await paginate(Enrollment, query, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      populate: [
+        { path: "user", select: "name email avatar" },
+        { path: "course", select: "title" }
+      ]
+    });
 
-    const total = await Enrollment.countDocuments(query);
-    return { payments, total };
+    return { payments, pagination };
   }
 };

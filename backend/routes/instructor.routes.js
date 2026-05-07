@@ -1,10 +1,14 @@
 import express from 'express';
 const router = express.Router();
 import { createCourse, getInstructorCourses, updateCourse, deleteCourse } from '../controllers/courseController.js';
+import { getInstructorStudents } from '../controllers/enrollmentController.js';
 import { protect, isInstructor, isApprovedInstructor } from '../middleware/auth.js';
 
 // All routes require auth + instructor role
 router.use(protect, isInstructor);
+
+// GET /api/instructor/students — get students enrolled in instructor's courses
+router.get('/students', getInstructorStudents);
 
 // POST /api/instructor/course  — create a course
 router.post('/course', isApprovedInstructor, createCourse);

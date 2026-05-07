@@ -11,20 +11,32 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useLiveClasses } from '../hooks/useLiveClasses';
+import Pagination from '../../../components/common/Pagination';
 
 const StudentLiveClasses = () => {
-  const { liveClasses, loading } = useLiveClasses();
   const [filter, setFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredClasses = liveClasses.filter(c => {
-    if (filter === 'ALL') return true;
-    return c.status === filter;
+  const { liveClasses, loading, pagination } = useLiveClasses({
+    page: currentPage,
+    limit: 9,
+    status: filter === 'ALL' ? '' : filter
   });
 
-  const liveNow = liveClasses.filter(c => c.status === 'LIVE');
-  const upcoming = liveClasses.filter(c => c.status === 'UPCOMING');
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  if (loading) {
+  const handleFilterChange = (f) => {
+    setFilter(f);
+    setCurrentPage(1);
+  };
+
+  const liveNow = liveClasses.filter(c => c.status === 'LIVE');
+  const upcomingCount = pagination.totalItems - liveNow.length;
+
+  if (loading && liveClasses.length === 0) {
     return (
       <div className="min-h-[60vh] flex flex-col justify-center items-center gap-4">
         <div className="relative">
@@ -39,7 +51,7 @@ const StudentLiveClasses = () => {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-16 animate-in fade-in duration-1000">
+    <div className="p-8 max-w-7xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-20">
       {/* Premium Hero Section */}
       <div className="relative rounded-[45px] overflow-hidden bg-slate-950 text-white p-10 md:p-16 shadow-2xl shadow-indigo-200/20 border border-white/5">
         <div className="relative z-10 max-w-2xl">
@@ -77,8 +89,8 @@ const StudentLiveClasses = () => {
                 <Calendar className="text-purple-400" size={18} />
               </div>
               <div>
-                <div className="text-xs font-black text-white uppercase tracking-wider">{upcoming.length} Planned</div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Upcoming</div>
+                <div className="text-xs font-black text-white uppercase tracking-wider">{pagination.totalItems} Total</div>
+                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Available</div>
               </div>
             </div>
           </div>
@@ -90,30 +102,7 @@ const StudentLiveClasses = () => {
         <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px]"></div>
       </div>
 
-      {/* Live Now Section */}
-      {liveNow.length > 0 && (
-        <section className="animate-in slide-in-from-bottom-4 duration-700">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                </div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Streaming Now</h2>
-              </div>
-              <p className="text-slate-500 text-sm font-medium">Join these active sessions and interact live</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {liveNow.map(c => (
-              <StudentLiveClassCard key={c._id} liveClass={c} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Scheduled Section */}
+      {/* Main Content */}
       <section>
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div>
@@ -122,10 +111,10 @@ const StudentLiveClasses = () => {
           </div>
           
           <div className="flex items-center p-1.5 bg-slate-100 rounded-2xl border border-slate-200/50">
-            {['ALL', 'UPCOMING', 'ENDED'].map(f => (
+            {['ALL', 'LIVE', 'UPCOMING', 'ENDED'].map(f => (
               <button 
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => handleFilterChange(f)}
                 className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
                   filter === f 
                     ? 'bg-white text-indigo-600 shadow-sm shadow-indigo-100' 
@@ -138,22 +127,29 @@ const StudentLiveClasses = () => {
           </div>
         </div>
 
-        {filteredClasses.length === 0 ? (
+        {liveClasses.length === 0 ? (
           <div className="bg-white rounded-[40px] border border-slate-100 p-20 text-center shadow-sm">
             <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
               <Calendar className="text-slate-200" size={40} />
             </div>
             <h3 className="text-2xl font-black text-slate-900 mb-2">No Sessions Found</h3>
             <p className="text-slate-500 max-w-xs mx-auto font-medium text-sm leading-relaxed">
-              It looks like there aren't any live classes scheduled for your enrolled courses right now.
+              It looks like there aren't any live classes matching your filter right now.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredClasses.filter(c => c.status !== 'LIVE').map(c => (
-              <StudentLiveClassCard key={c._id} liveClass={c} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {liveClasses.map(c => (
+                <StudentLiveClassCard key={c._id} liveClass={c} />
+              ))}
+            </div>
+            
+            <Pagination 
+              pagination={pagination} 
+              onPageChange={handlePageChange} 
+            />
+          </>
         )}
       </section>
     </div>
@@ -187,9 +183,9 @@ const StudentLiveClassCard = ({ liveClass }) => {
         )}
         
         <div className="absolute bottom-5 left-5 right-5">
-          <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl inline-flex items-center gap-3 text-[10px] font-black text-indigo-600 shadow-sm uppercase tracking-wider border border-white/50">
-            <BookOpen size={14} />
-            {liveClass.course?.title}
+          <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl inline-flex items-center gap-3 text-[10px] font-black text-indigo-600 shadow-sm uppercase tracking-wider border border-white/50 max-w-full">
+            <BookOpen size={14} className="shrink-0" />
+            <span className="truncate">{liveClass.course?.title || 'General Session'}</span>
           </div>
         </div>
       </div>
@@ -219,7 +215,7 @@ const StudentLiveClassCard = ({ liveClass }) => {
                 <User size={16} className="text-indigo-300" />
               )}
             </div>
-            <div className="text-[11px] font-black text-slate-700 uppercase tracking-wide">{liveClass.instructor?.name}</div>
+            <div className="text-[11px] font-black text-slate-700 uppercase tracking-wide truncate max-w-[80px]">{liveClass.instructor?.name}</div>
           </div>
 
           <Link 

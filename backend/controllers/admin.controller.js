@@ -46,8 +46,8 @@ export const rejectInstructor = async (req, res) => {
 
 export const getStudents = async (req, res) => {
   try {
-    const { students, total } = await adminService.getStudents(req.query);
-    res.status(200).json({ success: true, total, data: students });
+    const { students, pagination } = await adminService.getStudents(req.query);
+    res.status(200).json({ success: true, pagination, data: students });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -64,8 +64,8 @@ export const getStudentStats = async (req, res) => {
 
 export const getTutors = async (req, res) => {
   try {
-    const { tutors, total } = await adminService.getTutors(req.query);
-    res.status(200).json({ success: true, total, data: tutors });
+    const { tutors, pagination } = await adminService.getTutors(req.query);
+    res.status(200).json({ success: true, pagination, data: tutors });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -73,8 +73,8 @@ export const getTutors = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const { users, total } = await adminService.getAllUsers(req.query);
-    res.status(200).json({ success: true, total, data: users });
+    const { users, pagination } = await adminService.getAllUsers(req.query);
+    res.status(200).json({ success: true, pagination, data: users });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -142,8 +142,8 @@ export const unblockUser = async (req, res) => {
 
 export const getAllCourses = async (req, res) => {
   try {
-    const { courses, total } = await adminService.getAllCourses(req.query);
-    res.status(200).json({ success: true, total, data: courses });
+    const { courses, pagination } = await adminService.getAllCourses(req.query);
+    res.status(200).json({ success: true, pagination, data: courses });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -214,8 +214,8 @@ export const getDashboardStats = async (req, res) => {
 
 export const getPayments = async (req, res) => {
   try {
-    const { payments, total } = await adminService.getPayments(req.query);
-    res.status(200).json({ success: true, total, data: payments });
+    const { payments, pagination } = await adminService.getPayments(req.query);
+    res.status(200).json({ success: true, pagination, data: payments });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

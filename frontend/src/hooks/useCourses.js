@@ -6,10 +6,12 @@ export const useCourses = (filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 12,
-    total: 0,
-    pages: 1
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 12
   });
 
   const fetchCourses = async () => {

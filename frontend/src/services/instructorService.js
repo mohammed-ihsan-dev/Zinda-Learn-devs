@@ -5,8 +5,8 @@ export const createCourse = async (courseData) => {
   return data;
 };
 
-export const getInstructorCourses = async () => {
-  const { data } = await api.get('/courses/instructor/my-courses');
+export const getInstructorCourses = async (params = {}) => {
+  const { data } = await api.get('/courses/instructor/my-courses', { params });
   return data;
 };
 
@@ -22,5 +22,10 @@ export const deleteCourse = async (id) => {
 
 export const submitCourse = async (id) => {
   const { data } = await api.patch(`/courses/${id}/submit`);
+  return data;
+};
+
+export const getInstructorStudents = async (params = {}) => {
+  const { data } = await api.get('/instructor/students', { params });
   return data;
 };

@@ -1,5 +1,6 @@
 import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
+import { paginate } from "../utils/pagination.js";
 
 export const courseService = {
   getPublishedCourses: async ({ category, level, search, minPrice, maxPrice, sort, page = 1, limit = 12 }) => {
@@ -18,7 +19,7 @@ export const courseService = {
       query.$text = { $search: search };
     }
 
-    let sortQuery = {};
+    let sortQuery = { createdAt: -1 };
     switch (sort) {
       case "popular":
         sortQuery = { totalStudents: -1 };
@@ -35,22 +36,18 @@ export const courseService = {
       case "price-high":
         sortQuery = { price: -1 };
         break;
-      default:
-        sortQuery = { createdAt: -1 };
     }
 
-    const [courses, total] = await Promise.all([
-      Course.find(query)
-        .populate("instructor", "name avatar")
-        .sort(sortQuery)
-        .skip((page - 1) * limit)
-        .limit(Number(limit)),
-      Course.countDocuments(query)
-    ]);
+    const { items, pagination } = await paginate(Course, query, {
+      page,
+      limit,
+      sort: sortQuery,
+      populate: { path: "instructor", select: "name avatar" }
+    });
 
-    const coursesWithVirtuals = courses.map(course => course.toObject({ virtuals: true }));
+    const coursesWithVirtuals = items.map(course => course.toObject({ virtuals: true }));
 
-    return { courses: coursesWithVirtuals, total };
+    return { courses: coursesWithVirtuals, pagination };
   },
 
   getCourseById: async (id, userId = null) => {
@@ -139,12 +136,25 @@ export const courseService = {
     return true;
   },
 
-  getInstructorCourses: async (instructorId) => {
-    return await Course.find({ instructor: instructorId, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
+  getInstructorCourses: async (instructorId, { page = 1, limit = 10 } = {}) => {
+    const { items, pagination } = await paginate(Course, 
+      { instructor: instructorId, isDeleted: { $ne: true } }, 
+      { page, limit, sort: { createdAt: -1 } }
+    );
+    return { courses: items, pagination };
   },
 
-  getAllCoursesAdmin: async () => {
-    return await Course.find({ isDeleted: { $ne: true } }).populate("instructor", "name email").sort({ createdAt: -1 });
+  getAllCoursesAdmin: async ({ page = 1, limit = 10 } = {}) => {
+    const { items, pagination } = await paginate(Course, 
+      { isDeleted: { $ne: true } }, 
+      { 
+        page, 
+        limit, 
+        sort: { createdAt: -1 },
+        populate: { path: "instructor", select: "name email" }
+      }
+    );
+    return { courses: items, pagination };
   },
 
   updateCourseStatus: async (id, status) => {

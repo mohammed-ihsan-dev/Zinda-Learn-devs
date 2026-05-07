@@ -14,28 +14,54 @@ import {
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/currencyFormatter';
+import Pagination from '../../components/common/Pagination';
 
 const MyCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 6
+  });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, courseId: null, courseTitle: '' });
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [currentPage, activeTab, searchTerm]);
 
   const fetchCourses = async () => {
     try {
-      const data = await getInstructorCourses();
+      setLoading(true);
+      const params = {
+        page: currentPage,
+        limit: 5,
+        status: activeTab === 'All' ? '' : activeTab.toLowerCase(),
+        search: searchTerm
+      };
+      const data = await getInstructorCourses(params);
       setCourses(data.courses);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (error) {
       toast.error('Failed to fetch courses');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteClick = (course) => {
@@ -56,24 +82,17 @@ const MyCourses = () => {
     }
   };
 
-  const filteredCourses = courses.filter(course => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Published') return course.status === 'published';
-    if (activeTab === 'Draft') return course.status === 'draft';
-    return true;
-  });
-
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-10">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Courses</h1>
-          <p className="text-slate-500 mt-1">Manage and track all your courses</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Courses</h1>
+          <p className="text-slate-500 font-medium mt-1">Manage and track all your courses</p>
         </div>
         <button 
           onClick={() => navigate('/instructor/create-course')}
-          className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all active:scale-95"
+          className="flex items-center gap-2 px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl shadow-xl shadow-purple-200 transition-all active:scale-95"
         >
           <Plus className="w-5 h-5" />
           Create Course
@@ -81,22 +100,30 @@ const MyCourses = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col lg:flex-row items-center gap-4 bg-white p-2 rounded-3xl border border-slate-100 shadow-sm">
-        <div className="relative flex-1 w-full lg:w-auto">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="flex flex-col lg:flex-row items-center gap-4 bg-white p-3 rounded-[32px] border border-slate-100 shadow-sm">
+        <div className="relative flex-1 w-full lg:w-auto group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-purple-600 transition-colors" />
           <input 
             type="text" 
-            placeholder="Filter by title..."
-            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-purple-500/20 transition-all"
+            placeholder="Search courses..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-bold focus:ring-2 focus:ring-purple-500/20 transition-all"
           />
         </div>
         
-        <div className="flex bg-slate-50 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
+        <div className="flex bg-slate-50 p-1.5 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
           {['All', 'Published', 'Draft'].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 lg:flex-none px-6 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              onClick={() => {
+                setActiveTab(tab);
+                setCurrentPage(1);
+              }}
+              className={`flex-1 lg:flex-none px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                 activeTab === tab 
                   ? 'bg-white text-purple-600 shadow-sm' 
                   : 'text-slate-500 hover:text-slate-700'
@@ -106,92 +133,90 @@ const MyCourses = () => {
             </button>
           ))}
         </div>
-
-        <div className="relative w-full lg:w-auto">
-          <button className="w-full lg:w-auto flex items-center justify-between gap-8 px-5 py-2.5 bg-slate-50 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
-            Newest First
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          </button>
-        </div>
       </div>
 
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        {loading ? (
+        {loading && courses.length === 0 ? (
           [1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-[32px] p-4 border border-slate-100 animate-pulse h-[400px]">
-              <div className="bg-slate-100 rounded-2xl h-48 mb-4"></div>
-              <div className="h-6 bg-slate-100 rounded w-3/4 mb-4"></div>
-              <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+            <div key={i} className="bg-white rounded-[40px] p-4 border border-slate-100 animate-pulse h-[400px]">
+              <div className="bg-slate-100 rounded-3xl h-48 mb-6"></div>
+              <div className="px-2 space-y-4">
+                <div className="h-6 bg-slate-100 rounded-xl w-3/4"></div>
+                <div className="h-4 bg-slate-100 rounded-xl w-1/2"></div>
+                <div className="h-10 bg-slate-100 rounded-2xl w-full mt-4"></div>
+              </div>
             </div>
           ))
         ) : (
           <>
-            {filteredCourses.map((course) => (
-              <div key={course._id} className="group bg-white rounded-[32px] p-4 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-300">
-                <div className="relative mb-5">
+            {/* Add New Course Card */}
+            <button 
+              onClick={() => navigate('/instructor/create-course')}
+              className="group flex flex-col items-center justify-center gap-6 bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-all p-8 h-full min-h-[420px]"
+            >
+              <div className="w-16 h-16 rounded-[24px] bg-white flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500 shadow-sm border border-slate-100">
+                <Plus className="w-8 h-8" />
+              </div>
+              <div className="text-center">
+                <p className="font-black text-slate-900 mb-2">Create New Course</p>
+                <p className="text-xs text-slate-500 px-6 font-medium leading-relaxed">Expand your teaching portfolio with a new masterpiece</p>
+              </div>
+            </button>
+
+            {courses.map((course) => (
+              <div key={course._id} className="group bg-white rounded-[40px] p-4 border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500">
+                <div className="relative mb-6 overflow-hidden rounded-[32px]">
                   <img 
                     src={course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop"} 
                     alt={course.title} 
-                    className="w-full h-48 object-cover rounded-2xl"
+                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute top-3 right-3">
-                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg backdrop-blur-md border ${
-                      course.status === 'published' ? 'bg-emerald-500 text-white border-emerald-400/30' : 
-                      course.status === 'pending' ? 'bg-amber-500 text-white border-amber-400/30' : 
-                      course.status === 'declined' ? 'bg-rose-500 text-white border-rose-400/30' :
-                      'bg-slate-900 text-white border-slate-700/30'
+                  <div className="absolute top-4 right-4">
+                    <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] shadow-xl backdrop-blur-md border ${
+                      course.status === 'published' ? 'bg-emerald-500/90 text-white border-emerald-400/30' : 
+                      course.status === 'pending' ? 'bg-amber-500/90 text-white border-amber-400/30' : 
+                      course.status === 'declined' ? 'bg-rose-500/90 text-white border-rose-400/30' :
+                      'bg-slate-900/90 text-white border-slate-700/30'
                     }`}>
                       {course.status || 'Draft'}
                     </span>
                   </div>
                 </div>
 
-                <div className="px-1 space-y-4">
+                <div className="px-2 space-y-5">
                   <div className="flex justify-between items-start gap-4">
-                    <h3 className="font-bold text-slate-900 leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[44px]">
+                    <h3 className="font-black text-slate-900 leading-[1.3] group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[48px]">
                       {course.title}
                     </h3>
-                    <div className="flex flex-col items-end">
-                      {course.discountPrice > 0 && course.discountPrice < course.price ? (
-                        <>
-                          <span className="text-[10px] text-slate-400 line-through font-bold">
-                            {formatCurrency(course.price)}
-                          </span>
-                          <span className="text-xl font-bold text-purple-600">
-                            {formatCurrency(course.discountPrice)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-xl font-bold text-purple-600">
-                          {course.price === 0 ? 'Free' : formatCurrency(course.price || 0)}
-                        </span>
-                      )}
-                    </div>
                   </div>
 
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-slate-500">
-                      <Users className="w-4 h-4" />
-                      <span className="text-xs font-bold">{course.totalStudents || 0} Students</span>
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-black">{course.totalStudents || 0} <span className="text-[10px] text-slate-400 uppercase tracking-widest ml-0.5">Students</span></span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-500">
-                      <BookOpen className="w-4 h-4" />
-                      <span className="text-xs font-bold">{course.totalLessons || 0} Lessons</span>
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
+                        <BookOpen className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-black">{course.totalLessons || 0} <span className="text-[10px] text-slate-400 uppercase tracking-widest ml-0.5">Lessons</span></span>
                     </div>
                   </div>
 
-                  <div className="pt-4 flex items-center gap-3">
+                  <div className="pt-2 flex items-center gap-3">
                     <Link 
                       to={`/instructor/courses/${course._id}`}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-2xl text-xs transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-50 hover:bg-slate-900 hover:text-white text-slate-700 font-black rounded-[20px] text-[10px] uppercase tracking-widest transition-all"
                     >
-                      Manage Course
+                      Manage
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                     <button 
                       onClick={() => handleDeleteClick(course)}
-                      className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-2xl transition-all hover:scale-110 active:scale-95 group/del"
+                      className="w-12 h-12 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-[20px] transition-all flex items-center justify-center group/del active:scale-90"
                       title="Delete Course"
                     >
                       <Trash2 className="w-4 h-4 transition-transform group-hover/del:rotate-12" />
@@ -200,70 +225,63 @@ const MyCourses = () => {
                 </div>
               </div>
             ))}
-
-            {/* Delete Confirmation Modal */}
-            {deleteModal.isOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-                <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl shadow-slate-200/50 animate-scale-in overflow-hidden">
-                  <div className="p-8 text-center">
-                    <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <AlertCircle className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 mb-2">Delete Course?</h3>
-                    <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                      Are you sure you want to delete <span className="font-bold text-slate-700">"{deleteModal.courseTitle}"</span>? This action cannot be undone.
-                    </p>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button 
-                        onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
-                        className="flex-1 px-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={confirmDelete}
-                        disabled={deleting}
-                        className="flex-1 px-6 py-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2"
-                      >
-                        {deleting ? (
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        ) : (
-                          <>
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
-                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Add New Course Card */}
-            <button 
-              onClick={() => navigate('/instructor/create-course')}
-              className="group flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[32px] border-2 border-dashed border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-all p-8 h-full min-h-[400px]"
-            >
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:scale-110 transition-all shadow-sm">
-                <Plus className="w-6 h-6" />
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-slate-900 mb-1">Add New Course</p>
-                <p className="text-xs text-slate-500 px-4">Start creating your next learning masterpiece</p>
-              </div>
-            </button>
           </>
         )}
       </div>
+
+      {!loading && courses.length > 0 && (
+        <Pagination 
+          pagination={pagination} 
+          onPageChange={handlePageChange} 
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-[48px] w-full max-w-md shadow-2xl animate-scale-in overflow-hidden relative">
+            <div className="p-10 text-center">
+              <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[32px] flex items-center justify-center mx-auto mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
+                <AlertCircle className="w-12 h-12" />
+              </div>
+              <h3 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Delete Course?</h3>
+              <p className="text-slate-500 text-sm mb-10 font-medium leading-relaxed px-4">
+                Are you sure you want to delete <span className="font-bold text-rose-600">"{deleteModal.courseTitle}"</span>? This action is permanent.
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="w-full py-5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-[24px] shadow-xl shadow-rose-200 transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                  {deleting ? (
+                    <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <Trash2 className="w-5 h-5" />
+                      Confirm Delete
+                    </>
+                  )}
+                </button>
+                <button 
+                  onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
+                  className="w-full py-5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black rounded-[24px] transition-all"
+                >
+                  Keep Course
+                </button>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setDeleteModal({ isOpen: false, courseId: null, courseTitle: '' })}
+              className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

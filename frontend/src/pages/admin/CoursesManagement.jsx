@@ -12,6 +12,7 @@ import {
 } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
 import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
+import Pagination from '../../components/common/Pagination';
 import toast from 'react-hot-toast';
 
 const CoursesManagement = () => {
@@ -21,7 +22,14 @@ const CoursesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCourses, setTotalCourses] = useState(0);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
 
   const fetchCourses = async () => {
     try {
@@ -32,8 +40,10 @@ const CoursesManagement = () => {
         page: currentPage,
         limit: 10
       });
-      setCourses(data.data);
-      setTotalCourses(data.total);
+      setCourses(data.data || []);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (error) {
       toast.error('Failed to fetch courses');
     } finally {
@@ -77,6 +87,11 @@ const CoursesManagement = () => {
     } catch (error) {
       toast.error('Failed to delete course');
     }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const columns = [
@@ -190,12 +205,12 @@ const CoursesManagement = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Courses Management</h1>
-          <p className="text-zinc-500">Monitor course performance, approve pending submissions, and manage platform content.</p>
+          <h1 className="text-3xl font-black text-white mb-2 tracking-tight">Courses Management</h1>
+          <p className="text-zinc-500 font-medium">Monitor course performance, approve pending submissions, and manage platform content.</p>
         </div>
       </div>
 
@@ -209,7 +224,7 @@ const CoursesManagement = () => {
         />
         <AnalyticsCard 
           title="Published" 
-          value={courses.filter(c => c.status === 'published').length || 0} 
+          value={stats?.totalCourses - (stats?.pendingCoursesCount || 0) || 0} 
           icon={CheckCircle} 
           color="emerald"
         />
@@ -228,25 +243,35 @@ const CoursesManagement = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-2xl border border-[#27272a]">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-3xl border border-[#27272a]">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-purple-500 transition-colors" />
           <input 
             type="text" 
-            placeholder="Search courses by title or instructor..." 
-            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+            placeholder="Search courses..." 
+            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto hide-scrollbar">
-          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-xl p-1 shrink-0">
+          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-2xl p-1.5 shrink-0">
             {['all', 'published', 'pending', 'declined', 'draft'].map((status) => (
               <button 
                 key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${statusFilter === status ? 'bg-[#27272a] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setCurrentPage(1);
+                }}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  statusFilter === status 
+                    ? 'bg-[#27272a] text-white shadow-xl' 
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
               >
                 {status}
               </button>
@@ -256,40 +281,28 @@ const CoursesManagement = () => {
       </div>
 
       {/* Table */}
-      <DataTable 
-        columns={columns} 
-        data={courses} 
-        loading={loading}
-        emptyMessage="No courses found"
-      />
+      <div className="bg-[#1c1c21] rounded-[40px] border border-[#27272a] overflow-hidden shadow-2xl shadow-black/20">
+        <DataTable 
+          columns={columns} 
+          data={courses} 
+          loading={loading}
+          emptyMessage="No courses found"
+        />
+        
+        <div className="p-10 border-t border-[#27272a] bg-[#1c1c21]">
+          <Pagination 
+            pagination={pagination} 
+            onPageChange={handlePageChange} 
+          />
+        </div>
+      </div>
 
-      {/* Pagination */}
-      {totalCourses > 10 && (
-        <div className="flex items-center justify-between px-2">
-          <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">
-            Showing {courses.length} of {totalCourses} courses
-          </p>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-sm font-bold text-zinc-200 px-4">{currentPage}</span>
-            <button 
-              disabled={courses.length < 10}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+      {/* Results Info */}
+      {!loading && courses.length > 0 && (
+        <div className="flex items-center justify-center">
+           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-[#1c1c21] px-4 py-2 rounded-full border border-[#27272a]">
+              Showing {courses.length} of {pagination.totalItems} courses
+           </p>
         </div>
       )}
     </div>
