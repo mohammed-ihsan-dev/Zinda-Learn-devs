@@ -1,13 +1,15 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
-const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const baseURL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5005/api' : 'https://zinda-learn-backend.onrender.com/api');
+// Use /api to leverage Vite proxy in dev and absolute URL in production
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000, // 15 seconds timeout
 });
 
 // Add a request interceptor to include the auth token
@@ -20,6 +22,46 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Add a response interceptor
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    const originalRequest = error.config;
+
+    // Handle Network Errors (ERR_CONNECTION_REFUSED, etc.)
+    if (!error.response) {
+      toast.error('Server is currently unavailable. Please check your connection.', {
+        id: 'network-error'
+      });
+      return Promise.reject(error);
+    }
+
+    // Handle Token Expiration
+    if (error.response?.status === 401) {
+      const token = localStorage.getItem('zinda_token');
+      if (token) {
+        localStorage.removeItem('zinda_token');
+        localStorage.removeItem('zinda_user');
+        
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login') && 
+            !window.location.pathname.includes('/register')) {
+          toast.error('Session expired. Please login again.');
+          window.location.href = '/login?expired=true';
+        }
+      }
+    }
+
+    // Global error message extraction
+    const message = error.response?.data?.message || 'Something went wrong';
+    
+    // Standardize error return
+    return Promise.reject(error);
+  }
 );
 
 export default api;

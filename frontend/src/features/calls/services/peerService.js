@@ -1,6 +1,7 @@
 class PeerService {
   constructor() {
     this.peer = null;
+    this.iceCandidateQueue = [];
     this.config = {
       iceServers: [
         {
@@ -30,16 +31,38 @@ class PeerService {
 
   async getAnswer(offer) {
     if (this.peer) {
-      await this.peer.setRemoteDescription(offer);
+      await this.peer.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await this.peer.createAnswer();
       await this.peer.setLocalDescription(new RTCSessionDescription(answer));
+      
+      // Process queued ICE candidates
+      await this.processQueuedCandidates();
+      
       return answer;
     }
   }
 
-  async setLocalDescription(ans) {
+  async setRemoteDescription(ans) {
     if (this.peer) {
       await this.peer.setRemoteDescription(new RTCSessionDescription(ans));
+      await this.processQueuedCandidates();
+    }
+  }
+
+  async addIceCandidate(candidate) {
+    if (this.peer && this.peer.remoteDescription) {
+      await this.peer.addIceCandidate(new RTCIceCandidate(candidate));
+    } else {
+      this.iceCandidateQueue.push(candidate);
+    }
+  }
+
+  async processQueuedCandidates() {
+    if (this.peer && this.peer.remoteDescription) {
+      while (this.iceCandidateQueue.length > 0) {
+        const candidate = this.iceCandidateQueue.shift();
+        await this.peer.addIceCandidate(new RTCIceCandidate(candidate));
+      }
     }
   }
 
@@ -47,6 +70,7 @@ class PeerService {
     if (this.peer) {
       this.peer.close();
       this.peer = null;
+      this.iceCandidateQueue = [];
     }
   }
 }

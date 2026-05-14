@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import api from '../../services/api';
+import { useLandingData } from '../../hooks/useLandingData';
 
 const InstructorSignup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -170,12 +171,16 @@ const InstructorSignup = () => {
       navigate('/instructor/dashboard');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        toast.error('Google signup failed');
+        const errorMsg = err.response?.data?.message || err.message || 'Google signup failed';
+        toast.error(errorMsg);
+        console.error('Instructor Google Signup Error:', err);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const { stats } = useLandingData();
 
   return (
     <div className="min-h-screen flex bg-white font-sans relative">
@@ -222,7 +227,7 @@ const InstructorSignup = () => {
             Inspire the Next<br />Generation of<br />Creators.
           </h1>
           <p className="text-lg text-purple-100 max-w-md leading-relaxed mb-12">
-            Join our elite circle of instructors and share your expertise with a global community of 50,000+ students.
+            Join our elite circle of instructors and share your expertise with a global community of {stats.students} students.
           </p>
 
           {/* Profile Card Mockup */}
@@ -254,15 +259,15 @@ const InstructorSignup = () => {
             
             <div className="flex items-center justify-between mt-12 w-full max-w-sm mx-auto px-4">
               <div>
-                <p className="text-2xl font-bold text-white">50k+</p>
+                <p className="text-2xl font-bold text-white">{stats.students}</p>
                 <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">ACTIVE STUDENTS</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">120+</p>
+                <p className="text-2xl font-bold text-white">25+</p>
                 <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">COUNTRIES</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">4.9/5</p>
+                <p className="text-2xl font-bold text-white">{stats.avgRating}/5</p>
                 <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">RATING AVERAGE</p>
               </div>
             </div>

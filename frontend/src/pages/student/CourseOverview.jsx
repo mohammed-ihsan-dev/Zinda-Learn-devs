@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { enrollInCourse } from '../../services/courseService';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { useAuth } from '../../context/AuthContext';
+import PurchaseModal from '../../components/course/PurchaseModal';
+import { loadRazorpayScript } from '../../utils/razorpayLoader';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -19,6 +21,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [enrolling, setEnrolling] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const isEnrolled = !!enrollment;
 
   const totalLessons = course.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0;
@@ -26,31 +29,98 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
     (acc, m) => acc + (m.lessons?.reduce((a, l) => a + (l.duration || 0), 0) || 0), 0
   ) || 0;
 
-  const handleEnrollClick = async () => {
-    if (enrolling) return;
+  // loadRazorpayScript removed as it now uses the shared utility
 
+  const handleEnrollClick = () => {
     if (!isAuthenticated) {
       toast.error('Please login to enroll in courses');
       navigate('/login');
       return;
     }
+    setShowPurchaseModal(true);
+  };
 
+  const initiatePayment = async () => {
+    if (enrolling) return;
     setEnrolling(true);
-    const loadingToast = toast.loading('Processing your enrollment...');
+    const loadingToast = toast.loading('Initializing payment process...');
     
     try {
-      // Direct enrollment via dedicated endpoint
-      await enrollInCourse(course._id);
+      // 1. If course is free, use direct enrollment
+      if (course.price === 0 || course.isFree) {
+        await enrollInCourse(course._id);
+        toast.success('Successfully Enrolled!', { id: loadingToast });
+        setShowPurchaseModal(false);
+        setTimeout(() => navigate('/student/my-learning'), 1000);
+        return;
+      }
 
-      toast.success('Successfully Enrolled!', { id: loadingToast });
-      
-      setTimeout(() => {
-        navigate('/student/my-learning');
-      }, 1000);
+      // 2. Load Razorpay Script
+      const res = await loadRazorpayScript();
+      if (!res) {
+        toast.error('Razorpay SDK failed to load. Please check your connection.', { id: loadingToast });
+        setEnrolling(false);
+        return;
+      }
+
+      // 3. Create Order
+      const { createOrder } = await import('../../services/paymentService');
+      const orderData = await createOrder(course._id);
+
+      if (!orderData.success) {
+        throw new Error(orderData.message || 'Failed to create order');
+      }
+
+      toast.loading('Opening Razorpay Checkout...', { id: loadingToast });
+
+      // 4. Open Razorpay Checkout
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Zinda Learn',
+        description: `Enrollment for ${course.title}`,
+        image: '/logo.png',
+        order_id: orderData.orderId,
+        handler: async function (response) {
+          toast.loading('Verifying payment signature...', { id: loadingToast });
+          try {
+            const { verifyPayment } = await import('../../services/paymentService');
+            const verifyRes = await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+
+            if (verifyRes.success) {
+              toast.success('Payment Successful! Welcome.', { id: loadingToast });
+              setShowPurchaseModal(false);
+              setTimeout(() => navigate('/student/my-learning'), 1500);
+            } else {
+              toast.error(verifyRes.message || 'Payment verification failed', { id: loadingToast });
+              setEnrolling(false);
+            }
+          } catch (err) {
+            toast.error('Verification failed. Please contact support.', { id: loadingToast });
+            setEnrolling(false);
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setEnrolling(false);
+            toast.dismiss(loadingToast);
+            toast('Payment cancelled', { icon: 'ℹ️' });
+          }
+        },
+        theme: { color: '#7c3aed' }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
       
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Enrollment failed. Please try again.', { id: loadingToast });
-    } finally {
+      console.error('Enrollment error:', err);
+      toast.error(err.response?.data?.message || err.message || 'Payment initialization failed.', { id: loadingToast });
       setEnrolling(false);
     }
   };
@@ -212,6 +282,14 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
           </div>
         </div>
       </div>
+
+      <PurchaseModal 
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        course={course}
+        onProceed={initiatePayment}
+        loading={enrolling}
+      />
     </div>
   );
 };

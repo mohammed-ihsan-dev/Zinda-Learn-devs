@@ -220,3 +220,23 @@ export const getPayments = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getPayouts = async (req, res) => {
+  try {
+    const { payouts, total } = await adminService.getPayouts(req.query);
+    res.status(200).json({ success: true, total, data: payouts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updatePayoutStatus = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    const payout = await adminService.updatePayoutStatus(req.params.id, req.body);
+    if (!payout) return res.status(404).json({ success: false, message: "Payout not found" });
+    res.status(200).json({ success: true, message: `Payout status updated to ${req.body.status}`, data: payout });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

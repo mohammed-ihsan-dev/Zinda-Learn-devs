@@ -131,8 +131,8 @@ const StudentsManagement = () => {
       header: 'Status',
       cell: (student) => (
         <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${student.isBlocked
-            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-            : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+          ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+          : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
           }`}>
           {student.isBlocked ? 'Blocked' : 'Active'}
         </span>

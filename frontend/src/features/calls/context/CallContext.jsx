@@ -15,6 +15,7 @@ export const CallProvider = ({ children }) => {
   const [call, setCall] = useState({
     isReceiving: false,
     isCalling: false,
+    isRinging: false,
     isConnected: false,
     partnerId: null,
     partnerName: '',
@@ -31,15 +32,22 @@ export const CallProvider = ({ children }) => {
   const remoteAudioRef = useRef(new Audio());
 
   const resetCall = useCallback(() => {
+    console.log('[CALL] Resetting call state and cleaning up');
     if (timerRef.current) clearInterval(timerRef.current);
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[CALL] Stopped local track: ${track.kind}`);
+      });
+      localStreamRef.current = null;
     }
     remoteAudioRef.current.srcObject = null;
     peerService.destroy();
+    
     setCall({
       isReceiving: false,
       isCalling: false,
+      isRinging: false,
       isConnected: false,
       partnerId: null,
       partnerName: '',
@@ -52,62 +60,111 @@ export const CallProvider = ({ children }) => {
     });
   }, []);
 
-  // Socket Listeners
-  useEffect(() => {
-    socketService.onIncomingCall((data) => {
-      setCall(prev => ({
-        ...prev,
-        isReceiving: true,
-        partnerId: data.callerId,
-        partnerName: data.callerName,
-        partnerAvatar: data.callerAvatar,
-        conversationId: data.conversationId
-      }));
-      // Play ringtone (optional, omitted for brevity but recommended)
-    });
+  const handleIncomingCall = useCallback((data) => {
+    console.log('[CALL] Incoming call from:', data.callerName);
+    setCall(prev => ({
+      ...prev,
+      isReceiving: true,
+      partnerId: data.callerId,
+      partnerName: data.callerName,
+      partnerAvatar: data.callerAvatar,
+      conversationId: data.conversationId
+    }));
+  }, []);
 
-    socketService.onCallAccepted(async ({ receiverId }) => {
-      setCall(prev => ({ ...prev, isCalling: false, isConnected: true }));
-      
-      // Start timer
-      timerRef.current = setInterval(() => {
-        setCall(prev => ({ ...prev, duration: prev.duration + 1 }));
-      }, 1000);
+  const handleCallRinging = useCallback(() => {
+    console.log('[CALL] Remote user is ringing');
+    setCall(prev => ({ ...prev, isRinging: true }));
+  }, []);
 
-      // Create Offer
+  const handleCallAccepted = useCallback(async ({ receiverId }) => {
+    console.log('[CALL] Call accepted by:', receiverId);
+    setCall(prev => ({ ...prev, isCalling: false, isRinging: false, isConnected: true }));
+    
+    timerRef.current = setInterval(() => {
+      setCall(prev => ({ ...prev, duration: prev.duration + 1 }));
+    }, 1000);
+
+    try {
       const offer = await peerService.getOffer();
       socketService.emitWebRTCOffer({ to: receiverId, offer });
-    });
+      console.log('[CALL] WebRTC Offer sent');
+    } catch (err) {
+      console.error('[CALL] Error creating offer:', err);
+      toast.error('Failed to establish connection');
+    }
+  }, []);
 
+  const handleWebRTCOffer = useCallback(async ({ from, offer }) => {
+    console.log('[CALL] WebRTC Offer received');
+    try {
+      const answer = await peerService.getAnswer(offer);
+      socketService.emitWebRTCAnswer({ to: from, answer });
+      console.log('[CALL] WebRTC Answer sent');
+    } catch (err) {
+      console.error('[CALL] Error creating answer:', err);
+    }
+  }, []);
+
+  const handleWebRTCAnswer = useCallback(async ({ from, answer }) => {
+    console.log('[CALL] WebRTC Answer received');
+    try {
+      await peerService.setRemoteDescription(answer);
+      console.log('[CALL] Remote description set');
+    } catch (err) {
+      console.error('[CALL] Error setting remote description:', err);
+    }
+  }, []);
+
+  const handleIceCandidate = useCallback(async ({ from, candidate }) => {
+    try {
+      await peerService.addIceCandidate(candidate);
+    } catch (err) {
+      console.error('[CALL] Error adding ICE candidate:', err);
+    }
+  }, []);
+
+  const handleCallEnded = useCallback(() => {
+    console.log('[CALL] Call ended by partner');
+    toast('Call ended');
+    resetCall();
+  }, [resetCall]);
+
+  const handleCallError = useCallback((data) => {
+    console.error('[CALL] Call error:', data.message);
+    toast.error(data.message);
+    resetCall();
+  }, [resetCall]);
+
+  // Socket Listeners Management
+  useEffect(() => {
+    socketService.onIncomingCall(handleIncomingCall);
+    socketService.onCallRinging(handleCallRinging);
+    socketService.onCallAccepted(handleCallAccepted);
     socketService.onCallRejected(() => {
       toast.error('Call rejected');
       resetCall();
     });
-
-    socketService.onCallEnded(() => {
-      toast('Call ended');
-      resetCall();
-    });
-
-    socketService.onWebRTCOffer(async ({ from, offer }) => {
-      const answer = await peerService.getAnswer(offer);
-      socketService.emitWebRTCAnswer({ to: from, answer });
-    });
-
-    socketService.onWebRTCAnswer(async ({ from, answer }) => {
-      await peerService.setLocalDescription(answer);
-    });
-
-    socketService.onIceCandidate(async ({ from, candidate }) => {
-      const peer = peerService.getPeer();
-      await peer.addIceCandidate(new RTCIceCandidate(candidate));
-    });
+    socketService.onCallEnded(handleCallEnded);
+    socketService.onWebRTCOffer(handleWebRTCOffer);
+    socketService.onWebRTCAnswer(handleWebRTCAnswer);
+    socketService.onIceCandidate(handleIceCandidate);
+    socketService.onCallError(handleCallError);
 
     return () => {
-      // Don't remove listeners here if you want call to persist across navigation
-      // but cleanup on unmount of Provider (which is App level)
+      socketService.offCallEvents();
     };
-  }, [resetCall]);
+  }, [
+    handleIncomingCall,
+    handleCallRinging,
+    handleCallAccepted,
+    handleCallEnded,
+    handleWebRTCOffer,
+    handleWebRTCAnswer,
+    handleIceCandidate,
+    handleCallError,
+    resetCall
+  ]);
 
   // Peer Event Listeners
   useEffect(() => {
@@ -120,19 +177,47 @@ export const CallProvider = ({ children }) => {
     };
 
     peer.ontrack = (event) => {
-      setCall(prev => ({ ...prev, remoteStream: event.streams[0] }));
-      remoteAudioRef.current.srcObject = event.streams[0];
-      remoteAudioRef.current.play().catch(e => console.error("Error playing remote audio:", e));
+      console.log('[CALL] Remote track received');
+      const [remoteStream] = event.streams;
+      setCall(prev => ({ ...prev, remoteStream }));
+      
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(e => {
+          console.error("[CALL] Auto-play prevented or failed:", e);
+          toast('Click anywhere to enable audio');
+        });
+      }
+    };
+
+    peer.oniceconnectionstatechange = () => {
+      console.log('[CALL] ICE Connection State:', peer.iceConnectionState);
+      if (peer.iceConnectionState === 'failed') {
+        toast.error('Connection failed. Please try again.');
+        resetCall();
+      }
+      if (peer.iceConnectionState === 'disconnected') {
+        // We don't necessarily end immediately as it might reconnect
+        console.warn('[CALL] Connection unstable');
+      }
     };
   }, [call.partnerId]);
 
   const startCall = async (receiverId, receiverName, receiverAvatar, conversationId) => {
+    if (call.isCalling || call.isConnected || call.isReceiving) {
+      toast.error('A call is already in progress');
+      return;
+    }
     try {
+      console.log('[CALL] Starting call to:', receiverName);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
       
       const peer = peerService.getPeer();
-      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      stream.getTracks().forEach(track => {
+        peer.addTrack(track, stream);
+        console.log(`[CALL] Added local track: ${track.kind}`);
+      });
 
       setCall(prev => ({
         ...prev,
@@ -146,17 +231,22 @@ export const CallProvider = ({ children }) => {
 
       socketService.emitCallUser({ receiverId, conversationId });
     } catch (err) {
-      toast.error('Microphone access denied');
+      console.error('[CALL] Media Error:', err);
+      toast.error('Microphone access denied. Please check your browser settings.');
     }
   };
 
   const acceptCall = async () => {
     try {
+      console.log('[CALL] Accepting call from:', call.partnerName);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
 
       const peer = peerService.getPeer();
-      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      stream.getTracks().forEach(track => {
+        peer.addTrack(track, stream);
+        console.log(`[CALL] Added local track: ${track.kind}`);
+      });
 
       setCall(prev => ({ 
         ...prev, 
@@ -171,17 +261,20 @@ export const CallProvider = ({ children }) => {
 
       socketService.emitAcceptCall({ callerId: call.partnerId });
     } catch (err) {
+      console.error('[CALL] Media Error:', err);
       toast.error('Microphone access denied');
       rejectCall();
     }
   };
 
   const rejectCall = () => {
+    console.log('[CALL] Rejecting call');
     socketService.emitRejectCall({ callerId: call.partnerId });
     resetCall();
   };
 
   const endCall = () => {
+    console.log('[CALL] Ending call');
     socketService.emitEndCall({ partnerId: call.partnerId, duration: call.duration });
     resetCall();
   };
@@ -191,6 +284,7 @@ export const CallProvider = ({ children }) => {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       audioTrack.enabled = !audioTrack.enabled;
       setCall(prev => ({ ...prev, isMuted: !audioTrack.enabled }));
+      console.log('[CALL] Mute toggled:', !audioTrack.enabled);
     }
   };
 

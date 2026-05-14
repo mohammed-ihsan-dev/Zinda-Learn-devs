@@ -211,10 +211,13 @@ const CreateCourse = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Promo Video (Coming Soon)</label>
-              <div className="relative h-52 bg-slate-100 rounded-[28px] overflow-hidden flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200">
-                <Video className="w-10 h-10 text-slate-200 mb-4" />
-                <p className="text-xs font-bold text-slate-400">Video preview management coming soon</p>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Promo Video</label>
+              <div className="relative h-52 bg-slate-50/50 rounded-[28px] overflow-hidden flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-100 group hover:border-purple-200 transition-all">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-purple-50 transition-colors">
+                  <Video className="w-7 h-7 text-slate-300 group-hover:text-purple-600 transition-colors" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-1">Upload Promo Video</p>
+                <p className="text-[10px] text-slate-400 max-w-[180px]">You can upload your course introduction after creating the course.</p>
               </div>
             </div>
           </div>

@@ -7,48 +7,14 @@ import CourseCard from '../components/CourseCard';
 import Button from '../components/Button';
 import { useCourses } from '../hooks/useCourses';
 import Loader from '../components/Loader';
+import CourseCardSkeleton from '../components/CourseCardSkeleton';
 
-const LANDING_CATEGORIES = [
-  { name: 'Web Development', count: 245, icon: '🌐' },
-  { name: 'Mobile Development', count: 128, icon: '📱' },
-  { name: 'Data Science', count: 189, icon: '📊' },
-  { name: 'Machine Learning', count: 156, icon: '🤖' },
-  { name: 'UI/UX Design', count: 98, icon: '🎨' },
-  { name: 'DevOps', count: 76, icon: '⚙️' },
-  { name: 'Cybersecurity', count: 64, icon: '🔒' },
-  { name: 'Cloud Computing', count: 112, icon: '☁️' },
-];
-
-const LANDING_TESTIMONIALS = [
-  {
-    id: 1,
-    name: 'Priya Sharma',
-    role: 'Frontend Developer at Google',
-    avatar: '',
-    content: 'Zinda Learn transformed my career. The React course helped me land my dream job at Google. The instructors are world-class!',
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: 'Arjun Mehta',
-    role: 'Full-Stack Developer',
-    avatar: '',
-    content: 'The quality of courses is outstanding. I went from zero coding knowledge to building full-stack apps in just 6 months.',
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: 'Lisa Chen',
-    role: 'Data Scientist at Microsoft',
-    avatar: '',
-    content: 'The Data Science track was exactly what I needed. Practical projects, clear explanations, and amazing community support.',
-    rating: 5,
-  },
-];
+import { useLandingData } from '../hooks/useLandingData';
 
 const Home = () => {
   const location = useLocation();
-  const { courses, loading } = useCourses();
+  const { courses, loading: coursesLoading } = useCourses();
+  const { stats, testimonials, categories, loading: landingLoading } = useLandingData();
 
 
   useEffect(() => {
@@ -109,10 +75,10 @@ const Home = () => {
               {/* Stats */}
               <div className="flex flex-wrap items-center justify-center gap-12 mt-20 pt-12 border-t border-white/20">
                 {[
-                  { value: '50K+', label: 'Students' },
-                  { value: '500+', label: 'Courses' },
-                  { value: '100+', label: 'Experts' },
-                  { value: '4.9', label: 'Average Rating' },
+                  { value: stats.students, label: 'Students' },
+                  { value: stats.courses, label: 'Courses' },
+                  { value: stats.instructors, label: 'Experts' },
+                  { value: stats.avgRating, label: 'Average Rating' },
                 ].map((stat) => (
                   <div key={stat.label}>
                     <p className="text-3xl font-extrabold text-white mb-1.5">{stat.value}</p>
@@ -173,7 +139,7 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {LANDING_CATEGORIES.map((cat) => (
+            {categories.length > 0 ? categories.map((cat) => (
               <Link
                 key={cat.name}
                 to={`/courses?category=${encodeURIComponent(cat.name)}`}
@@ -183,7 +149,9 @@ const Home = () => {
                 <h3 className="font-semibold text-surface-900 text-sm mb-1 group-hover:text-primary-600 transition-colors">{cat.name}</h3>
                 <p className="text-xs text-surface-400">{cat.count} courses</p>
               </Link>
-            ))}
+            )) : (
+              <div className="col-span-full py-10 text-center text-surface-400">Loading categories...</div>
+            )}
           </div>
         </div>
       </section>
@@ -203,8 +171,12 @@ const Home = () => {
             </Link>
           </div>
 
-          {loading ? (
-            <div className="py-20"><Loader /></div>
+          {coursesLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <CourseCardSkeleton key={i} />
+              ))}
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.slice(0, 6).map((course) => (
@@ -235,9 +207,9 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {LANDING_TESTIMONIALS.map((t) => (
+            {testimonials.length > 0 ? testimonials.map((t) => (
               <div
-                key={t.id}
+                key={t._id}
                 className="bg-white rounded-3xl p-8 shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-surface-100 flex flex-col h-full"
               >
                 <div className="mb-6">
@@ -245,7 +217,7 @@ const Home = () => {
                 </div>
 
                 <p className="text-surface-600 text-lg leading-relaxed mb-8 flex-1 italic">
-                  "{t.content}"
+                  "{t.comment || t.content}"
                 </p>
 
                 <div className="flex items-center gap-1 mb-6">
@@ -258,16 +230,22 @@ const Home = () => {
                 </div>
 
                 <div className="flex items-center gap-4 pt-6 border-t border-surface-50">
-                  <div className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-500/20">
-                    {t.name.charAt(0)}
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-500/20">
+                    {t.user?.profilePic || t.user?.avatar ? (
+                      <img src={t.user.profilePic || t.user.avatar} alt={t.user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      t.user?.name?.charAt(0) || 'U'
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-bold text-surface-900 text-base mb-0.5">{t.name}</h4>
-                    <p className="text-xs font-medium text-surface-400 uppercase tracking-wide">{t.role}</p>
+                    <h4 className="font-bold text-surface-900 text-base mb-0.5">{t.user?.name || 'Anonymous'}</h4>
+                    <p className="text-xs font-medium text-surface-400 uppercase tracking-wide">{t.user?.role || 'Learner'}</p>
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="col-span-full py-10 text-center text-surface-400">Join our community and share your story!</div>
+            )}
           </div>
         </div>
       </section>

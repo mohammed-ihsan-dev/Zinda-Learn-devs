@@ -7,7 +7,10 @@ import Button from '../../components/Button';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
-const CATEGORIES = ['All', 'Web Development', 'Mobile Development', 'Data Science', 'UI/UX Design', 'DevOps'];
+import { useLandingData } from '../../hooks/useLandingData';
+
+import Skeleton, { CourseCardSkeleton } from '../../components/Skeleton';
+
 const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
 const BrowseCourses = () => {
@@ -15,7 +18,10 @@ const BrowseCourses = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
+  const { stats, categories, loading: landingLoading } = useLandingData();
   const navigate = useNavigate();
+
+  const CATEGORIES = ['All', ...categories.map(c => c.name)];
 
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
@@ -26,7 +32,19 @@ const BrowseCourses = () => {
     return matchesSearch && matchesCategory && matchesLevel;
   });
 
-  if (loading) return <Loader fullScreen text="Loading courses..." />;
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-10 pb-10">
+        <div className="space-y-2">
+          <Skeleton width="250px" height="32px" />
+          <Skeleton width="450px" height="20px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => <CourseCardSkeleton key={i} />)}
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

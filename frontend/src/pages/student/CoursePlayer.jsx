@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import React, { useState, memo, useMemo, useCallback } from 'react';
 import {
   Play, ChevronLeft, ChevronRight, CheckCircle2, CheckCircle,
   Clock, BarChart2, Eye, Lock, Lightbulb, Wrench,
   Video, Calendar, Users, ChevronDown, ChevronUp
 } from 'lucide-react';
+
 import { updateProgress } from '../../services/courseService';
 import toast from 'react-hot-toast';
 import VideoPlayer from '../../components/VideoPlayer';
-
-// ─── Helper ──────────────────────────────────────────────────────────────────
 const fmtDuration = (mins) => {
   if (!mins) return '0:00';
   const h = Math.floor(mins / 60);
@@ -19,13 +18,13 @@ const fmtDuration = (mins) => {
 // ─── Sub-component: Tab Bar ───────────────────────────────────────────────────
 const TABS = ['Overview', 'Notes', 'Q&A', 'Resources', 'Tests'];
 
-const TabBar = ({ active, onChange }) => (
-  <div className="flex gap-1 border-b border-zinc-200 mb-8">
+const TabBar = memo(({ active, onChange }) => (
+  <div className="flex gap-1 border-b border-zinc-200 mb-8 overflow-x-auto scrollbar-hide">
     {TABS.map((tab) => (
       <button
         key={tab}
         onClick={() => onChange(tab)}
-        className={`px-4 py-3 text-sm font-semibold transition-all relative ${active === tab
+        className={`px-4 py-3 text-sm font-semibold transition-all relative whitespace-nowrap ${active === tab
             ? 'text-primary-600'
             : 'text-zinc-500 hover:text-zinc-800'
           }`}
@@ -37,10 +36,12 @@ const TabBar = ({ active, onChange }) => (
       </button>
     ))}
   </div>
-);
+));
+
+TabBar.displayName = 'TabBar';
 
 // ─── Sub-component: Module Accordion Row ────────────────────────────────────
-const ModuleRow = ({ module, moduleIndex, activeLesson, completedLessons, onLessonClick }) => {
+const ModuleRow = memo(({ module, moduleIndex, activeLesson, completedLessons, onLessonClick }) => {
   const [open, setOpen] = useState(
     moduleIndex === (activeLesson?.moduleIndex ?? 0)
   );
@@ -110,7 +111,9 @@ const ModuleRow = ({ module, moduleIndex, activeLesson, completedLessons, onLess
       )}
     </div>
   );
-};
+});
+
+ModuleRow.displayName = 'ModuleRow';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack }) => {
@@ -124,13 +127,14 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
   const completedLessons = enrollment?.completedLessons || [];
   const progress = enrollment?.progress || 0;
 
-  const allLessons = course.modules?.flatMap((mod, mIdx) =>
+  const allLessons = useMemo(() => course.modules?.flatMap((mod, mIdx) =>
     mod.lessons?.map((l, lIdx) => ({ moduleIndex: mIdx, lessonIndex: lIdx, lesson: l, module: mod })) || []
-  ) || [];
+  ) || [], [course.modules]);
 
-  const currentFlatIdx = allLessons.findIndex(
+  const currentFlatIdx = useMemo(() => allLessons.findIndex(
     al => al.moduleIndex === moduleIndex && al.lessonIndex === lessonIndex
-  );
+  ), [allLessons, moduleIndex, lessonIndex]);
+
   const prevLesson = currentFlatIdx > 0 ? allLessons[currentFlatIdx - 1] : null;
   const nextLesson = currentFlatIdx < allLessons.length - 1 ? allLessons[currentFlatIdx + 1] : null;
 

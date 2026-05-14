@@ -1,0 +1,482 @@
+import { useState, useEffect } from 'react';
+import { 
+  User, Mail, Phone, Globe, Shield, Bell, 
+  Moon, Sun, Monitor, LogOut, Trash2, Camera,
+  Check, AlertCircle, Eye, EyeOff, Save,
+  ChevronDown
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  getSettings, 
+  updateProfile, 
+  updatePassword, 
+  updatePreferences, 
+  updateNotifications, 
+  deleteAccount 
+} from '../../services/settingsService';
+import Loader from '../../components/Loader';
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
+
+const SettingsPage = () => {
+  const { user: authUser, logout, updateUser } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState(null);
+  
+  // Form States
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    bio: '',
+    username: '',
+    phone: '',
+    language: 'English (US)',
+    avatar: ''
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNew: ''
+  });
+  const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false });
+
+  const [notifications, setNotifications] = useState({
+    emailNotifications: true,
+    liveClassReminders: true,
+    chatMessages: true,
+    courseUpdates: true
+  });
+
+  const [preferences, setPreferences] = useState({
+    darkMode: false,
+    videoQuality: '1080p',
+    twoFactorEnabled: false
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const settingsRes = await getSettings();
+        
+        const data = settingsRes.data;
+        setSettings(data);
+        
+        setProfileForm({
+          name: data.name || '',
+          email: data.email || '',
+          bio: data.bio || '',
+          username: data.username || '',
+          phone: data.phone || '',
+          language: data.language || 'English (US)',
+          avatar: data.avatar || ''
+        });
+        
+        setNotifications(data.notificationPreferences || notifications);
+        setPreferences({
+          darkMode: data.preferences?.darkMode || false,
+          videoQuality: data.preferences?.videoQuality || '1080p',
+          twoFactorEnabled: data.twoFactorEnabled || false
+        });
+        
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+        toast.error('Failed to load settings');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const response = await updateProfile(profileForm);
+      if (response.success) {
+        updateUser(response.data);
+        toast.success('Profile updated successfully');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Update failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmNew) {
+      return toast.error('New passwords do not match');
+    }
+    setSaving(true);
+    try {
+      await updatePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      toast.success('Password updated successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmNew: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Password update failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTogglePreference = async (key, value) => {
+    const newPrefs = { ...preferences, [key]: value };
+    setPreferences(newPrefs);
+    try {
+      await updatePreferences(newPrefs);
+    } catch (error) {
+      toast.error('Failed to update preference');
+    }
+  };
+
+  const handleToggleNotification = async (key, value) => {
+    const newNotifs = { ...notifications, [key]: value };
+    setNotifications(newNotifs);
+    try {
+      await updateNotifications(newNotifs);
+    } catch (error) {
+      toast.error('Failed to update notification settings');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm('Are you absolutely sure? This action cannot be undone.')) {
+      try {
+        await deleteAccount();
+        toast.success('Account deleted');
+        logout();
+      } catch (error) {
+        toast.error('Failed to delete account');
+      }
+    }
+  };
+
+  if (loading) return <Loader fullScreen text="Loading your preferences..." />;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-5xl mx-auto space-y-12 pb-20 px-4 sm:px-6"
+    >
+      {/* HEADER */}
+      <div className="space-y-2">
+        <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Settings</h1>
+        <p className="text-zinc-500 max-w-2xl font-medium">
+          Manage your account preferences and learning experience.
+        </p>
+      </div>
+
+      {/* 1. PROFILE DETAILS */}
+      <section className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-zinc-100 shadow-xl shadow-zinc-200/40 space-y-8">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-primary-600 rounded-full" />
+          <h2 className="text-xl font-black text-zinc-900 tracking-tight">Profile Details</h2>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+           <div className="relative group">
+              <div className="w-32 h-32 rounded-full overflow-hidden bg-zinc-100 border-4 border-white shadow-xl relative">
+                {profileForm.avatar ? (
+                  <img src={profileForm.avatar} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                    <User className="w-12 h-12" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                  <Camera className="text-white w-6 h-6" />
+                </div>
+              </div>
+              <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full border-2 border-white flex items-center justify-center text-white shadow-lg">
+                <Check className="w-4 h-4" />
+              </button>
+           </div>
+
+           <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-black text-zinc-900 mb-1">Profile Photo</h3>
+                <p className="text-xs text-zinc-400 font-medium">Min. 400x400px, JPG, PNG or GIF.</p>
+              </div>
+              <div className="flex gap-3">
+                 <button className="px-6 py-2 bg-primary-50 text-primary-600 text-xs font-black rounded-full hover:bg-primary-100 transition-colors">Upload New</button>
+                 <button className="px-6 py-2 text-red-500 text-xs font-black rounded-full hover:bg-red-50 transition-colors">Remove</button>
+              </div>
+           </div>
+        </div>
+
+        <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div className="space-y-2">
+              <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest pl-1">Full Name</label>
+              <input 
+                type="text" 
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                placeholder="Alex Johnson"
+                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" 
+              />
+           </div>
+           <div className="space-y-2">
+              <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest pl-1">Email Address</label>
+              <input 
+                type="email" 
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
+                placeholder="alex.j@zindalearn.com"
+                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" 
+              />
+           </div>
+           <div className="md:col-span-2 space-y-2">
+              <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest pl-1">Bio</label>
+              <textarea 
+                rows="4"
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+                placeholder="Passionate lifelong learner currently exploring UI/UX and advanced Python architectures..."
+                className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-[2rem] text-sm font-bold text-zinc-900 focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none resize-none leading-relaxed" 
+              />
+           </div>
+           <div className="md:col-span-2 flex justify-end">
+              <button 
+                type="submit"
+                disabled={saving}
+                className="px-10 py-4 bg-primary-600 text-white font-black text-sm rounded-full shadow-lg shadow-primary-500/30 hover:bg-primary-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+              >
+                {saving ? 'Saving...' : 'Save Profile Changes'}
+                <Save className="w-4 h-4" />
+              </button>
+           </div>
+        </form>
+      </section>
+
+      {/* 2. ACCOUNT */}
+      <div className="grid grid-cols-1 gap-8">
+        {/* Account Details */}
+        <div className="bg-white rounded-[2.5rem] p-8 border border-zinc-100 shadow-xl shadow-zinc-200/40 space-y-8">
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
+              <h2 className="text-xl font-black text-zinc-900 tracking-tight">Account</h2>
+           </div>
+
+           <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1">Username</label>
+                  <div className="px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 flex items-center justify-between">
+                     <span>{profileForm.username || 'Not set'}</span>
+                     <button className="text-primary-600 text-[11px] font-black uppercase tracking-widest">Edit</button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1">Phone</label>
+                  <input 
+                    type="text" 
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                    placeholder="+1 (555) 012-3456"
+                    className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:bg-white transition-all outline-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1">Language</label>
+                  <div className="relative group">
+                    <select 
+                      value={profileForm.language}
+                      onChange={(e) => setProfileForm({...profileForm, language: e.target.value})}
+                      className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 appearance-none focus:bg-white transition-all outline-none cursor-pointer"
+                    >
+                      <option>English (US)</option>
+                      <option>French (FR)</option>
+                      <option>Spanish (ES)</option>
+                      <option>German (DE)</option>
+                    </select>
+                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none group-focus-within:rotate-180 transition-transform" />
+                  </div>
+                </div>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* 3. SECURITY */}
+      <section className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-zinc-100 shadow-xl shadow-zinc-200/40 space-y-8">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+          <h2 className="text-xl font-black text-zinc-900 tracking-tight">Security</h2>
+        </div>
+
+        <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           {[
+             { label: 'Current Password', key: 'currentPassword' },
+             { label: 'New Password', key: 'newPassword' },
+             { label: 'Confirm New', key: 'confirmNew' }
+           ].map((field, i) => (
+             <div key={i} className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">{field.label}</label>
+                <div className="relative group">
+                  <input 
+                    type={showPass[field.key.replace('current', 'current')] ? 'text' : 'password'}
+                    value={passwordForm[field.key]}
+                    onChange={(e) => setPasswordForm({...passwordForm, [field.key]: e.target.value})}
+                    placeholder={i === 0 ? '••••••••' : 'Enter new'}
+                    className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:bg-white transition-all outline-none pr-12" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPass({...showPass, [field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']: !showPass[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']})}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-600 transition-colors"
+                  >
+                    {showPass[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+             </div>
+           ))}
+        </form>
+
+        <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100 flex items-center justify-between group">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center">
+                 <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                 <h3 className="text-sm font-black text-zinc-900">Two-Factor Authentication (2FA)</h3>
+                 <p className="text-xs text-zinc-400 font-medium">Secure your account with an extra layer of safety.</p>
+              </div>
+           </div>
+           <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={preferences.twoFactorEnabled}
+                onChange={(e) => handleTogglePreference('twoFactorEnabled', e.target.checked)}
+              />
+              <div className="w-12 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+           </label>
+        </div>
+      </section>
+
+      {/* 4. NOTIFICATIONS */}
+      <section className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-zinc-100 shadow-xl shadow-zinc-200/40 space-y-8">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+          <h2 className="text-xl font-black text-zinc-900 tracking-tight">Notifications</h2>
+        </div>
+
+        <div className="space-y-2">
+           {[
+             { title: 'Email notifications', desc: 'Weekly digest and activity alerts', key: 'emailNotifications' },
+             { title: 'Live class reminders', desc: 'Get notified 15 minutes before starts', key: 'liveClassReminders' },
+             { title: 'Chat messages', desc: 'Instructor and peer replies', key: 'chatMessages' },
+             { title: 'Course updates', desc: 'New lessons and downloadable resources', key: 'courseUpdates' }
+           ].map((notif, i) => (
+             <div key={i} className="flex items-center justify-between p-4 px-6 hover:bg-zinc-50 rounded-2xl transition-colors group">
+                <div>
+                   <h4 className="text-sm font-bold text-zinc-900">{notif.title}</h4>
+                   <p className="text-xs text-zinc-400 font-medium mt-0.5">{notif.desc}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={notifications[notif.key]}
+                    onChange={(e) => handleToggleNotification(notif.key, e.target.checked)}
+                  />
+                  <div className="w-10 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+             </div>
+           ))}
+        </div>
+      </section>
+
+      {/* 5. PREFERENCES */}
+      <section className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-zinc-100 shadow-xl shadow-zinc-200/40 space-y-8">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-zinc-900 rounded-full" />
+          <h2 className="text-xl font-black text-zinc-900 tracking-tight">Preferences</h2>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+           <div className="space-y-4">
+              <div>
+                 <h4 className="text-sm font-black text-zinc-900">Dark Mode</h4>
+                 <p className="text-xs text-zinc-400 font-medium mt-0.5">Adjust your interface theme.</p>
+              </div>
+              <div className="flex bg-zinc-100 p-1 rounded-2xl w-fit">
+                 <button 
+                  onClick={() => handleTogglePreference('darkMode', false)}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${!preferences.darkMode ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+                 >
+                    <Sun className="w-4 h-4" /> Light
+                 </button>
+                 <button 
+                  onClick={() => handleTogglePreference('darkMode', true)}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${preferences.darkMode ? 'bg-zinc-800 shadow-sm text-white' : 'text-zinc-400 hover:text-zinc-600'}`}
+                 >
+                    <Moon className="w-4 h-4" /> Dark
+                 </button>
+              </div>
+           </div>
+
+           <div className="space-y-4 flex-1 max-w-md">
+              <div>
+                 <h4 className="text-sm font-black text-zinc-900">Video Quality</h4>
+                 <p className="text-xs text-zinc-400 font-medium mt-0.5">Default streaming resolution.</p>
+              </div>
+              <div className="flex bg-zinc-100 p-1 rounded-2xl w-full">
+                 {['720p', '1080p', '4K'].map((q) => (
+                   <button 
+                    key={q}
+                    onClick={() => handleTogglePreference('videoQuality', q)}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${preferences.videoQuality === q ? 'bg-primary-600 text-white shadow-lg' : 'text-zinc-400 hover:text-zinc-600'}`}
+                   >
+                     {q}
+                   </button>
+                 ))}
+              </div>
+           </div>
+        </div>
+
+        <div className="flex justify-end pt-4">
+           <button className="px-10 py-4 bg-primary-600 text-white font-black text-sm rounded-full shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Save All Changes
+           </button>
+        </div>
+      </section>
+
+      {/* 6. DANGER ZONE */}
+      <section className="bg-red-50/50 rounded-[2.5rem] p-8 lg:p-10 border border-red-100 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div>
+              <h2 className="text-xl font-black text-red-600 tracking-tight">Danger Zone</h2>
+              <p className="text-xs text-red-400 font-medium mt-1">Permanently delete your account and all associated data.</p>
+           </div>
+           <div className="flex items-center gap-4">
+              <button 
+                onClick={logout}
+                className="px-8 py-3.5 text-zinc-500 font-black text-xs uppercase tracking-widest hover:text-zinc-900 transition-colors"
+              >
+                Logout
+              </button>
+              <button 
+                onClick={handleDeleteAccount}
+                className="px-8 py-3.5 bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-red-500/30 hover:bg-red-700 active:scale-[0.98] transition-all flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account
+              </button>
+           </div>
+        </div>
+      </section>
+    </motion.div>
+  );
+};
+
+export default SettingsPage;

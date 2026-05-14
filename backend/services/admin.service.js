@@ -1,5 +1,7 @@
 import User from "../models/User.js";
 import Course from "../models/Course.js";
+import Payout from "../models/Payout.js";
+import Enrollment from "../models/Enrollment.js";
 import mongoose from "mongoose";
 
 export const adminService = {
@@ -40,7 +42,6 @@ export const adminService = {
     const total = await User.countDocuments(query);
 
     // Fetch enrollment insights for each student
-    const Enrollment = mongoose.model("Enrollment");
     const studentsWithInsights = await Promise.all(students.map(async (student) => {
       const enrollments = await Enrollment.find({ user: student._id });
       const totalSpent = enrollments.reduce((sum, enr) => sum + (enr.amountPaid || 0), 0);
@@ -68,7 +69,7 @@ export const adminService = {
       User.countDocuments({ role: "student", deletedAt: null }),
       User.countDocuments({ role: "student", deletedAt: null, isBlocked: false }),
       User.countDocuments({ role: "student", deletedAt: null, createdAt: { $gte: startOfMonth } }),
-      mongoose.model("Enrollment").find()
+      Enrollment.find()
     ]);
 
     const avgCompletion = enrollments.length > 0
@@ -277,8 +278,8 @@ export const adminService = {
       Course.countDocuments(),
       User.countDocuments({ role: "instructor", isApproved: false }),
       Course.countDocuments({ status: "pending" }),
-      mongoose.model("Enrollment").countDocuments({ paymentStatus: "completed" }),
-      mongoose.model("Enrollment").find({ paymentStatus: "completed" }).populate("course"),
+      Enrollment.countDocuments({ paymentStatus: "completed" }),
+      Enrollment.find({ paymentStatus: "completed" }).populate("course"),
       User.find({ role: "instructor" }).sort({ createdAt: -1 }).limit(5).select("name email createdAt isApproved role"),
       Course.find().populate("instructor", "name").sort({ createdAt: -1 }).limit(5).select("title category createdAt status")
     ]);
@@ -366,7 +367,6 @@ export const adminService = {
   },
 
   getPayments: async ({ page = 1, limit = 50 }) => {
-    const Enrollment = mongoose.model("Enrollment");
     const query = { paymentStatus: "completed" };
 
     const payments = await Enrollment.find(query)
@@ -378,5 +378,34 @@ export const adminService = {
 
     const total = await Enrollment.countDocuments(query);
     return { payments, total };
+  },
+
+  getPayouts: async ({ status, page = 1, limit = 50 }) => {
+    const query = {};
+    if (status && status !== 'all') query.status = status;
+
+    const payouts = await Payout.find(query)
+      .populate("instructor", "name email avatar")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Payout.countDocuments(query);
+    return { payouts, total };
+  },
+
+  updatePayoutStatus: async (id, { status, adminComment, transactionId }) => {
+    const updateData = { status };
+    if (adminComment) updateData.adminComment = adminComment;
+    if (transactionId) updateData.transactionId = transactionId;
+
+    if (status === 'paid') {
+      updateData.paidAt = new Date();
+    } else if (status === 'rejected') {
+      updateData.rejectedAt = new Date();
+    }
+
+    return await Payout.findByIdAndUpdate(id, updateData, { new: true })
+      .populate("instructor", "name email avatar");
   }
 };

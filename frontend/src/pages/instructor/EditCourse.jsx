@@ -13,6 +13,7 @@ import { getCourseById, updateCourse } from '../../services/courseService';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import PromoVideoUpload from '../../components/instructor/PromoVideoUpload';
 
 const EditCourse = () => {
   const { id } = useParams();
@@ -30,7 +31,9 @@ const EditCourse = () => {
     thumbnail: '',
     currency: 'INR',
     isFree: false,
-    discountPrice: 0
+    discountPrice: 0,
+    previewVideo: '',
+    previewVideoPublicId: ''
   });
   const [errors, setErrors] = useState({});
 
@@ -63,7 +66,9 @@ const EditCourse = () => {
         thumbnail: course.thumbnail || '',
         currency: course.currency || 'INR',
         isFree: course.isFree || false,
-        discountPrice: course.discountPrice || 0
+        discountPrice: course.discountPrice || 0,
+        previewVideo: course.previewVideo || '',
+        previewVideoPublicId: course.previewVideoPublicId || ''
       });
     } catch (error) {
       toast.error('Failed to fetch course details');
@@ -261,11 +266,20 @@ const EditCourse = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Promo Video (Coming Soon)</label>
-              <div className="relative h-52 bg-slate-100 rounded-[28px] overflow-hidden flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200">
-                <Video className="w-10 h-10 text-slate-200 mb-4" />
-                <p className="text-xs font-bold text-slate-400">Video preview management coming soon</p>
-              </div>
+              <PromoVideoUpload 
+                courseId={id} 
+                initialUrl={formData.previewVideo}
+                onUploadSuccess={(data) => setFormData(prev => ({ 
+                  ...prev, 
+                  previewVideo: data.url, 
+                  previewVideoPublicId: data.publicId 
+                }))}
+                onRemove={() => setFormData(prev => ({ 
+                  ...prev, 
+                  previewVideo: '', 
+                  previewVideoPublicId: '' 
+                }))}
+              />
             </div>
           </div>
         </div>

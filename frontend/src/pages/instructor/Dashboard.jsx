@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getInstructorCourses } from '../../services/instructorService';
+import { getInstructorCourses, getInstructorStats } from '../../services/instructorService';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { BookOpen, Users, DollarSign, TrendingUp, PlusCircle, Eye, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -27,21 +27,24 @@ const InstructorDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const data = await getInstructorCourses();
-      const fetchedCourses = data.courses || [];
+      const [coursesData, statsData] = await Promise.all([
+        getInstructorCourses(),
+        getInstructorStats()
+      ]);
+
+      const fetchedCourses = coursesData.courses || [];
       setCourses(fetchedCourses);
-      const totalStudents = fetchedCourses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
-      const totalEarnings = fetchedCourses.reduce((acc, c) => {
-        const actualPrice = (c.discountPrice > 0 && c.discountPrice < c.price) ? c.discountPrice : (c.price || 0);
-        return acc + ((c.totalStudents || 0) * actualPrice);
-      }, 0);
-      setStats({
-        totalCourses: fetchedCourses.length,
-        totalStudents,
-        totalRevenue: formatCurrency(totalEarnings),
-        monthlyEarnings: formatCurrency(0) // Mock monthly for now
-      });
+
+      if (statsData.success) {
+        setStats({
+          totalCourses: statsData.data.totalCourses,
+          totalStudents: statsData.data.totalStudents,
+          totalRevenue: formatCurrency(statsData.data.totalRevenue),
+          monthlyEarnings: formatCurrency(statsData.data.monthlyEarnings)
+        });
+      }
     } catch (error) {
+      console.error('Dashboard data error:', error);
       toast.error('Failed to fetch dashboard data');
     } finally {
       setLoading(false);

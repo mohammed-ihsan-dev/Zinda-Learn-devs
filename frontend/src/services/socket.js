@@ -173,6 +173,10 @@ class SocketService {
     this.socket?.on('incoming-call', callback);
   }
 
+  onCallRinging(callback) {
+    this.socket?.on('call-ringing', callback);
+  }
+
   onCallAccepted(callback) {
     this.socket?.on('call-accepted', callback);
   }
@@ -199,6 +203,20 @@ class SocketService {
 
   onCallError(callback) {
     this.socket?.on('call-error', callback);
+  }
+
+  // Cleanup for calls
+  offCallEvents() {
+    if (!this.socket) return;
+    this.socket.off('incoming-call');
+    this.socket.off('call-ringing');
+    this.socket.off('call-accepted');
+    this.socket.off('call-rejected');
+    this.socket.off('call-ended');
+    this.socket.off('webrtc-offer');
+    this.socket.off('webrtc-answer');
+    this.socket.off('ice-candidate');
+    this.socket.off('call-error');
   }
 }
 

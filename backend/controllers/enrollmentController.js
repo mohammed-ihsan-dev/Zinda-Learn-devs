@@ -1,6 +1,8 @@
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
 import User from "../models/User.js";
+import Progress from "../models/Progress.js";
+import Certificate from "../models/Certificate.js";
 
 // Get user enrollments
 export const getMyEnrollments = async (req, res) => {
@@ -64,6 +66,33 @@ export const updateProgress = async (req, res) => {
 
     if (lessonId && !enrollment.completedLessons.includes(lessonId)) {
       enrollment.completedLessons.push(lessonId);
+      
+      // Log progress activity
+      try {
+        const course = await Course.findById(enrollment.course);
+        let lessonDuration = 0;
+        if (course) {
+          course.modules.forEach(mod => {
+            const lesson = mod.lessons.find(l => l._id.toString() === lessonId);
+            if (lesson) lessonDuration = lesson.duration || 0;
+          });
+        }
+        
+        await Progress.create({
+          user: req.user.id,
+          course: enrollment.course,
+          lessonId,
+          minutesLearned: lessonDuration,
+          date: new Date()
+        });
+        
+        // Update user's total hours
+        await User.findByIdAndUpdate(req.user.id, { 
+          $inc: { hoursLearned: Math.round((lessonDuration / 60) * 10) / 10 || 0, points: 10 } 
+        });
+      } catch (logErr) {
+        console.error("Failed to log progress:", logErr);
+      }
     }
 
     if (
@@ -87,9 +116,33 @@ export const updateProgress = async (req, res) => {
         )
         : 0;
 
-    if (enrollment.progress >= 100) {
+    if (enrollment.progress >= 100 && !enrollment.isCompleted) {
       enrollment.isCompleted = true;
       enrollment.completedAt = new Date();
+      
+      // Issue Certificate
+      try {
+        const existingCert = await Certificate.findOne({ enrollment: enrollment._id });
+        if (!existingCert) {
+          const certId = `ZL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const course = await Course.findById(enrollment.course);
+          
+          await Certificate.create({
+            user: req.user.id,
+            course: enrollment.course,
+            enrollment: enrollment._id,
+            certificateId: certId,
+            skills: course?.tags || []
+          });
+          
+          // Update user certificates array
+          await User.findByIdAndUpdate(req.user.id, { 
+            $addToSet: { certificates: certId } 
+          });
+        }
+      } catch (certErr) {
+        console.error("Failed to issue certificate:", certErr);
+      }
     }
 
     await enrollment.save();
@@ -171,7 +224,10 @@ export const enrollInCourse = async (req, res) => {
 
     // Update course and user
     await Promise.all([
-      Course.findByIdAndUpdate(courseId, { $inc: { totalStudents: 1 } }),
+      Course.findByIdAndUpdate(courseId, { 
+        $inc: { totalStudents: 1 },
+        $addToSet: { students: req.user.id }
+      }),
       User.findByIdAndUpdate(req.user.id, { $addToSet: { enrolledCourses: courseId } })
     ]);
 

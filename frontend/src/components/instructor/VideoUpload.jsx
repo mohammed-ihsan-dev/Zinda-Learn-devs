@@ -168,8 +168,8 @@ const VideoUpload = ({ courseId, onUploadSuccess }) => {
                 <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center mb-4">
                   <UploadCloud className="w-8 h-8 text-purple-600" />
                 </div>
-                <p className="font-bold text-slate-700">Drag & drop video or click to browse</p>
-                <p className="text-xs text-slate-400 mt-1">MP4, WebM, or OGG (Max 200MB)</p>
+                <p className="font-bold text-slate-700">Drag & drop lecture video or click to browse</p>
+                <p className="text-xs text-slate-400 mt-1">MP4, WebM, or MOV (Max 200MB)</p>
               </>
             )}
           </div>

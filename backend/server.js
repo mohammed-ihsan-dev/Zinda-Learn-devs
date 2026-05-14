@@ -17,6 +17,12 @@ import notificationRoutes from './routes/notification.routes.js';
 import videoRoutes from './routes/video.routes.js';
 import liveClassRoutes from './modules/liveClasses/routes/liveClass.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import studentProgressRoutes from './routes/studentProgress.routes.js';
+import certificateRoutes from './routes/certificate.routes.js';
+import studentSettingsRoutes from './routes/studentSettings.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
+import errorMiddleware from './middleware/errorMiddleware.js';
 
 
 // Load env vars
@@ -32,6 +38,11 @@ const httpServer = createServer(app);
 initSocket(httpServer);
 
 // Middleware
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -62,6 +73,11 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/live-classes', liveClassRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/student/progress', studentProgressRoutes);
+app.use('/api/student/certificates', certificateRoutes);
+app.use('/api/student/settings', studentSettingsRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/payment', paymentRoutes);
 
 
 // Health check
@@ -70,14 +86,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+app.use(errorMiddleware);
 
 // 404 handler
 app.use((req, res) => {

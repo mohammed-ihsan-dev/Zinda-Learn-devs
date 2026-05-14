@@ -15,8 +15,8 @@ const upload = multer({
   limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.mp4' && ext !== '.mkv' && ext !== '.mov') {
-      return cb(new Error('Only videos are allowed'));
+    if (ext !== '.mp4' && ext !== '.webm' && ext !== '.mov') {
+      return cb(new Error('Only MP4, WebM, and MOV videos are allowed'));
     }
     cb(null, true);
   }

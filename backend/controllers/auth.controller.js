@@ -314,25 +314,38 @@ export const googleLogin = async (req, res) => {
       const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
       
       const role = req.body.role || "student";
-      try {
-        user = await User.create({
-          name,
-          email,
-          profilePic: photo || "",
-          avatar: photo || "",
-          role: role,
-          password: randomPassword,
-          isVerified: true, // Google users are considered verified
-          isApproved: role !== 'instructor'
-        });
-      } catch (createError) {
-        if (createError.code === 11000) {
-          // If user was created by another request in the meantime
-          user = await User.findOne({ email });
-        } else {
-          throw createError;
-        }
+      
+      user = await User.create({
+        name,
+        email,
+        profilePic: photo || "",
+        avatar: photo || "",
+        role: role,
+        password: randomPassword,
+        isVerified: true,
+        isApproved: role !== 'instructor' // Instructors need manual approval
+      });
+    } else {
+      // Update photo if it changed
+      if (photo && (user.profilePic !== photo)) {
+        user.profilePic = photo;
+        user.avatar = photo;
+        await user.save();
       }
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked. Please contact support."
+      });
+    }
+
+    if (user.role === 'instructor' && !user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: "Your instructor account is pending approval."
+      });
     }
 
     // 4. Generate JWT for our app

@@ -16,7 +16,6 @@ router.get('/', getCourses);
 router.get('/:id', optionalProtect, getCourse);
 
 // Instructor routes
-router.get('/instructor/my-courses', protect, isInstructor, getInstructorCourses);
 router.post('/', protect, isInstructor, isApprovedInstructor, createCourse);
 router.put('/:id', protect, authorize('instructor', 'admin'), updateCourse);
 router.delete('/:id', protect, isInstructor, isApprovedInstructor, deleteCourse);

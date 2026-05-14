@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
+import { useLandingData } from '../hooks/useLandingData';
 
 const StudentLogin = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -14,6 +15,7 @@ const StudentLogin = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { login, googleLogin } = useAuth();
+  const { stats, testimonials, loading: landingLoading } = useLandingData();
   const navigate = useNavigate();
 
   const validate = () => {
@@ -75,8 +77,9 @@ const StudentLogin = () => {
       if (err.code === 'auth/popup-closed-by-user') {
         toast.error('Login cancelled');
       } else {
-        toast.error(err.message || 'Google login failed');
-        console.error(err);
+        const errorMsg = err.response?.data?.message || err.message || 'Google login failed';
+        toast.error(errorMsg);
+        console.error('Google Login Error:', err);
       }
     } finally {
       setLoading(false);
@@ -111,8 +114,8 @@ const StudentLogin = () => {
           {/* Stats */}
           <div className="flex items-center gap-8 mb-12">
             {[
-              { value: '50K+', label: 'Active Students' },
-              { value: '4.8', label: 'Average Rating' },
+              { value: stats.students, label: 'Active Students' },
+              { value: stats.avgRating, label: 'Average Rating' },
             ].map((stat) => (
               <div key={stat.label}>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
@@ -122,24 +125,32 @@ const StudentLogin = () => {
           </div>
 
           {/* Testimonial */}
-          <div className="glass rounded-2xl p-6 max-w-md border border-white/10">
-            <Quote className="w-8 h-8 text-primary-300 mb-3" />
-            <p className="text-black/80 text-sm leading-relaxed mb-4">
-              "Zinda Learn helped me transition from a marketing role to a full-stack developer. The courses are well-structured and the community is amazing!"
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary-400 flex items-center justify-center text-purple font-bold text-sm">P</div>
-              <div>
-                <p className="text-purple font-semibold text-sm">Priya Sharma</p>
-                <p className="text-purple/50 text-xs">Frontend Developer at Google</p>
-              </div>
-              <div className="ml-auto flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                ))}
+          {testimonials.length > 0 && (
+            <div className="glass rounded-2xl p-6 max-w-md border border-white/10">
+              <Quote className="w-8 h-8 text-primary-300 mb-3" />
+              <p className="text-black/80 text-sm leading-relaxed mb-4">
+                "{testimonials[0].comment || testimonials[0].content}"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary-400 flex items-center justify-center text-purple font-bold text-sm overflow-hidden">
+                  {testimonials[0].user?.profilePic ? (
+                    <img src={testimonials[0].user.profilePic} alt={testimonials[0].user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    testimonials[0].user?.name?.charAt(0) || 'U'
+                  )}
+                </div>
+                <div>
+                  <p className="text-purple font-semibold text-sm">{testimonials[0].user?.name || 'Anonymous'}</p>
+                  <p className="text-purple/50 text-xs">{testimonials[0].user?.role || 'Learner'}</p>
+                </div>
+                <div className="ml-auto flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`w-3 h-3 ${i < testimonials[0].rating ? 'fill-amber-400 text-amber-400' : 'text-purple/20'}`} />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

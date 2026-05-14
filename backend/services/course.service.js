@@ -3,7 +3,7 @@ import Enrollment from "../models/Enrollment.js";
 
 export const courseService = {
   getPublishedCourses: async ({ category, level, search, minPrice, maxPrice, sort, page = 1, limit = 12 }) => {
-    const query = { status: "published", isApproved: true, isDeleted: { $ne: true } };
+    const query = { status: "published", isDeleted: { $ne: true } };
 
     if (category) query.category = category;
     if (level) query.level = level;

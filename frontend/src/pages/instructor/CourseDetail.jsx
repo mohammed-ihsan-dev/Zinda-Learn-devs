@@ -194,6 +194,7 @@ const CreateLessonModal = ({ onClose, onSave, courseId }) => {
             onUploadSuccess={(video) => {
               onSave({
                 title: video.title,
+                description: video.description || '',
                 videoUrl: video.videoUrl,
                 duration: video.duration || 0,
                 isFree: false,
@@ -208,11 +209,121 @@ const CreateLessonModal = ({ onClose, onSave, courseId }) => {
   );
 };
 
+// ── Edit Lesson Modal ────────────────────────────────────────────────────────
+const EditLessonModal = ({ lesson, onClose, onSave }) => {
+  const [formData, setFormData] = useState({ 
+    title: lesson.title, 
+    description: lesson.description || '',
+    isFree: lesson.isFree || false
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return toast.error('Title is required');
+    onSave({ ...lesson, ...formData });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden">
+        <div className="flex items-center justify-between p-8 pb-6 border-b border-slate-50">
+          <h3 className="text-xl font-bold text-slate-900">Edit Lesson</h3>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 transition-colors">
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Lesson Title</label>
+            <input
+              autoFocus
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
+            <textarea
+              rows="3"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-4 px-1">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={formData.isFree}
+                onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
+                className="w-5 h-5 rounded-lg border-slate-200 text-purple-600 focus:ring-purple-500 transition-all"
+              />
+              <span className="text-sm font-bold text-slate-600 group-hover:text-purple-600 transition-colors">Available as Free Preview</span>
+            </label>
+          </div>
+
+          <div className="flex items-center gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-all">
+              Cancel
+            </button>
+            <button type="submit" className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ── Lesson Preview Modal ──────────────────────────────────────────────────────
+const LessonPreviewModal = ({ lesson, onClose }) => {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-10">
+      <div className="w-full max-w-5xl aspect-video relative bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/10">
+        <button 
+          onClick={onClose}
+          className="absolute top-6 right-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-all z-10"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        
+        <div className="absolute top-6 left-8 z-10">
+          <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Previewing Lesson</p>
+          <h3 className="text-xl font-bold text-white">{lesson.title}</h3>
+        </div>
+
+        {lesson.videoUrl ? (
+          <video 
+            src={lesson.videoUrl} 
+            controls 
+            autoPlay 
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-white">
+            <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+            <p className="font-bold">No video URL found for this lesson</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── Content Tab ───────────────────────────────────────────────────────────────
-const ContentTab = ({ modules = [], onUpdate }) => {
+const ContentTab = ({ modules = [], onUpdate, courseId }) => {
   const [selectedModule, setSelectedModule] = useState(0);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
+  const [editingLesson, setEditingLesson] = useState(null);
+  const [previewingLesson, setPreviewingLesson] = useState(null);
 
   const handleAddModule = (newMod) => {
     const updatedModules = [...modules, {
@@ -236,6 +347,27 @@ const ContentTab = ({ modules = [], onUpdate }) => {
     toast.success('Lesson added successfully');
   };
 
+  const handleUpdateLesson = (updatedLesson) => {
+    const updatedModules = [...modules];
+    const currentModule = updatedModules[selectedModule];
+    currentModule.lessons = currentModule.lessons.map((l, i) => 
+      i === editingLesson.index ? updatedLesson : l
+    );
+    onUpdate(updatedModules);
+    setEditingLesson(null);
+    toast.success('Lesson updated');
+  };
+
+  const handleDeleteLesson = (index) => {
+    if (window.confirm('Are you sure you want to delete this lesson?')) {
+      const updatedModules = [...modules];
+      const currentModule = updatedModules[selectedModule];
+      currentModule.lessons = currentModule.lessons.filter((_, i) => i !== index);
+      onUpdate(updatedModules);
+      toast.success('Lesson removed');
+    }
+  };
+
   return (
     <>
       {showModuleModal && (
@@ -248,7 +380,20 @@ const ContentTab = ({ modules = [], onUpdate }) => {
         <CreateLessonModal
           onClose={() => setShowLessonModal(false)}
           onSave={handleAddLesson}
-          courseId={window.location.pathname.split('/').pop()}
+          courseId={courseId}
+        />
+      )}
+      {editingLesson && (
+        <EditLessonModal
+          lesson={editingLesson.lesson}
+          onClose={() => setEditingLesson(null)}
+          onSave={handleUpdateLesson}
+        />
+      )}
+      {previewingLesson && (
+        <LessonPreviewModal
+          lesson={previewingLesson}
+          onClose={() => setPreviewingLesson(null)}
         />
       )}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
@@ -318,21 +463,38 @@ const ContentTab = ({ modules = [], onUpdate }) => {
                 {modules[selectedModule].lessons?.length > 0 ? (
                   modules[selectedModule].lessons.map((lesson, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group border border-transparent hover:border-slate-200 transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors">
-                          <PlayCircle className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h5 className="text-sm font-bold text-slate-700">{lesson.title}</h5>
+                      <div className="flex items-center gap-4 overflow-hidden">
+                        <button 
+                          onClick={() => setPreviewingLesson(lesson)}
+                          className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-600 group-hover:bg-purple-50 transition-all shrink-0 active:scale-95"
+                        >
+                          <PlayCircle className="w-5 h-5" />
+                        </button>
+                        <div className="overflow-hidden">
+                          <h5 className="text-sm font-bold text-slate-700 truncate">{lesson.title}</h5>
+                          {lesson.description && (
+                            <p className="text-[11px] text-slate-400 truncate max-w-[300px] font-medium mb-1">{lesson.description}</p>
+                          )}
                           <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
                             <span>{lesson.duration} mins</span>
                             {lesson.isFree && <span className="text-emerald-500">Free Preview</span>}
                           </div>
                         </div>
                       </div>
-                      <button className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button 
+                          onClick={() => setEditingLesson({ lesson, index: idx })}
+                          className="p-2 text-slate-400 hover:text-purple-600 transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteLesson(idx)}
+                          className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -614,7 +776,7 @@ const CourseDetail = () => {
 
       {/* Tab Content */}
       <div className="transition-all duration-500">
-        {activeTab === 'Content' && <ContentTab modules={course.modules} onUpdate={handleCurriculumUpdate} />}
+        {activeTab === 'Content' && <ContentTab modules={course.modules} onUpdate={handleCurriculumUpdate} courseId={id} />}
         {activeTab === 'Tests' && <TestsTab />}
         {activeTab === 'Coupons' && <CouponsTab />}
       </div>

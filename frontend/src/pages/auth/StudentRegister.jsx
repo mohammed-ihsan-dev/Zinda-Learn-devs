@@ -153,7 +153,11 @@ const StudentRegister = () => {
       toast.success('Signed in with Google!');
       navigate('/student/dashboard');
     } catch (err) {
-      toast.error('Google login failed');
+      if (err.code !== 'auth/popup-closed-by-user') {
+        const errorMsg = err.response?.data?.message || err.message || 'Google signup failed';
+        toast.error(errorMsg);
+        console.error('Student Google Signup Error:', err);
+      }
     }
   };
 

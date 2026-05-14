@@ -6,7 +6,10 @@ import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../../firebase';
 import { signInWithPopup } from 'firebase/auth';
 
+import { useLandingData } from '../../hooks/useLandingData';
+
 const InstructorLogin = () => {
+  const { stats } = useLandingData();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +58,9 @@ const InstructorLogin = () => {
       navigate('/instructor/dashboard');
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        toast.error('Google login failed');
+        const errorMsg = err.response?.data?.message || err.message || 'Google login failed';
+        toast.error(errorMsg);
+        console.error('Instructor Google Login Error:', err);
       }
     } finally {
       setLoading(false);
@@ -88,7 +93,7 @@ const InstructorLogin = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-purple-200 tracking-wider uppercase">Global Reach</p>
-                <p className="text-white font-bold">14,203 active students today</p>
+                <p className="text-white font-bold">{stats.students} active students today</p>
               </div>
             </div>
             <div className="h-40 bg-[#1c1c21] rounded-xl overflow-hidden relative border border-white/10 shadow-inner">

@@ -38,6 +38,9 @@ export const callHandlers = (io, socket) => {
       callerAvatar: socket.user.avatar,
       conversationId
     });
+
+    // Notify caller that it's ringing
+    socket.emit('call-ringing', { receiverId });
   });
 
   // 2. Accept Call
@@ -52,10 +55,6 @@ export const callHandlers = (io, socket) => {
   socket.on('reject-call', async ({ callerId }) => {
     const callerSocketId = userSockets.get(callerId);
     
-    // Clear busy states
-    activeCalls.delete(userId);
-    activeCalls.delete(callerId);
-
     if (callerSocketId) {
       io.to(callerSocketId).emit('call-rejected', { receiverId: userId });
     }
@@ -66,6 +65,10 @@ export const callHandlers = (io, socket) => {
       receiver: userId,
       status: 'rejected'
     });
+
+    // Clear busy states after logging
+    activeCalls.delete(userId);
+    activeCalls.delete(callerId);
   });
 
   // 4. WebRTC Signaling (Offer/Answer/ICE Candidates)
@@ -99,20 +102,21 @@ export const callHandlers = (io, socket) => {
       io.to(partnerSocketId).emit('call-ended', { from: userId });
     }
 
-    // Clear states
-    activeCalls.delete(userId);
-    activeCalls.delete(partnerId);
-
     // Log to history if this was the person ending it or reporting it
     if (duration !== undefined) {
+      const callData = activeCalls.get(userId);
       await CallHistory.create({
-        caller: activeCalls.get(userId)?.role === 'caller' ? userId : partnerId,
-        receiver: activeCalls.get(userId)?.role === 'receiver' ? userId : partnerId,
+        caller: callData?.role === 'caller' ? userId : partnerId,
+        receiver: callData?.role === 'receiver' ? userId : partnerId,
         status: 'completed',
         duration,
         endedAt: new Date()
       });
     }
+
+    // Clear states after logging
+    activeCalls.delete(userId);
+    activeCalls.delete(partnerId);
   });
 
   // 6. Cleanup on disconnect

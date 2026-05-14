@@ -16,6 +16,8 @@ const formatDuration = (mins) => {
 };
 
 // ── Main Component ─────────────────────────────────────────────────
+import Skeleton, { CourseCardSkeleton } from '../../components/Skeleton';
+
 const MyLearning = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,10 +31,12 @@ const MyLearning = () => {
   useEffect(() => {
     const fetchEnrollments = async () => {
       try {
+        setLoading(true);
         const data = await getMyEnrollments();
         setEnrollments(data.enrollments || []);
       } catch (error) {
         console.error('Error fetching enrollments:', error);
+        toast.error('Failed to load your courses');
       } finally {
         setLoading(false);
       }
@@ -45,7 +49,19 @@ const MyLearning = () => {
     setActiveLesson(null);
   }, [activeCourseId]);
 
-  if (loading) return <Loader fullScreen text="Loading your courses..." />;
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-10 pb-10">
+        <div className="space-y-2">
+          <Skeleton width="200px" height="32px" />
+          <Skeleton width="300px" height="20px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => <CourseCardSkeleton key={i} />)}
+        </div>
+      </div>
+    );
+  }
 
   const activeEnrollment = enrollments.find((e) => e.course._id === activeCourseId);
 

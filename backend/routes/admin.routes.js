@@ -19,6 +19,8 @@ import {
   declineCourse,
   getDashboardStats,
   getPayments,
+  getPayouts,
+  updatePayoutStatus,
   getStudents,
   getStudentStats,
   getTutors
@@ -53,5 +55,7 @@ router.patch('/courses/:id/decline', declineCourse);
 // 4. Dashboard & Finances
 router.get('/dashboard', getDashboardStats);
 router.get('/payments', getPayments);
+router.get('/payouts', getPayouts);
+router.patch('/payouts/:id/status', updatePayoutStatus);
 
 export default router;

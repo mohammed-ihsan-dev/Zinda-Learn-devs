@@ -1,25 +1,48 @@
 import express from 'express';
+import { 
+  getInstructorPayouts, 
+  requestWithdrawal, 
+  getInstructorReviews, 
+  updateInstructorSettings, 
+  submitSupportTicket, 
+  getInstructorTickets,
+  getInstructorCourses,
+  getInstructorDashboardStats,
+  getInstructorStudents
+} from '../controllers/instructor.controller.js';
+import { 
+  createCourse, 
+  updateCourse, 
+  deleteCourse 
+} from '../controllers/courseController.js';
+import { protect, authorize } from '../middleware/auth.js';
+
 const router = express.Router();
-import { createCourse, getInstructorCourses, updateCourse, deleteCourse } from '../controllers/courseController.js';
-import { getInstructorStudents } from '../controllers/enrollmentController.js';
-import { protect, isInstructor, isApprovedInstructor } from '../middleware/auth.js';
 
-// All routes require auth + instructor role
-router.use(protect, isInstructor);
+// All routes are protected and restricted to instructors
+router.use(protect);
+router.use(authorize('instructor'));
 
-// GET /api/instructor/students — get students enrolled in instructor's courses
-router.get('/students', getInstructorStudents);
+// Payouts
+router.get('/payouts', getInstructorPayouts);
+router.post('/withdraw', requestWithdrawal);
 
-// POST /api/instructor/course  — create a course
-router.post('/course', isApprovedInstructor, createCourse);
+// Reviews
+router.get('/reviews', getInstructorReviews);
 
-// GET /api/instructor/my-courses  — get own courses
+// Settings
+router.put('/settings', updateInstructorSettings);
+
+// Dashboard & Courses
 router.get('/my-courses', getInstructorCourses);
+router.get('/stats', getInstructorDashboardStats);
+router.get('/students', getInstructorStudents);
+router.post('/course', createCourse);
+router.put('/course/:id', updateCourse);
+router.delete('/course/:id', deleteCourse);
 
-// PUT /api/instructor/course/:id — edit course
-router.put('/course/:id', isApprovedInstructor, updateCourse);
-
-// DELETE /api/instructor/course/:id — delete course
-router.delete('/course/:id', isApprovedInstructor, deleteCourse);
+// Help Center / Support
+router.post('/support/tickets', submitSupportTicket);
+router.get('/support/tickets', getInstructorTickets);
 
 export default router;

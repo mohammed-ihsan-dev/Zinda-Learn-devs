@@ -10,6 +10,10 @@ const lessonSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  description: {
+    type: String,
+    trim: true
+  },
   videoUrl: {
     type: String,
     required: true
@@ -101,6 +105,10 @@ const courseSchema = new mongoose.Schema({
   },
 
   previewVideo: {
+    type: String,
+    default: ''
+  },
+  previewVideoPublicId: {
     type: String,
     default: ''
   },

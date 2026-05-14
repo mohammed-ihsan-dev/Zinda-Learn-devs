@@ -5,6 +5,7 @@ import { useCall } from '../context/CallContext';
 const CallModal = () => {
   const { 
     isCalling, 
+    isRinging,
     isConnected, 
     partnerName, 
     partnerAvatar, 
@@ -38,7 +39,7 @@ const CallModal = () => {
 
         <h3 className="text-2xl font-black text-white tracking-tight mb-2">{partnerName}</h3>
         <p className="text-cyan-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-8">
-          {isConnected ? `On Call • ${formatDuration(duration)}` : 'Calling...'}
+          {isConnected ? `On Call • ${formatDuration(duration)}` : isRinging ? 'Ringing...' : 'Calling...'}
         </p>
 
         {/* Controls */}

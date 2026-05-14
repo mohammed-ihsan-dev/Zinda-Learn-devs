@@ -61,7 +61,7 @@ export const createCourse = async (req, res) => {
     }
 
     // Normalize title and category
-    const title = req.body.title.trim().toLowerCase();
+    const title = req.body.title.trim();
     if (req.body.category) {
       req.body.category = req.body.category.toLowerCase().trim();
     }
@@ -113,7 +113,7 @@ export const updateCourse = async (req, res) => {
 
     // Normalize title if present and check for duplicates
     if (title) {
-      title = title.trim().toLowerCase();
+      title = title.trim();
       req.body.title = title;
 
       const existingCourse = await Course.findOne({
@@ -258,6 +258,39 @@ export const submitCourse = async (req, res) => {
       success: true,
       message: "Course submitted for review",
       course
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Get instructor dashboard stats
+export const getInstructorStats = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const courses = await Course.find({ instructor: instructorId, isDeleted: { $ne: true } }).lean();
+
+    const totalCourses = courses.length;
+    const totalStudents = courses.reduce((acc, c) => acc + (c.totalStudents || 0), 0);
+    
+    const totalRevenue = courses.reduce((acc, c) => {
+      const actualPrice = (c.discountPrice > 0 && c.discountPrice < c.price) ? c.discountPrice : (c.price || 0);
+      return acc + ((c.totalStudents || 0) * actualPrice);
+    }, 0);
+
+    const monthlyEarnings = totalRevenue * 0.15; // 15% placeholder
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalCourses,
+        totalStudents,
+        totalRevenue,
+        monthlyEarnings
+      }
     });
   } catch (error) {
     res.status(500).json({

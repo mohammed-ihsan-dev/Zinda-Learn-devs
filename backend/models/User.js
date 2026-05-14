@@ -84,6 +84,48 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  language: {
+    type: String,
+    default: 'English (US)'
+  },
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
+  },
+  paymentDetails: {
+    bank: {
+      accountNumber: String,
+      ifscCode: String,
+      bankName: String,
+      accountHolderName: String
+    },
+    upi: {
+      upiId: String
+    },
+    preferredMethod: {
+      type: String,
+      enum: ['bank', 'upi'],
+      default: 'bank'
+    }
+  },
+  notificationPreferences: {
+    emailNotifications: { type: Boolean, default: true },
+    liveClassReminders: { type: Boolean, default: true },
+    chatMessages: { type: Boolean, default: true },
+    courseUpdates: { type: Boolean, default: true },
+    newEnrollments: { type: Boolean, default: true },
+    newReviews: { type: Boolean, default: true },
+    payoutUpdates: { type: Boolean, default: true }
+  },
+  preferences: {
+    darkMode: { type: Boolean, default: false },
+    videoQuality: { type: String, enum: ['720p', '1080p', '4K'], default: '1080p' }
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -98,6 +140,13 @@ const userSchema = new mongoose.Schema({
     default: null
   }
 }, { timestamps: true });
+
+// Add indices for performance
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ isApproved: 1 });
+userSchema.index({ deletedAt: 1 });
+userSchema.index({ createdAt: -1 });
 
 // Hash password before save
 userSchema.pre('save', async function(next) {

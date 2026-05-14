@@ -99,3 +99,13 @@ export const getPayments = async (params) => {
   const { data } = await api.get('/admin/payments', { params });
   return data;
 };
+
+export const getPayouts = async (params) => {
+  const { data } = await api.get('/admin/payouts', { params });
+  return data;
+};
+
+export const updatePayoutStatus = async (id, updateData) => {
+  const { data } = await api.patch(`/admin/payouts/${id}/status`, updateData);
+  return data;
+};
