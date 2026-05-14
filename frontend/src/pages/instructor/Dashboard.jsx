@@ -114,13 +114,6 @@ const InstructorDashboard = () => {
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Revenue Overview */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-h-[300px] flex flex-col items-center justify-center text-center">
-            <TrendingUp className="w-12 h-12 text-slate-200 mb-4" />
-            <h3 className="text-lg font-bold text-slate-900">Revenue Overview</h3>
-            <p className="text-sm text-slate-400">Revenue analytics coming soon</p>
-          </div>
-
           {/* Recent Courses */}
           <div>
             <div className="flex justify-between items-center mb-4">
