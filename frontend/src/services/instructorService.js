@@ -5,8 +5,8 @@ export const createCourse = async (courseData) => {
   return data;
 };
 
-export const getInstructorCourses = async () => {
-  const { data } = await api.get('/instructor/my-courses');
+export const getInstructorCourses = async (params = {}) => {
+  const { data } = await api.get('/instructor/my-courses', { params });
   return data;
 };
 
@@ -32,5 +32,17 @@ export const submitCourse = async (id) => {
 
 export const getInstructorStudents = async () => {
   const { data } = await api.get('/instructor/students');
+  return data;
+};
+
+export const uploadThumbnail = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', 'zinda-learn/courses/thumbnails');
+  const { data } = await api.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return data;
 };

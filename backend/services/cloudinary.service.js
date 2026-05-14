@@ -45,7 +45,10 @@ export const cloudinaryService = {
    */
   uploadVideo: async (filePath, courseId) => {
     try {
-      const folder = `zinda-learn/courses/${courseId}/videos`;
+      const folder = courseId 
+        ? `zinda-learn/courses/${courseId}/videos`
+        : `zinda-learn/courses/temp/videos`;
+        
       const result = await cloudinary.uploader.upload(filePath, {
         resource_type: 'video',
         folder: folder,

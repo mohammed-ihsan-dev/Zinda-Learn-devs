@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
-  UploadCloud, 
+  Plus, 
   Video, 
   FileText, 
   Image as ImageIcon,
@@ -14,6 +14,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import PromoVideoUpload from '../../components/instructor/PromoVideoUpload';
+import ThumbnailUpload from '../../components/instructor/ThumbnailUpload';
 
 const EditCourse = () => {
   const { id } = useParams();
@@ -250,19 +251,11 @@ const EditCourse = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Course Thumbnail URL</label>
-              <input 
-                type="text" 
-                name="thumbnail"
-                value={formData.thumbnail}
-                onChange={handleChange}
-                placeholder="Paste image URL here..." 
-                className="w-full bg-slate-50/50 border border-slate-100 rounded-[18px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner mb-4"
+              <ThumbnailUpload 
+                initialUrl={formData.thumbnail}
+                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, thumbnail: url }))}
+                onRemove={() => setFormData(prev => ({ ...prev, thumbnail: '' }))}
               />
-              <div className="group border-2 border-dashed border-slate-100 rounded-[28px] h-32 flex flex-col items-center justify-center text-center p-4 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer relative overflow-hidden">
-                <UploadCloud className="w-6 h-6 text-slate-300 mb-2" />
-                <p className="text-[10px] text-slate-400 font-medium tracking-tight">Direct upload coming soon</p>
-              </div>
             </div>
 
             <div>

@@ -187,12 +187,45 @@ export const getInstructorTickets = async (req, res) => {
 
 export const getInstructorCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+    const sort = req.query.sort || '-createdAt';
+    const status = req.query.status;
+
+    // Build query
+    const query = { 
       instructor: req.user.id, 
       isDeleted: { $ne: true } 
-    }).sort({ createdAt: -1 });
+    };
+
+    // Add status filter if provided and not 'All'
+    if (status && status !== 'All') {
+      query.status = status.toLowerCase();
+    }
+
+    // Add search functionality if provided
+    if (search) {
+      query.title = { $regex: search, $options: 'i' };
+    }
+
+    // Get total count for pagination
+    const totalCourses = await Course.countDocuments(query);
+    const totalPages = Math.ceil(totalCourses / limit);
+
+    const courses = await Course.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
     
-    res.json({ success: true, courses });
+    res.json({ 
+      success: true, 
+      courses,
+      totalCourses,
+      totalPages,
+      currentPage: page
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

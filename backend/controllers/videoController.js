@@ -126,24 +126,21 @@ export const uploadVideo = async (req, res) => {
       return res.status(400).json({ success: false, message: "No video file provided" });
     }
 
-    if (!courseId) {
-      if (file.path) fs.unlinkSync(file.path);
-      return res.status(400).json({ success: false, message: "Missing courseId" });
+    // 1. Validate course ownership if courseId is provided
+    if (courseId && courseId !== 'undefined' && courseId !== 'null' && courseId !== '') {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        if (file.path) fs.unlinkSync(file.path);
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+
+      if (course.instructor.toString() !== req.user.id && req.user.role !== 'admin') {
+        if (file.path) fs.unlinkSync(file.path);
+        return res.status(403).json({ success: false, message: "Not authorized" });
+      }
     }
 
-    // 1. Validate course ownership
-    const course = await Course.findById(courseId);
-    if (!course) {
-      if (file.path) fs.unlinkSync(file.path);
-      return res.status(404).json({ success: false, message: "Course not found" });
-    }
-
-    if (course.instructor.toString() !== req.user.id && req.user.role !== 'admin') {
-      if (file.path) fs.unlinkSync(file.path);
-      return res.status(403).json({ success: false, message: "Not authorized" });
-    }
-
-    // 2. Upload to Cloudinary
+    // 2. Upload to Cloudinary (folder will be determined by cloudinaryService based on courseId presence)
     const result = await cloudinaryService.uploadVideo(file.path, courseId);
 
     // 3. Delete temp file

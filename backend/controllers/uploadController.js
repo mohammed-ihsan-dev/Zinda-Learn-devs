@@ -7,7 +7,7 @@ export const uploadFile = async (req, res) => {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
-    const { folder = 'zinda-learn/messages' } = req.body;
+    const { folder = 'zinda-learn/courses/thumbnails' } = req.body;
     
     const result = await cloudinaryService.uploadFile(req.file.path, folder);
     

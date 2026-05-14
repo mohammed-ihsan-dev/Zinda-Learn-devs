@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { 
-  UploadCloud, 
   Plus, 
   Video, 
   FileText, 
@@ -12,6 +11,8 @@ import { createCourse } from '../../services/instructorService';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import ThumbnailUpload from '../../components/instructor/ThumbnailUpload';
+import PromoVideoUpload from '../../components/instructor/PromoVideoUpload';
 
 const CreateCourse = () => {
   const { user } = useAuth();
@@ -27,7 +28,9 @@ const CreateCourse = () => {
     thumbnail: '',
     currency: 'INR',
     isFree: false,
-    discountPrice: 0
+    discountPrice: 0,
+    previewVideo: '',
+    previewVideoPublicId: ''
   });
   const [errors, setErrors] = useState({});
 
@@ -195,30 +198,28 @@ const CreateCourse = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Course Thumbnail URL</label>
-              <input 
-                type="text" 
-                name="thumbnail"
-                value={formData.thumbnail}
-                onChange={handleChange}
-                placeholder="Paste image URL here..." 
-                className="w-full bg-slate-50/50 border border-slate-100 rounded-[18px] px-6 py-4 text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all shadow-inner mb-4"
+              <ThumbnailUpload 
+                initialUrl={formData.thumbnail}
+                onUploadSuccess={(url) => setFormData(prev => ({ ...prev, thumbnail: url }))}
+                onRemove={() => setFormData(prev => ({ ...prev, thumbnail: '' }))}
               />
-              <div className="group border-2 border-dashed border-slate-100 rounded-[28px] h-32 flex flex-col items-center justify-center text-center p-4 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer relative overflow-hidden">
-                <UploadCloud className="w-6 h-6 text-slate-300 mb-2" />
-                <p className="text-[10px] text-slate-400 font-medium tracking-tight">Direct upload coming soon</p>
-              </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Promo Video</label>
-              <div className="relative h-52 bg-slate-50/50 rounded-[28px] overflow-hidden flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-100 group hover:border-purple-200 transition-all">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-purple-50 transition-colors">
-                  <Video className="w-7 h-7 text-slate-300 group-hover:text-purple-600 transition-colors" />
-                </div>
-                <p className="text-xs font-bold text-slate-500 mb-1">Upload Promo Video</p>
-                <p className="text-[10px] text-slate-400 max-w-[180px]">You can upload your course introduction after creating the course.</p>
-              </div>
+              <PromoVideoUpload 
+                courseId={null} // null for new courses
+                initialUrl={formData.previewVideo}
+                onUploadSuccess={(data) => setFormData(prev => ({ 
+                  ...prev, 
+                  previewVideo: data.url, 
+                  previewVideoPublicId: data.publicId 
+                }))}
+                onRemove={() => setFormData(prev => ({ 
+                  ...prev, 
+                  previewVideo: '', 
+                  previewVideoPublicId: '' 
+                }))}
+              />
             </div>
           </div>
         </div>
