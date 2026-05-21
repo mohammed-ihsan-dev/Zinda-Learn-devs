@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import { getNotifications, markAsRead } from '../services/notificationService';
+import { getNotifications, markAsRead, markAllRead } from '../services/notificationService';
 import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
@@ -43,8 +43,20 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
+  };
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead: handleMarkAsRead, fetchNotifications }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead: handleMarkAsRead, markAllRead: handleMarkAllRead, fetchNotifications }}>
       {children}
     </NotificationContext.Provider>
   );

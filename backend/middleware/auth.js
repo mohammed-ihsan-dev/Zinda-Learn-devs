@@ -36,6 +36,19 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    if (user.isBlocked) {
+      const isSupportRoute = req.originalUrl && req.originalUrl.includes('/api/support');
+      if (!isSupportRoute) {
+        return res.status(403).json({
+          success: false,
+          blocked: true,
+          message: "Your account has been suspended",
+          reason: user.blockedReason || "Violation of platform policies",
+          blockedReason: user.blockedReason || "Violation of platform policies"
+        });
+      }
+    }
+
     // Attach user to request
     req.user = user;
 

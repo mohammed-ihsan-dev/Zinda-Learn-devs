@@ -34,3 +34,15 @@ export const deleteAccount = async () => {
   const response = await api.delete('/student/settings/delete-account');
   return response.data;
 };
+
+export const uploadAvatar = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', 'zinda-learn/students/avatars');
+  const response = await api.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};

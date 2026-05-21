@@ -56,6 +56,14 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle Blocked Account
+    if (error.response?.status === 403 && error.response?.data?.blocked) {
+      if (!window.location.pathname.includes('/account-blocked')) {
+        toast.error('Your account has been suspended.');
+        window.location.href = '/account-blocked';
+      }
+    }
+
     // Global error message extraction
     const message = error.response?.data?.message || 'Something went wrong';
     

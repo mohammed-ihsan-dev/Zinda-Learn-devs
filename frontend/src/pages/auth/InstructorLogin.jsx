@@ -28,7 +28,11 @@ const InstructorLogin = () => {
     try {
       const data = await login({ ...formData, role: 'instructor' });
       toast.success('Welcome back, Instructor!');
-      navigate('/instructor/dashboard');
+      if (data.user.isBlocked) {
+        navigate('/account-blocked');
+      } else {
+        navigate('/instructor/dashboard');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
@@ -55,7 +59,11 @@ const InstructorLogin = () => {
         role: 'instructor'
       });
       toast.success('Signed in with Google!');
-      navigate('/instructor/dashboard');
+      if (data.user.isBlocked) {
+        navigate('/account-blocked');
+      } else {
+        navigate('/instructor/dashboard');
+      }
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         const errorMsg = err.response?.data?.message || err.message || 'Google login failed';

@@ -53,10 +53,10 @@ export const getCourse = async (req, res) => {
 // Create course
 export const createCourse = async (req, res) => {
   try {
-    if (!req.body.title) {
+    if (!req.body.title || !req.body.title.trim()) {
       return res.status(400).json({ success: false, message: "Course title is required" });
     }
-    if (!req.body.description) {
+    if (!req.body.description || !req.body.description.trim()) {
       return res.status(400).json({ success: false, message: "Course description is required" });
     }
 
@@ -66,9 +66,13 @@ export const createCourse = async (req, res) => {
       req.body.category = req.body.category.toLowerCase().trim();
     }
 
-    // Pre-check for duplicate title for this instructor
+    // Escape title for case-insensitive regex query
+    const escapedTitle = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const titleRegex = new RegExp(`^\\s*${escapedTitle}\\s*$`, 'i');
+
+    // Pre-check for duplicate title for this instructor (case-insensitive and trimmed)
     const existingCourse = await Course.findOne({
-      title,
+      title: { $regex: titleRegex },
       instructor: req.user.id,
       isDeleted: { $ne: true }
     });
@@ -76,7 +80,7 @@ export const createCourse = async (req, res) => {
     if (existingCourse) {
       return res.status(400).json({
         success: false,
-        message: "You already created a course with this title"
+        message: "Course title already exists"
       });
     }
 
@@ -91,12 +95,12 @@ export const createCourse = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "Duplicate course title for this instructor"
+        message: "Course title already exists"
       });
     }
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: "Server error"
     });
   }
 };
@@ -112,13 +116,27 @@ export const updateCourse = async (req, res) => {
     }
 
     // Normalize title if present and check for duplicates
-    if (title) {
+    if (title !== undefined) {
+      if (!title || !title.trim()) {
+        return res.status(400).json({ success: false, message: "Course title is required" });
+      }
       title = title.trim();
       req.body.title = title;
 
+      // Find the instructor of the course being updated
+      let instructorId = req.user.id;
+      const courseToUpdate = await Course.findById(req.params.id);
+      if (courseToUpdate) {
+        instructorId = courseToUpdate.instructor.toString();
+      }
+
+      // Escape title for case-insensitive regex query
+      const escapedTitle = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const titleRegex = new RegExp(`^\\s*${escapedTitle}\\s*$`, 'i');
+
       const existingCourse = await Course.findOne({
-        title,
-        instructor: req.user.id,
+        title: { $regex: titleRegex },
+        instructor: instructorId,
         _id: { $ne: req.params.id },
         isDeleted: { $ne: true }
       });
@@ -126,7 +144,7 @@ export const updateCourse = async (req, res) => {
       if (existingCourse) {
         return res.status(400).json({
           success: false,
-          message: "You already have a course with this title"
+          message: "Course title already exists"
         });
       }
     }
@@ -149,7 +167,7 @@ export const updateCourse = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "Duplicate course title for this instructor"
+        message: "Course title already exists"
       });
     }
     if (error.message === "Not authorized to update this course") {
@@ -157,7 +175,7 @@ export const updateCourse = async (req, res) => {
     }
     res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: "Server error"
     });
   }
 };

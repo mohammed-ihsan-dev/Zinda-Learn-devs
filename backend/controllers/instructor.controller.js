@@ -163,6 +163,7 @@ export const submitSupportTicket = async (req, res) => {
     const { subject, category, message, attachment } = req.body;
     const ticket = await SupportTicket.create({
       user: req.user.id,
+      createdByRole: 'instructor',
       subject,
       category,
       message,

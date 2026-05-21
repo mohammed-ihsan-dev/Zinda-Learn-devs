@@ -138,8 +138,24 @@ export const sendMessage = async (req, res) => {
       type: 'message',
       conversationId: conversation._id,
       senderName: req.user.name,
-      text: text.substring(0, 50)
+      text: text ? text.substring(0, 50) : ''
     });
+
+    // Create DB Notification for receiver
+    try {
+      const { notificationService } = await import('../services/notification.service.js');
+      const redirectLink = req.user.role === 'student' ? '/instructor/messages' : '/student/messages';
+      await notificationService.createNotification({
+        userId: receiverId,
+        title: "New Message Received",
+        message: `You received a message from ${req.user.name}: "${text ? text.substring(0, 50) : 'Media Attachment'}"`,
+        type: "message",
+        link: redirectLink,
+        metadata: { conversationId: conversation._id }
+      });
+    } catch (notifErr) {
+      console.error("Message DB notification failed:", notifErr);
+    }
 
     return res.status(201).json({
       success: true,
@@ -359,11 +375,26 @@ export const broadcastMessage = async (req, res) => {
         text: `[Broadcast] ${text.substring(0, 50)}`
       });
       
-      // Also emit to the conversation room if they are looking at it
+      // Emit to conversation room if they are looking at it
       emitToConversation(conversation._id, 'newMessage', {
         ...msg.toObject(),
         sender: { _id: senderId, name: req.user.name, avatar: req.user.avatar }
       });
+
+      // Create DB Notification for student
+      try {
+        const { notificationService } = await import('../services/notification.service.js');
+        await notificationService.createNotification({
+          userId: studentId,
+          title: "New Broadcast Message",
+          message: `Broadcast from ${req.user.name} in "${course.title}": "${text ? text.substring(0, 50) : ''}"`,
+          type: "message",
+          link: "/student/messages",
+          metadata: { conversationId: conversation._id }
+        });
+      } catch (notifErr) {
+        console.error("Broadcast DB notification failed:", notifErr);
+      }
     });
 
     await Promise.all(broadcastPromises);

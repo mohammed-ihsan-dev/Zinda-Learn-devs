@@ -70,13 +70,23 @@ export const restoreUser = async (id) => {
   return data;
 };
 
-export const blockUser = async (id) => {
-  const { data } = await api.patch(`/admin/users/${id}/block`);
+export const blockUser = async (id, blockedReason) => {
+  const { data } = await api.patch(`/admin/users/${id}/block`, { blockedReason });
   return data;
 };
 
 export const unblockUser = async (id) => {
   const { data } = await api.patch(`/admin/users/${id}/unblock`);
+  return data;
+};
+
+export const blockCourse = async (id, blockedReason) => {
+  const { data } = await api.patch(`/admin/courses/${id}/block`, { blockedReason });
+  return data;
+};
+
+export const unblockCourse = async (id) => {
+  const { data } = await api.patch(`/admin/courses/${id}/unblock`);
   return data;
 };
 

@@ -1,27 +1,43 @@
-import { Bell, CheckCircle2, MessageSquare, AlertCircle, Info, Trash2, MoreVertical } from 'lucide-react';
+import {
+  Bell, CheckCircle2, MessageSquare, AlertCircle, Info,
+  GraduationCap, DollarSign, Calendar, UserPlus, ShieldAlert, ShieldCheck
+} from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const Notifications = () => {
-  const { notifications, markAsRead } = useNotifications();
+  const { notifications, markAsRead, markAllRead } = useNotifications();
 
   const getIconData = (type) => {
     switch(type) {
+      case 'enrollment':
+        return { icon: UserPlus, color: 'text-indigo-600', bg: 'bg-indigo-100' };
+      case 'course_approved':
+        return { icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-100' };
+      case 'course_declined':
+        return { icon: GraduationCap, color: 'text-rose-600', bg: 'bg-rose-100' };
+      case 'payout_approved':
+        return { icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' };
+      case 'payout_rejected':
+        return { icon: DollarSign, color: 'text-rose-600', bg: 'bg-rose-100' };
+      case 'live_class':
+        return { icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-100' };
+      case 'message':
+      case 'support_reply':
+      case 'support_resolved':
+        return { icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-100' };
+      case 'account_blocked':
+        return { icon: ShieldAlert, color: 'text-red-600', bg: 'bg-red-100' };
+      case 'account_restored':
+        return { icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-100' };
       case 'success':
         return { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' };
       case 'warning':
       case 'error':
         return { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' };
-      case 'info':
       default:
         return { icon: Info, color: 'text-blue-600', bg: 'bg-blue-100' };
     }
-  };
-
-  const markAllRead = () => {
-    notifications.forEach(n => {
-      if (!n.isRead) markAsRead(n._id);
-    });
   };
 
   return (

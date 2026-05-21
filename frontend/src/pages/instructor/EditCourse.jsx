@@ -102,6 +102,7 @@ const EditCourse = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!validateForm()) {
       return toast.error('Please fix the errors in the form');
     }

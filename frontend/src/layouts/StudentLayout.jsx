@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import {
   GraduationCap, LayoutDashboard, BookOpen, Play, MessageSquare,
   Video, BarChart3, Award, Settings, LogOut, Menu, X,
-  Bell, Search, ChevronDown
+  Search, ChevronDown, HelpCircle
 } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 const studentMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
@@ -17,12 +17,12 @@ const studentMenuItems = [
   { label: 'Progress', icon: BarChart3, path: '/student/progress' },
   { label: 'Certificates', icon: Award, path: '/student/certificates' },
   { label: 'Settings', icon: Settings, path: '/student/settings' },
+  { label: 'Help & Support', icon: HelpCircle, path: '/student/help' },
 ];
 
 const StudentLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -115,17 +115,7 @@ const StudentLayout = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <Link 
-                to="/student/notifications"
-                className="relative p-2.5 rounded-xl hover:bg-surface-50 transition-all active:scale-90 group"
-              >
-                <Bell className="w-5 h-5 text-surface-500 group-hover:text-primary-600 transition-colors" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 w-4.5 h-4.5 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
+              <NotificationBell />
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-surface-50 transition-colors cursor-pointer">
                 <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">
                   {user?.name?.charAt(0) || 'S'}

@@ -213,6 +213,22 @@ const courseSchema = new mongoose.Schema({
   enrollmentsCount: {
     type: Number,
     default: 0
+  },
+
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
+  blockedReason: {
+    type: String,
+    default: ''
+  },
+  blockedAt: {
+    type: Date
+  },
+  blockedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 
 }, { timestamps: true });

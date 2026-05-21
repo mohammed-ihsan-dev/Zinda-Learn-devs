@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, UserCheck, UserPlus, GraduationCap, Search, Filter,
   MoreVertical, Eye, Lock, Unlock, Mail, ShieldAlert, BookOpen,
-  TrendingUp, Clock, CreditCard
+  TrendingUp, Clock, CreditCard, AlertTriangle
 } from 'lucide-react';
 import { getStudents, getStudentStats, blockUser, unblockUser } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
@@ -17,6 +17,11 @@ const StudentsManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalStudents, setTotalStudents] = useState(0);
+
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [blockReason, setBlockReason] = useState('');
+  const [submittingBlock, setSubmittingBlock] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -54,17 +59,39 @@ const StudentsManagement = () => {
   }, []);
 
   const handleBlockToggle = async (student) => {
-    try {
-      if (student.isBlocked) {
+    if (student.isBlocked) {
+      try {
         await unblockUser(student._id);
-        toast.success('Student unblocked');
-      } else {
-        await blockUser(student._id);
-        toast.success('Student blocked');
+        toast.success('Student unblocked successfully');
+        fetchStudents();
+      } catch (error) {
+        toast.error('Failed to unblock student');
       }
+    } else {
+      setSelectedStudent(student);
+      setBlockReason('');
+      setShowBlockModal(true);
+    }
+  };
+
+  const handleConfirmBlock = async (e) => {
+    e.preventDefault();
+    if (!blockReason.trim()) {
+      return toast.error('Please enter a reason for suspension.');
+    }
+
+    try {
+      setSubmittingBlock(true);
+      await blockUser(selectedStudent._id, blockReason);
+      toast.success('Student account suspended successfully');
+      setShowBlockModal(false);
+      setSelectedStudent(null);
+      setBlockReason('');
       fetchStudents();
     } catch (error) {
-      toast.error('Action failed');
+      toast.error('Failed to block student');
+    } finally {
+      setSubmittingBlock(false);
     }
   };
 
@@ -265,6 +292,62 @@ const StudentsManagement = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Block Confirmation Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#121215] border border-rose-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Suspend Student Account</h3>
+            </div>
+            
+            <p className="text-xs text-zinc-400">
+              You are about to suspend <strong>{selectedStudent?.name}</strong> ({selectedStudent?.email}).
+              Suspended users will lose all protected dashboard access and active session tokens.
+            </p>
+
+            <form onSubmit={handleConfirmBlock} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  Reason for Suspension
+                </label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="e.g. Violation of platform guidelines, abusive behavior, or suspicious payment activities..."
+                  rows={3}
+                  className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBlockModal(false);
+                    setSelectedStudent(null);
+                    setBlockReason('');
+                  }}
+                  className="px-4 py-2.5 bg-[#1c1c21] hover:bg-[#27272a] text-zinc-400 hover:text-zinc-200 text-xs font-bold rounded-xl border border-[#2d2d34] transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingBlock}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all"
+                >
+                  {submittingBlock ? 'Suspending...' : 'Confirm Suspension'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

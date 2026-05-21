@@ -58,6 +58,7 @@ const CreateCourse = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!user?.isApproved) {
       return toast.error('You must be approved by an admin to create courses');
     }

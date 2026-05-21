@@ -39,6 +39,31 @@ export const createLiveClass = async (req, res) => {
       title: liveClass.title
     });
 
+    // Notify students via DB Notifications
+    try {
+      const enrollments = await Enrollment.find({ 
+        course: courseId, 
+        paymentStatus: { $in: ['completed', 'free'] } 
+      }).select('user');
+      const studentIds = enrollments.map(e => e.user);
+
+      if (studentIds.length > 0) {
+        const { notificationService } = await import('../../../services/notification.service.js');
+        const notifPromises = studentIds.map(studentId => 
+          notificationService.createNotification({
+            userId: studentId,
+            title: "New Live Class Scheduled",
+            message: `A new live class "${title}" has been scheduled for course "${course.title}".`,
+            type: "live_class",
+            link: "/student/live-classes"
+          })
+        );
+        await Promise.all(notifPromises);
+      }
+    } catch (notifErr) {
+      console.error("Live class scheduled DB notification failed:", notifErr);
+    }
+
     res.status(201).json({ success: true, data: liveClass });
 
   } catch (error) {

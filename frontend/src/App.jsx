@@ -35,6 +35,7 @@ const StudentNotifications = lazy(() => import('./pages/student/Notifications'))
 const ProgressPage = lazy(() => import('./pages/student/Progress'));
 const CertificatesPage = lazy(() => import('./pages/student/CertificatesPage'));
 const SettingsPage = lazy(() => import('./pages/student/SettingsPage'));
+const StudentHelpCenter = lazy(() => import('./pages/student/HelpCenter'));
 const StudentLiveClasses = lazy(() => import('./features/liveClasses/pages/StudentLiveClasses'));
 const LiveClassDetail = lazy(() => import('./features/liveClasses/pages/LiveClassDetail'));
 
@@ -53,6 +54,7 @@ const InstructorPayouts = lazy(() => import('./pages/instructor/Payouts'));
 const InstructorReviews = lazy(() => import('./pages/instructor/Reviews'));
 const InstructorSettings = lazy(() => import('./pages/instructor/Settings'));
 const InstructorHelpCenter = lazy(() => import('./pages/instructor/HelpCenter'));
+const InstructorSupport = lazy(() => import('./pages/instructor/Support'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -62,6 +64,9 @@ const InstructorManagement = lazy(() => import('./pages/admin/InstructorManageme
 const Analytics = lazy(() => import('./pages/admin/Analytics'));
 const Payments = lazy(() => import('./pages/admin/Payments'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
+const AdminSupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
+const AdminNotifications = lazy(() => import('./pages/admin/Notifications'));
+const AccountBlocked = lazy(() => import('./pages/AccountBlocked'));
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -88,6 +93,7 @@ function App() {
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/courses/:id" element={<CourseDetailsPage />} />
                   <Route path="/test-video" element={<VideoTest />} />
+                  <Route path="/account-blocked" element={<AccountBlocked />} />
 
                   {/* Student Routes */}
                   <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
@@ -103,6 +109,7 @@ function App() {
                     <Route path="progress" element={<ProgressPage />} />
                     <Route path="certificates" element={<CertificatesPage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="help" element={<StudentHelpCenter />} />
                   </Route>
 
                   {/* Instructor Routes */}
@@ -120,6 +127,7 @@ function App() {
                     <Route path="notifications" element={<InstructorNotifications />} />
                     <Route path="settings" element={<InstructorSettings />} />
                     <Route path="help" element={<InstructorHelpCenter />} />
+                    <Route path="support" element={<InstructorSupport />} />
                     <Route path="live-classes" element={<InstructorLiveClasses />} />
                     <Route path="live-classes/create" element={<CreateLiveClass />} />
                     <Route path="live-classes/edit/:id" element={<EditLiveClass />} />
@@ -135,6 +143,8 @@ function App() {
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="payments" element={<Payments />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="support" element={<AdminSupportTickets />} />
+                    <Route path="notifications" element={<AdminNotifications />} />
                   </Route>
 
                   {/* 404 Route */}

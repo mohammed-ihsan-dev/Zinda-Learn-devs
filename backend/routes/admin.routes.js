@@ -7,6 +7,8 @@ import {
   getAllUsers,
   blockUser,
   unblockUser,
+  blockCourse,
+  unblockCourse,
   deleteUser,
   restoreUser,
   createUser,
@@ -51,6 +53,8 @@ router.delete('/courses/:id', deleteCourse);
 router.patch('/courses/:id/status', updateCourseStatus);
 router.patch('/courses/:id/approve', approveCourse);
 router.patch('/courses/:id/decline', declineCourse);
+router.patch('/courses/:id/block', blockCourse);
+router.patch('/courses/:id/unblock', unblockCourse);
 
 // 4. Dashboard & Finances
 router.get('/dashboard', getDashboardStats);

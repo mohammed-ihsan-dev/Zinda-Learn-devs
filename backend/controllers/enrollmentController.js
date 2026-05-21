@@ -234,14 +234,27 @@ export const enrollInCourse = async (req, res) => {
     // Trigger notification
     try {
       const { notificationService } = await import('../services/notification.service.js');
+      // Notify student
       await notificationService.createNotification({
         userId: req.user.id,
         title: "Course Enrolled",
         message: `You have successfully enrolled in "${course.title}". Enjoy your learning journey!`,
-        type: "success"
+        type: "enrollment",
+        link: "/student/my-learning"
       });
+
+      // Notify instructor
+      if (course.instructor) {
+        await notificationService.createNotification({
+          userId: course.instructor,
+          title: "New Student Enrolled",
+          message: `A new student has enrolled in your course "${course.title}".`,
+          type: "enrollment",
+          link: "/instructor/students"
+        });
+      }
     } catch (notifErr) {
-      console.error("Notification failed:", notifErr);
+      console.error("Enrollment notification failed:", notifErr);
     }
 
     res.status(200).json({

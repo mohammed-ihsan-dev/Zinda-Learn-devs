@@ -123,8 +123,25 @@ export const restoreUser = async (req, res) => {
 export const blockUser = async (req, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
-    const user = await adminService.blockUser(req.params.id);
-    res.status(200).json({ success: true, message: "User blocked", data: user });
+    const { blockedReason } = req.body;
+    const adminId = req.user.id || req.user._id;
+    const user = await adminService.blockUser(req.params.id, blockedReason, adminId);
+
+    // Notify user of block
+    try {
+      const { notificationService } = await import('../services/notification.service.js');
+      await notificationService.createNotification({
+        userId: user._id,
+        title: "Account Blocked",
+        message: `Your account has been suspended. Reason: ${blockedReason || "Violation of platform policies"}.`,
+        type: "account_blocked",
+        link: "/account-blocked"
+      });
+    } catch (notifErr) {
+      console.error("Account block DB notification failed:", notifErr);
+    }
+
+    res.status(200).json({ success: true, message: "User blocked successfully", data: user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -134,7 +151,44 @@ export const unblockUser = async (req, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
     const user = await adminService.unblockUser(req.params.id);
-    res.status(200).json({ success: true, message: "User unblocked", data: user });
+
+    // Notify user of restore
+    try {
+      const { notificationService } = await import('../services/notification.service.js');
+      await notificationService.createNotification({
+        userId: user._id,
+        title: "Account Restored",
+        message: `Your account has been successfully unblocked. Welcome back!`,
+        type: "account_restored",
+        link: "/"
+      });
+    } catch (notifErr) {
+      console.error("Account restore DB notification failed:", notifErr);
+    }
+
+    res.status(200).json({ success: true, message: "User unblocked successfully", data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const blockCourse = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    const { blockedReason } = req.body;
+    const adminId = req.user.id || req.user._id;
+    const course = await adminService.blockCourse(req.params.id, blockedReason, adminId);
+    res.status(200).json({ success: true, message: "Course blocked successfully", data: course });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const unblockCourse = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
+    const course = await adminService.unblockCourse(req.params.id);
+    res.status(200).json({ success: true, message: "Course restored/unblocked successfully", data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -185,6 +239,23 @@ export const approveCourse = async (req, res) => {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
     const adminId = req.user.id || req.user._id;
     const course = await adminService.approveCourse(req.params.id, adminId);
+
+    // Notify instructor of approval
+    if (course && course.instructor) {
+      try {
+        const { notificationService } = await import('../services/notification.service.js');
+        await notificationService.createNotification({
+          userId: course.instructor,
+          title: "Course Approved",
+          message: `Your course "${course.title}" has been approved and is now live.`,
+          type: "course_approved",
+          link: "/instructor/my-courses"
+        });
+      } catch (notifErr) {
+        console.error("Course approval DB notification failed:", notifErr);
+      }
+    }
+
     res.status(200).json({ success: true, message: "Course approved", data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -197,6 +268,23 @@ export const declineCourse = async (req, res) => {
     const { declineReason } = req.body;
     const adminId = req.user.id || req.user._id;
     const course = await adminService.declineCourse(req.params.id, declineReason, adminId);
+
+    // Notify instructor of declination
+    if (course && course.instructor) {
+      try {
+        const { notificationService } = await import('../services/notification.service.js');
+        await notificationService.createNotification({
+          userId: course.instructor,
+          title: "Course Declined",
+          message: `Your course "${course.title}" was declined. Reason: ${declineReason || 'Violation of guidelines'}.`,
+          type: "course_declined",
+          link: "/instructor/my-courses"
+        });
+      } catch (notifErr) {
+        console.error("Course declination DB notification failed:", notifErr);
+      }
+    }
+
     res.status(200).json({ success: true, message: "Course declined", data: course });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -235,6 +323,34 @@ export const updatePayoutStatus = async (req, res) => {
     if (!isValidId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid ID" });
     const payout = await adminService.updatePayoutStatus(req.params.id, req.body);
     if (!payout) return res.status(404).json({ success: false, message: "Payout not found" });
+
+    // Notify instructor of payout status update
+    if (payout && payout.instructor) {
+      const instId = payout.instructor._id || payout.instructor;
+      try {
+        const { notificationService } = await import('../services/notification.service.js');
+        if (req.body.status === 'paid' || req.body.status === 'approved') {
+          await notificationService.createNotification({
+            userId: instId,
+            title: "Payout Approved",
+            message: `Your payout request of ₹${payout.amount} has been approved.`,
+            type: "payout_approved",
+            link: "/instructor/earnings"
+          });
+        } else if (req.body.status === 'rejected') {
+          await notificationService.createNotification({
+            userId: instId,
+            title: "Payout Rejected",
+            message: `Your payout request of ₹${payout.amount} was rejected. Comment: ${req.body.adminComment || 'None'}.`,
+            type: "payout_rejected",
+            link: "/instructor/earnings"
+          });
+        }
+      } catch (notifErr) {
+        console.error("Payout status update DB notification failed:", notifErr);
+      }
+    }
+
     res.status(200).json({ success: true, message: `Payout status updated to ${req.body.status}`, data: payout });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

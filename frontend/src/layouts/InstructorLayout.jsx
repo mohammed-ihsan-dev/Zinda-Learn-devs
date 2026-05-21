@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import {
   LayoutDashboard, BookOpen, PlusCircle, Settings, LogOut, Menu, X,
-  Bell, ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, User, Video
+  ChevronDown, Users, CreditCard, Star, MessageSquare, HelpCircle, Video, LifeBuoy, Bell
 } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 const instructorMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/instructor/dashboard' },
@@ -15,14 +15,15 @@ const instructorMenuItems = [
   { label: 'Payouts', icon: CreditCard, path: '/instructor/earnings' },
   { label: 'Reviews', icon: Star, path: '/instructor/reviews' },
   { label: 'Messages', icon: MessageSquare, path: '/instructor/messages' },
+  { label: 'Notifications', icon: Bell, path: '/instructor/notifications' },
   { label: 'Settings', icon: Settings, path: '/instructor/settings' },
+  { label: 'Support', icon: LifeBuoy, path: '/instructor/support' },
 ];
 
 const InstructorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -133,14 +134,7 @@ const InstructorLayout = () => {
             </div>
 
             <div className="flex items-center gap-6">
-              <Link to="/instructor/notifications" className="relative text-slate-400 hover:text-purple-600 transition-colors">
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-purple-500 rounded-full text-white text-[10px] font-bold border-2 border-white">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
+              <NotificationBell />
               
               <div className="relative" ref={menuRef}>
                 <div 

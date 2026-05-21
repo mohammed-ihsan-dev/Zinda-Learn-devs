@@ -7,7 +7,7 @@ export const getLandingStats = async (req, res) => {
   try {
     const [totalStudents, totalCourses, totalInstructors, reviews] = await Promise.all([
       User.countDocuments({ role: "student" }),
-      Course.countDocuments({ status: "published" }),
+      Course.countDocuments({ status: "published", isBlocked: { $ne: true } }),
       User.countDocuments({ role: "instructor", isApproved: true }),
       Review.find()
     ]);
@@ -49,7 +49,7 @@ export const getLandingTestimonials = async (req, res) => {
 export const getLandingCategories = async (req, res) => {
   try {
     const categories = await Course.aggregate([
-      { $match: { status: "published" } },
+      { $match: { status: "published", isBlocked: { $ne: true } } },
       {
         $group: {
           _id: "$category",

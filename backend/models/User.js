@@ -30,6 +30,17 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  blockedReason: {
+    type: String,
+    default: ''
+  },
+  blockedAt: {
+    type: Date
+  },
+  blockedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   profilePic: {
     type: String,
     default: ''

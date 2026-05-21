@@ -152,6 +152,28 @@ export const login = async (req, res) => {
       });
     }
 
+    if (user.isBlocked) {
+      const token = user.generateToken();
+      return res.status(403).json({
+        success: false,
+        blocked: true,
+        message: "Your account has been suspended",
+        reason: user.blockedReason || "Violation of platform policies",
+        blockedReason: user.blockedReason || "Violation of platform policies",
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          profilePic: user.profilePic,
+          isBlocked: true,
+          blockedReason: user.blockedReason || "Violation of platform policies"
+        }
+      });
+    }
+
     if (user.role === "instructor" && !user.isApproved) {
       return res.status(403).json({
         success: false,
@@ -171,7 +193,9 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        profilePic: user.profilePic
+        profilePic: user.profilePic,
+        isBlocked: user.isBlocked,
+        blockedReason: user.blockedReason
       }
     });
   } catch (error) {
@@ -335,9 +359,24 @@ export const googleLogin = async (req, res) => {
     }
 
     if (user.isBlocked) {
+      const jwtToken = user.generateToken();
       return res.status(403).json({
         success: false,
-        message: "Your account has been blocked. Please contact support."
+        blocked: true,
+        message: "Your account has been suspended",
+        reason: user.blockedReason || "Violation of platform policies",
+        blockedReason: user.blockedReason || "Violation of platform policies",
+        token: jwtToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          profilePic: user.profilePic,
+          isBlocked: true,
+          blockedReason: user.blockedReason || "Violation of platform policies"
+        }
       });
     }
 
@@ -360,7 +399,9 @@ export const googleLogin = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        profilePic: user.profilePic
+        profilePic: user.profilePic,
+        isBlocked: user.isBlocked,
+        blockedReason: user.blockedReason
       }
     });
   } catch (error) {

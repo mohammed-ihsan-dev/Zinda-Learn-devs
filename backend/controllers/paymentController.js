@@ -2,6 +2,7 @@ import { paymentService } from '../services/payment.service.js';
 import Order from '../models/Order.js';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
+import User from '../models/User.js';
 
 export const createOrder = async (req, res) => {
   try {
@@ -12,6 +13,61 @@ export const createOrder = async (req, res) => {
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
+
+    if (course.isBlocked) {
+      return res.status(400).json({ success: false, message: 'This course has been suspended' });
+    }
+
+    // 1. Check if user is already enrolled
+    const existingEnrollment = await Enrollment.findOne({
+      user: userId,
+      course: courseId
+    });
+    if (existingEnrollment) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already purchased this course'
+      });
+    }
+
+    // 2. Check if user already has a successful paid order
+    const existingPaidOrder = await Order.findOne({
+      user: userId,
+      course: courseId,
+      status: 'paid'
+    });
+    if (existingPaidOrder) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already purchased this course'
+      });
+    }
+
+    // 3. Handle pending/created orders to avoid duplicate active payments and multiple rapid clicks
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const existingCreatedOrder = await Order.findOne({
+      user: userId,
+      course: courseId,
+      status: 'created',
+      createdAt: { $gte: fiveMinutesAgo }
+    });
+
+    if (existingCreatedOrder) {
+      return res.status(201).json({
+        success: true,
+        orderId: existingCreatedOrder.razorpayOrderId,
+        amount: Math.round(existingCreatedOrder.amount * 100), // convert to paise
+        currency: existingCreatedOrder.currency,
+        keyId: process.env.RAZORPAY_KEY_ID
+      });
+    }
+
+    // Delete older created orders for this user + course to keep DB clean
+    await Order.deleteMany({
+      user: userId,
+      course: courseId,
+      status: 'created'
+    });
 
     // Create Razorpay Order
     const receipt = `rcpt_${Date.now()}_${courseId.substring(0, 5)}`;
@@ -66,10 +122,37 @@ export const verifyPayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    // Prevent duplicate processing if order is already marked as paid
+    if (order.status === 'paid') {
+      const existingEnrollment = await Enrollment.findOne({
+        user: order.user,
+        course: order.course
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified and enrollment successful',
+        enrollment: existingEnrollment
+      });
+    }
+
     order.status = 'paid';
     order.razorpayPaymentId = razorpay_payment_id;
     order.razorpaySignature = razorpay_signature;
     await order.save();
+
+    // Check if enrollment already exists to avoid duplicate entries
+    const existingEnrollment = await Enrollment.findOne({
+      user: order.user,
+      course: order.course
+    });
+
+    if (existingEnrollment) {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified and enrollment successful',
+        enrollment: existingEnrollment
+      });
+    }
 
     // Create Enrollment
     const enrollment = new Enrollment({
@@ -95,14 +178,27 @@ export const verifyPayment = async (req, res) => {
     try {
       const course = await Course.findById(order.course);
       const { notificationService } = await import('../services/notification.service.js');
+      // Notify student
       await notificationService.createNotification({
         userId: order.user,
         title: "Course Enrolled",
         message: `Payment successful! You have been enrolled in "${course.title}".`,
-        type: "success"
+        type: "enrollment",
+        link: "/student/my-learning"
       });
+
+      // Notify instructor
+      if (course && course.instructor) {
+        await notificationService.createNotification({
+          userId: course.instructor,
+          title: "New Student Enrolled",
+          message: `A new student has enrolled in your course "${course.title}".`,
+          type: "enrollment",
+          link: "/instructor/students"
+        });
+      }
     } catch (notifErr) {
-      console.error("Notification failed:", notifErr);
+      console.error("Payment enrollment notification failed:", notifErr);
     }
 
     res.status(200).json({

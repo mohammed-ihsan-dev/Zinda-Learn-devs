@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   BookOpen, CheckCircle, Clock, Users, Search, Filter,
   MoreVertical, Eye, Trash2, Ban, Star, IndianRupee,
-  Plus, AlertCircle, TrendingUp, LayoutGrid
+  Plus, AlertCircle, TrendingUp, LayoutGrid, Lock, Unlock, AlertTriangle
 } from 'lucide-react';
 import {
   getAllCourses,
   updateCourseStatus,
   deleteCourse,
-  getDashboardStats
+  getDashboardStats,
+  blockCourse,
+  unblockCourse
 } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
 import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
@@ -22,6 +24,11 @@ const CoursesManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCourses, setTotalCourses] = useState(0);
+
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [blockReason, setBlockReason] = useState('');
+  const [submittingBlock, setSubmittingBlock] = useState(false);
 
   const fetchCourses = async () => {
     try {
@@ -76,6 +83,43 @@ const CoursesManagement = () => {
       fetchCourses();
     } catch (error) {
       toast.error('Failed to delete course');
+    }
+  };
+
+  const handleBlockToggle = async (course) => {
+    if (course.isBlocked) {
+      try {
+        await unblockCourse(course._id);
+        toast.success('Course unblocked successfully');
+        fetchCourses();
+      } catch (error) {
+        toast.error('Failed to unblock course');
+      }
+    } else {
+      setSelectedCourse(course);
+      setBlockReason('');
+      setShowBlockModal(true);
+    }
+  };
+
+  const handleConfirmBlock = async (e) => {
+    e.preventDefault();
+    if (!blockReason.trim()) {
+      return toast.error('Please enter a reason for suspension.');
+    }
+
+    try {
+      setSubmittingBlock(true);
+      await blockCourse(selectedCourse._id, blockReason);
+      toast.success('Course suspended successfully');
+      setShowBlockModal(false);
+      setSelectedCourse(null);
+      setBlockReason('');
+      fetchCourses();
+    } catch (error) {
+      toast.error('Failed to block course');
+    } finally {
+      setSubmittingBlock(false);
     }
   };
 
@@ -144,10 +188,18 @@ const CoursesManagement = () => {
           declined: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
           blocked: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
         };
+        const isBlocked = course.isBlocked;
         return (
-          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${statusColors[course.status] || statusColors.draft}`}>
-            {course.status}
-          </span>
+          <div className="flex flex-col gap-1 items-start">
+            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${statusColors[course.status] || statusColors.draft}`}>
+              {course.status}
+            </span>
+            {isBlocked && (
+              <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/25">
+                Suspended
+              </span>
+            )}
+          </div>
         );
       }
     },
@@ -174,6 +226,13 @@ const CoursesManagement = () => {
               </button>
             </>
           )}
+          <button
+            onClick={() => handleBlockToggle(course)}
+            className={`p-2 hover:bg-white/5 rounded-lg transition-colors ${course.isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-rose-400 hover:text-rose-300'}`}
+            title={course.isBlocked ? 'Unblock Course' : 'Block Course'}
+          >
+            {course.isBlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          </button>
           <button className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="View Course">
             <Eye className="w-4 h-4" />
           </button>
@@ -289,6 +348,61 @@ const CoursesManagement = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+      {/* Block Confirmation Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#121215] border border-rose-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Suspend Course</h3>
+            </div>
+            
+            <p className="text-xs text-zinc-400">
+              You are about to suspend the course <strong>{selectedCourse?.title}</strong>.
+              Suspended courses will be hidden from search results, details pages, student recommendations, and block new checkouts immediately.
+            </p>
+
+            <form onSubmit={handleConfirmBlock} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  Reason for Suspension
+                </label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="e.g. Inappropriate course content, policy violations, incorrect claims, etc..."
+                  rows={3}
+                  className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBlockModal(false);
+                    setSelectedCourse(null);
+                    setBlockReason('');
+                  }}
+                  className="px-4 py-2.5 bg-[#1c1c21] hover:bg-[#27272a] text-zinc-400 hover:text-zinc-200 text-xs font-bold rounded-xl border border-[#2d2d34] transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingBlock}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all"
+                >
+                  {submittingBlock ? 'Suspending...' : 'Confirm Suspension'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

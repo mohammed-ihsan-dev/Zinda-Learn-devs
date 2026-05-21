@@ -12,7 +12,8 @@ import {
   updatePassword, 
   updatePreferences, 
   updateNotifications, 
-  deleteAccount 
+  deleteAccount,
+  uploadAvatar
 } from '../../services/settingsService';
 import Loader from '../../components/Loader';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +24,8 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
   // Form States
   const [profileForm, setProfileForm] = useState({
@@ -91,7 +94,7 @@ const SettingsPage = () => {
   }, []);
 
   const handleProfileUpdate = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSaving(true);
     try {
       const response = await updateProfile(profileForm);
@@ -101,6 +104,84 @@ const SettingsPage = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Update failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      return toast.error('File size must be less than 2MB');
+    }
+
+    setUploading(true);
+    try {
+      const response = await uploadAvatar(file);
+      if (response.success) {
+        const newAvatar = response.url;
+        setProfileForm({ ...profileForm, avatar: newAvatar });
+        // Automatically update profile with new avatar
+        const updateRes = await updateProfile({ ...profileForm, avatar: newAvatar });
+        if (updateRes.success) {
+          updateUser(updateRes.data);
+          toast.success('Avatar updated successfully');
+        }
+      }
+    } catch (error) {
+      toast.error('Failed to upload avatar');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setSaving(true);
+    try {
+      const updatedForm = { ...profileForm, avatar: '' };
+      setProfileForm(updatedForm);
+      const response = await updateProfile(updatedForm);
+      if (response.success) {
+        updateUser(response.data);
+        toast.success('Avatar removed');
+      }
+    } catch (error) {
+      toast.error('Failed to remove avatar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // 1. Update Profile (includes username, phone, language, bio)
+      await updateProfile(profileForm);
+      
+      // 2. Update Password if fields are filled
+      if (passwordForm.newPassword) {
+        if (passwordForm.newPassword !== passwordForm.confirmNew) {
+          throw new Error('New passwords do not match');
+        }
+        if (!passwordForm.currentPassword) {
+          throw new Error('Current password is required to set a new one');
+        }
+        await updatePassword({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        });
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmNew: '' });
+      }
+
+      // 3. Preferences and Notifications are updated in real-time by toggles, 
+      // but we could sync them here too if needed.
+      
+      toast.success('All changes saved successfully');
+      setIsEditingUsername(false);
+    } catch (error) {
+      toast.error(error.message || 'Failed to save all changes');
     } finally {
       setSaving(false);
     }
@@ -182,23 +263,34 @@ const SettingsPage = () => {
         </div>
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-           <div className="relative group">
+            <div className="relative group">
               <div className="w-32 h-32 rounded-full overflow-hidden bg-zinc-100 border-4 border-white shadow-xl relative">
-                {profileForm.avatar ? (
-                  <img src={profileForm.avatar} className="w-full h-full object-cover" />
+                {uploading ? (
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-50">
+                    <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : profileForm.avatar ? (
+                  <img src={profileForm.avatar} className="w-full h-full object-cover" alt="Avatar" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-zinc-300">
                     <User className="w-12 h-12" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                   <Camera className="text-white w-6 h-6" />
-                </div>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                  />
+                </label>
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full border-2 border-white flex items-center justify-center text-white shadow-lg">
+              <div className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full border-2 border-white flex items-center justify-center text-white shadow-lg">
                 <Check className="w-4 h-4" />
-              </button>
-           </div>
+              </div>
+            </div>
 
            <div className="space-y-4">
               <div>
@@ -206,8 +298,22 @@ const SettingsPage = () => {
                 <p className="text-xs text-zinc-400 font-medium">Min. 400x400px, JPG, PNG or GIF.</p>
               </div>
               <div className="flex gap-3">
-                 <button className="px-6 py-2 bg-primary-50 text-primary-600 text-xs font-black rounded-full hover:bg-primary-100 transition-colors">Upload New</button>
-                 <button className="px-6 py-2 text-red-500 text-xs font-black rounded-full hover:bg-red-50 transition-colors">Remove</button>
+                 <label className="px-6 py-2 bg-primary-50 text-primary-600 text-xs font-black rounded-full hover:bg-primary-100 transition-colors cursor-pointer">
+                   Upload New
+                   <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                  />
+                 </label>
+                 <button 
+                  onClick={handleRemoveAvatar}
+                  className="px-6 py-2 text-red-500 text-xs font-black rounded-full hover:bg-red-50 transition-colors"
+                 >
+                   Remove
+                 </button>
               </div>
            </div>
         </div>
@@ -269,9 +375,27 @@ const SettingsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1">Username</label>
-                  <div className="px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 flex items-center justify-between">
-                     <span>{profileForm.username || 'Not set'}</span>
-                     <button className="text-primary-600 text-[11px] font-black uppercase tracking-widest">Edit</button>
+                  <div className="relative">
+                    {isEditingUsername ? (
+                      <input 
+                        type="text" 
+                        value={profileForm.username}
+                        onChange={(e) => setProfileForm({...profileForm, username: e.target.value})}
+                        className="w-full px-5 py-3.5 bg-white border border-primary-500 rounded-2xl text-sm font-bold text-zinc-900 outline-none"
+                        autoFocus
+                        onBlur={() => setIsEditingUsername(false)}
+                      />
+                    ) : (
+                      <div className="px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 flex items-center justify-between">
+                         <span>{profileForm.username || 'Not set'}</span>
+                         <button 
+                          onClick={() => setIsEditingUsername(true)}
+                          className="text-primary-600 text-[11px] font-black uppercase tracking-widest"
+                         >
+                           Edit
+                         </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -322,7 +446,7 @@ const SettingsPage = () => {
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">{field.label}</label>
                 <div className="relative group">
                   <input 
-                    type={showPass[field.key.replace('current', 'current')] ? 'text' : 'password'}
+                    type={showPass[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm'] ? 'text' : 'password'}
                     value={passwordForm[field.key]}
                     onChange={(e) => setPasswordForm({...passwordForm, [field.key]: e.target.value})}
                     placeholder={i === 0 ? '••••••••' : 'Enter new'}
@@ -330,7 +454,7 @@ const SettingsPage = () => {
                   />
                   <button 
                     type="button"
-                    onClick={() => setShowPass({...showPass, [field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']: !showPass[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']})}
+                    onClick={() => setShowPass(prev => ({...prev, [field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']: !prev[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm']}))}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-600 transition-colors"
                   >
                     {showPass[field.key.includes('current') ? 'current' : field.key.includes('newPassword') ? 'new' : 'confirm'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -444,9 +568,17 @@ const SettingsPage = () => {
         </div>
 
         <div className="flex justify-end pt-4">
-           <button className="px-10 py-4 bg-primary-600 text-white font-black text-sm rounded-full shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              Save All Changes
+           <button 
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="px-10 py-4 bg-primary-600 text-white font-black text-sm rounded-full shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
+           >
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {saving ? 'Saving...' : 'Save All Changes'}
            </button>
         </div>
       </section>

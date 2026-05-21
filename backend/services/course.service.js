@@ -59,6 +59,20 @@ export const courseService = {
 
     if (!course) return null;
 
+    if (course.isBlocked) {
+      let hasAccess = false;
+      if (userId) {
+        const User = (await import('../models/User.js')).default;
+        const userObj = await User.findById(userId);
+        if (userObj && (userObj.role === 'admin' || course.instructor._id.toString() === userId)) {
+          hasAccess = true;
+        }
+      }
+      if (!hasAccess) {
+        throw new Error("This course has been suspended by the administrator");
+      }
+    }
+
     // Convert to object to add dynamic properties
     const courseObj = course.toObject({ virtuals: true });
 
@@ -75,7 +89,11 @@ export const courseService = {
   },
 
   getCourseBySlug: async (slug) => {
-    return await Course.findOne({ slug, isDeleted: { $ne: true } }).populate("instructor", "name avatar bio");
+    const course = await Course.findOne({ slug, isDeleted: { $ne: true } }).populate("instructor", "name avatar bio");
+    if (course && course.isBlocked) {
+      throw new Error("This course has been suspended by the administrator");
+    }
+    return course;
   },
 
   createCourse: async (courseData, instructorId) => {

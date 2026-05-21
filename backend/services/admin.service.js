@@ -172,12 +172,58 @@ export const adminService = {
     );
   },
 
-  blockUser: async (id) => {
-    return await User.findByIdAndUpdate(id, { isBlocked: true }, { new: true });
+  blockUser: async (id, blockedReason, adminId) => {
+    return await User.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: true,
+        blockedReason: blockedReason || "Violation of platform policies",
+        blockedAt: new Date(),
+        blockedBy: adminId
+      },
+      { new: true }
+    );
   },
 
   unblockUser: async (id) => {
-    return await User.findByIdAndUpdate(id, { isBlocked: false }, { new: true });
+    return await User.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: false,
+        blockedReason: "",
+        blockedAt: null,
+        blockedBy: null
+      },
+      { new: true }
+    );
+  },
+
+  blockCourse: async (id, blockedReason, adminId) => {
+    return await Course.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: true,
+        isPublished: false,
+        status: "draft",
+        blockedReason: blockedReason || "Violation of platform policies",
+        blockedAt: new Date(),
+        blockedBy: adminId
+      },
+      { new: true }
+    );
+  },
+
+  unblockCourse: async (id) => {
+    return await Course.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: false,
+        blockedReason: "",
+        blockedAt: null,
+        blockedBy: null
+      },
+      { new: true }
+    );
   },
 
   // 3. Course Management
@@ -381,16 +427,43 @@ export const adminService = {
   },
 
   getPayouts: async ({ status, page = 1, limit = 50 }) => {
-    const query = {};
-    if (status && status !== 'all') query.status = status;
+    const match = {};
+    if (status && status !== 'all') match.status = status;
 
-    const payouts = await Payout.find(query)
-      .populate("instructor", "name email avatar")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    const skipCount = (Number(page) - 1) * Number(limit);
+    const limitCount = Number(limit);
 
-    const total = await Payout.countDocuments(query);
+    const pipeline = [
+      { $match: match },
+      {
+        $addFields: {
+          priority: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$status", "pending"] }, then: 1 },
+                { case: { $eq: ["$status", "approved"] }, then: 2 },
+                { case: { $eq: ["$status", "rejected"] }, then: 3 },
+                { case: { $eq: ["$status", "paid"] }, then: 4 }
+              ],
+              default: 5
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          priority: 1,
+          createdAt: -1
+        }
+      },
+      { $skip: skipCount },
+      { $limit: limitCount }
+    ];
+
+    let payouts = await Payout.aggregate(pipeline);
+    payouts = await Payout.populate(payouts, { path: "instructor", select: "name email avatar" });
+
+    const total = await Payout.countDocuments(match);
     return { payouts, total };
   },
 

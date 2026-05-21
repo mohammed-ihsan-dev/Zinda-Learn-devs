@@ -42,8 +42,19 @@ export const AuthProvider = ({ children }) => {
       console.error('Fetch user error:', error);
       setError(error.message);
       
-      // Only logout on definite auth failure, not network errors
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      // Update block reason dynamically if 403 blocked is returned
+      if (error.response?.status === 403 && error.response?.data?.blocked) {
+        const backendReason = error.response.data.blockedReason || error.response.data.reason;
+        const localUser = JSON.parse(localStorage.getItem('zinda_user') || '{}');
+        const updatedUser = {
+          ...localUser,
+          isBlocked: true,
+          blockedReason: backendReason
+        };
+        setUser(updatedUser);
+        localStorage.setItem('zinda_user', JSON.stringify(updatedUser));
+      } else if (error.response?.status === 401 || (error.response?.status === 403 && !error.response?.data?.blocked)) {
+        // Only logout on definite auth failure, not network errors
         logout();
       }
     } finally {
@@ -64,6 +75,14 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       return data;
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.blocked && err.response?.data?.token) {
+        const data = err.response.data;
+        localStorage.setItem('zinda_token', data.token);
+        localStorage.setItem('zinda_user', JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+        return data;
+      }
       throw err;
     }
   };
@@ -90,6 +109,14 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       return data;
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.blocked && err.response?.data?.token) {
+        const data = err.response.data;
+        localStorage.setItem('zinda_token', data.token);
+        localStorage.setItem('zinda_user', JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+        return data;
+      }
       throw err;
     }
   };
@@ -108,6 +135,17 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
+      if (error.response?.status === 403 && error.response?.data?.blocked) {
+        const backendReason = error.response.data.blockedReason || error.response.data.reason;
+        const localUser = JSON.parse(localStorage.getItem('zinda_user') || '{}');
+        const updatedUser = {
+          ...localUser,
+          isBlocked: true,
+          blockedReason: backendReason
+        };
+        setUser(updatedUser);
+        localStorage.setItem('zinda_user', JSON.stringify(updatedUser));
+      }
     }
   };
 

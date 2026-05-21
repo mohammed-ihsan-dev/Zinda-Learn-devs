@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Shield, Settings, LogOut, Menu, X,
-  Bell, ChevronDown, CheckCircle, XCircle, Users, GraduationCap, BookOpen, CreditCard, BarChart3
+  Bell, ChevronDown, CheckCircle, XCircle, Users, GraduationCap, BookOpen, CreditCard, BarChart3, HelpCircle
 } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 const adminMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
@@ -12,7 +13,9 @@ const adminMenuItems = [
   { label: 'Tutors', icon: GraduationCap, path: '/admin/instructor-management' },
   { label: 'Courses', icon: BookOpen, path: '/admin/courses' },
   { label: 'Payments', icon: CreditCard, path: '/admin/payments' },
+  { label: 'Support', icon: HelpCircle, path: '/admin/support' },
   { label: 'Reports', icon: BarChart3, path: '/admin/analytics' },
+  { label: 'Notifications', icon: Bell, path: '/admin/notifications' },
   { label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
@@ -110,10 +113,7 @@ const AdminLayout = () => {
             </div>
 
             <div className="flex items-center gap-5">
-              <button className="relative text-zinc-400 hover:text-zinc-200 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full border border-[#121212]"></span>
-              </button>
+              <NotificationBell />
               
               <div className="flex items-center gap-3 pl-5 border-l border-[#27272a] cursor-pointer group">
                 <div className="flex flex-col items-end">

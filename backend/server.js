@@ -22,6 +22,7 @@ import certificateRoutes from './routes/certificate.routes.js';
 import studentSettingsRoutes from './routes/studentSettings.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
 
@@ -78,6 +79,7 @@ app.use('/api/student/certificates', certificateRoutes);
 app.use('/api/student/settings', studentSettingsRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/support', supportRoutes);
 
 
 // Health check
