@@ -46,3 +46,13 @@ export const uploadAvatar = async (file) => {
   });
   return response.data;
 };
+
+export const sendVerificationEmail = async () => {
+  const response = await api.post('/student/settings/send-verification-email');
+  return response.data;
+};
+
+export const verifyEmailToken = async (token) => {
+  const response = await api.post(`/student/settings/verify-email/${token}`);
+  return response.data;
+};

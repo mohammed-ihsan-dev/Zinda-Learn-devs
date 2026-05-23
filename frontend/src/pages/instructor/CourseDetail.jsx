@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getInstructorCourses, submitCourse } from '../../services/instructorService';
-import { getCourseById, updateCourse } from '../../services/courseService';
+import { getCourseById, updateCourse, addSection as addSectionAPI, updateSection as updateSectionAPI, deleteSection as deleteSectionAPI, addLessonToSection, updateLessonInSection, deleteLessonFromSection } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -28,8 +28,8 @@ import {
 import VideoUpload from '../../components/instructor/VideoUpload';
 
 // ── Create Module Modal ───────────────────────────────────────────────────────
-const CreateModuleModal = ({ onClose, onSave }) => {
-  const [formData, setFormData] = useState({ title: '', description: '' });
+const CreateModuleModal = ({ onClose, onSave, initialData }) => {
+  const [formData, setFormData] = useState({ title: initialData?.title || '', description: initialData?.description || '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -318,55 +318,110 @@ const LessonPreviewModal = ({ lesson, onClose }) => {
 };
 
 // ── Content Tab ───────────────────────────────────────────────────────────────
-const ContentTab = ({ modules = [], onUpdate, courseId }) => {
+const ContentTab = ({ modules = [], courseId, onCourseUpdate }) => {
   const [selectedModule, setSelectedModule] = useState(0);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
+  const [editingSection, setEditingSection] = useState(null);
   const [previewingLesson, setPreviewingLesson] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleAddModule = (newMod) => {
-    const updatedModules = [...modules, {
-      ...newMod,
-      order: modules.length + 1,
-      lessons: []
-    }];
-    onUpdate(updatedModules);
-    setSelectedModule(modules.length);
-    toast.success('Section added successfully');
-  };
-
-  const handleAddLesson = (newLesson) => {
-    const updatedModules = [...modules];
-    const currentModule = updatedModules[selectedModule];
-    currentModule.lessons = [
-      ...currentModule.lessons,
-      { ...newLesson, order: currentModule.lessons.length + 1 }
-    ];
-    onUpdate(updatedModules);
-    toast.success('Lesson added successfully');
-  };
-
-  const handleUpdateLesson = (updatedLesson) => {
-    const updatedModules = [...modules];
-    const currentModule = updatedModules[selectedModule];
-    currentModule.lessons = currentModule.lessons.map((l, i) => 
-      i === editingLesson.index ? updatedLesson : l
-    );
-    onUpdate(updatedModules);
-    setEditingLesson(null);
-    toast.success('Lesson updated');
-  };
-
-  const handleDeleteLesson = (index) => {
-    if (window.confirm('Are you sure you want to delete this lesson?')) {
-      const updatedModules = [...modules];
-      const currentModule = updatedModules[selectedModule];
-      currentModule.lessons = currentModule.lessons.filter((_, i) => i !== index);
-      onUpdate(updatedModules);
-      toast.success('Lesson removed');
+  const handleAddModule = async (newMod) => {
+    setSaving(true);
+    try {
+      const res = await addSectionAPI(courseId, newMod);
+      onCourseUpdate(res.course);
+      setSelectedModule(res.course.modules.length - 1);
+      toast.success('Section saved ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add section');
+    } finally {
+      setSaving(false);
     }
   };
+
+  const handleEditModule = async (data) => {
+    setSaving(true);
+    try {
+      const sectionId = modules[editingSection]._id;
+      const res = await updateSectionAPI(courseId, sectionId, data);
+      onCourseUpdate(res.course);
+      setEditingSection(null);
+      toast.success('Section updated ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update section');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteModule = async (index) => {
+    if (!window.confirm('Delete this section and all its lessons? This cannot be undone.')) return;
+    setSaving(true);
+    try {
+      const sectionId = modules[index]._id;
+      const res = await deleteSectionAPI(courseId, sectionId);
+      onCourseUpdate(res.course);
+      if (selectedModule >= res.course.modules.length) {
+        setSelectedModule(Math.max(0, res.course.modules.length - 1));
+      }
+      toast.success('Section deleted ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete section');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddLesson = async (newLesson) => {
+    setSaving(true);
+    try {
+      const sectionId = modules[selectedModule]._id;
+      const res = await addLessonToSection(courseId, sectionId, newLesson);
+      onCourseUpdate(res.course);
+      toast.success('Lesson saved ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add lesson');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateLesson = async (updatedLesson) => {
+    setSaving(true);
+    try {
+      const sectionId = modules[selectedModule]._id;
+      const lessonId = editingLesson.lesson._id;
+      const res = await updateLessonInSection(courseId, sectionId, lessonId, updatedLesson);
+      onCourseUpdate(res.course);
+      setEditingLesson(null);
+      toast.success('Lesson updated ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update lesson');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteLesson = async (index) => {
+    if (!window.confirm('Are you sure you want to delete this lesson?')) return;
+    setSaving(true);
+    try {
+      const sectionId = modules[selectedModule]._id;
+      const lessonId = modules[selectedModule].lessons[index]._id;
+      const res = await deleteLessonFromSection(courseId, sectionId, lessonId);
+      onCourseUpdate(res.course);
+      toast.success('Lesson deleted ✓');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete lesson');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Clamp selectedModule to valid range
+  const safeIdx = Math.min(selectedModule, Math.max(modules.length - 1, 0));
 
   return (
     <>
@@ -374,6 +429,13 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
         <CreateModuleModal
           onClose={() => setShowModuleModal(false)}
           onSave={handleAddModule}
+        />
+      )}
+      {editingSection !== null && modules[editingSection] && (
+        <CreateModuleModal
+          initialData={modules[editingSection]}
+          onClose={() => setEditingSection(null)}
+          onSave={handleEditModule}
         />
       )}
       {showLessonModal && (
@@ -396,6 +458,14 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
           onClose={() => setPreviewingLesson(null)}
         />
       )}
+
+      {/* Saving indicator */}
+      {saving && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 bg-slate-900 text-white text-xs font-bold rounded-2xl shadow-2xl animate-fade-in">
+          <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
         {/* Left — Modules list */}
         <div className="lg:col-span-4 space-y-4">
@@ -407,15 +477,15 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
           {modules.length > 0 ? (
             modules.map((mod, i) => (
               <button
-                key={i}
+                key={mod._id || i}
                 onClick={() => setSelectedModule(i)}
-                className={`w-full text-left p-5 rounded-[24px] border transition-all duration-300 ${selectedModule === i
+                className={`w-full text-left p-5 rounded-[24px] border transition-all duration-300 ${safeIdx === i
                     ? 'border-purple-200 bg-white shadow-xl shadow-purple-500/5 border-l-4 border-l-purple-600'
                     : 'border-slate-100 bg-white hover:border-slate-200'
                   }`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${selectedModule === i ? 'text-purple-600' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${safeIdx === i ? 'text-purple-600' : 'text-slate-400'}`}>
                     Section {i + 1}
                   </span>
                   <GripVertical className="w-4 h-4 text-slate-300" />
@@ -437,7 +507,8 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
 
           <button
             onClick={() => setShowModuleModal(true)}
-            className="w-full py-4 border-2 border-dashed border-slate-200 rounded-[24px] text-xs font-bold text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
+            disabled={saving}
+            className="w-full py-4 border-2 border-dashed border-slate-200 rounded-[24px] text-xs font-bold text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" /> Add New Section
           </button>
@@ -445,24 +516,39 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
 
         {/* Right — Module detail */}
         <div className="lg:col-span-8 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[400px] p-10">
-          {modules.length > 0 ? (
+          {modules.length > 0 && modules[safeIdx] ? (
             <div className="w-full text-left">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Managing Curriculum</span>
-                  <h3 className="text-2xl font-bold text-slate-900">{modules[selectedModule].title}</h3>
+                  <h3 className="text-2xl font-bold text-slate-900">{modules[safeIdx].title}</h3>
+                  {modules[safeIdx].description && (
+                    <p className="text-sm text-slate-500 mt-1">{modules[safeIdx].description}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100"><Edit2 className="w-4 h-4" /></button>
-                  <button className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
+                  <button
+                    onClick={() => setEditingSection(safeIdx)}
+                    disabled={saving}
+                    className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteModule(safeIdx)}
+                    disabled={saving}
+                    className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
               {/* Lessons List */}
               <div className="space-y-3 mb-8">
-                {modules[selectedModule].lessons?.length > 0 ? (
-                  modules[selectedModule].lessons.map((lesson, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group border border-transparent hover:border-slate-200 transition-all">
+                {modules[safeIdx].lessons?.length > 0 ? (
+                  modules[safeIdx].lessons.map((lesson, idx) => (
+                    <div key={lesson._id || idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group border border-transparent hover:border-slate-200 transition-all">
                       <div className="flex items-center gap-4 overflow-hidden">
                         <button 
                           onClick={() => setPreviewingLesson(lesson)}
@@ -507,7 +593,8 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
 
               <button
                 onClick={() => setShowLessonModal(true)}
-                className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                disabled={saving}
+                className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Plus className="w-5 h-5" /> Add Lesson to Section
               </button>
@@ -519,7 +606,8 @@ const ContentTab = ({ modules = [], onUpdate, courseId }) => {
               <p className="text-sm text-slate-500 max-w-xs">Start by adding your first section and uploading your lessons to get started.</p>
               <button
                 onClick={() => setShowModuleModal(true)}
-                className="mt-8 flex items-center gap-2 px-8 py-3.5 bg-purple-600 text-white font-bold rounded-2xl shadow-xl shadow-purple-500/20"
+                disabled={saving}
+                className="mt-8 flex items-center gap-2 px-8 py-3.5 bg-purple-600 text-white font-bold rounded-2xl shadow-xl shadow-purple-500/20 disabled:opacity-50"
               >
                 <Plus className="w-5 h-5" /> Add First Section
               </button>
@@ -639,26 +727,8 @@ const CourseDetail = () => {
     }
   };
 
-  const handleCurriculumUpdate = async (updatedModules) => {
-    try {
-      setCourse(prev => ({ ...prev, modules: updatedModules }));
-      // Auto-save logic could go here, or just wait for the explicit Save button
-      // For now, let's just update the local state.
-    } catch (error) {
-      toast.error('Failed to update curriculum');
-    }
-  };
-
-  const handleSaveAll = async () => {
-    try {
-      setSubmitting(true);
-      await updateCourse(id, { modules: course.modules });
-      toast.success('All changes saved successfully!');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save changes');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleCourseUpdate = (updatedCourse) => {
+    setCourse(updatedCourse);
   };
 
   if (loading) {
@@ -732,14 +802,10 @@ const CourseDetail = () => {
             </button>
           )}
 
-          <button
-            onClick={handleSaveAll}
-            disabled={submitting}
-            className="flex items-center gap-2.5 px-6 py-3.5 bg-slate-900 text-white hover:bg-slate-800 font-bold rounded-2xl shadow-xl transition-all active:scale-95 group disabled:opacity-50"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 group-hover:rotate-12 transition-transform" />}
-            Save Changes
-          </button>
+          <div className="flex items-center gap-2.5 px-6 py-3.5 bg-emerald-50 text-emerald-700 font-bold rounded-2xl border border-emerald-200">
+            <CheckCircle2 className="w-4 h-4" />
+            Auto-saved
+          </div>
         </div>
       </div>
 
@@ -776,7 +842,7 @@ const CourseDetail = () => {
 
       {/* Tab Content */}
       <div className="transition-all duration-500">
-        {activeTab === 'Content' && <ContentTab modules={course.modules} onUpdate={handleCurriculumUpdate} courseId={id} />}
+        {activeTab === 'Content' && <ContentTab modules={course.modules} courseId={id} onCourseUpdate={handleCourseUpdate} />}
         {activeTab === 'Tests' && <TestsTab />}
         {activeTab === 'Coupons' && <CouponsTab />}
       </div>

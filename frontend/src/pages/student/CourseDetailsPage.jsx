@@ -157,7 +157,7 @@ const CourseDetailsPage = () => {
   };
 
   const handleContinue = () => {
-    navigate(`/student/my-learning?course=${id}`);
+    navigate(`/student/my-learning?course=${id}&play=true`);
   };
 
   if (loading) return <CourseSkeleton />;

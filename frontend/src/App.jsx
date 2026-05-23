@@ -67,6 +67,7 @@ const Settings = lazy(() => import('./pages/admin/Settings'));
 const AdminSupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'));
 const AccountBlocked = lazy(() => import('./pages/AccountBlocked'));
+const VerifyEmailPage = lazy(() => import('./pages/student/VerifyEmailPage'));
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -94,6 +95,7 @@ function App() {
                   <Route path="/courses/:id" element={<CourseDetailsPage />} />
                   <Route path="/test-video" element={<VideoTest />} />
                   <Route path="/account-blocked" element={<AccountBlocked />} />
+                  <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
                   {/* Student Routes */}
                   <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>

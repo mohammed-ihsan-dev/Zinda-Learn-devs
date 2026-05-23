@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Users, UserCheck, UserPlus, GraduationCap, Search, Filter,
-  MoreVertical, Eye, Lock, Unlock, Mail, ShieldAlert, BookOpen,
-  TrendingUp, Clock, CreditCard, AlertTriangle
-} from 'lucide-react';
+import { Users, UserCheck, UserPlus, TrendingUp, Search, Eye, Lock, Unlock, BookOpen, AlertTriangle } from 'lucide-react';
 import { getStudents, getStudentStats, blockUser, unblockUser } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
 import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
+import StatusBadge from '../../components/admin/shared/StatusBadge';
+import PageHeader from '../../components/admin/shared/PageHeader';
+import ConfirmModal from '../../components/admin/shared/ConfirmModal';
 import toast from 'react-hot-toast';
 
 const StudentsManagement = () => {
@@ -50,13 +49,8 @@ const StudentsManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchStudents();
-  }, [searchTerm, statusFilter, currentPage]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStudents(); }, [searchTerm, statusFilter, currentPage]);
+  useEffect(() => { fetchStats(); }, []);
 
   const handleBlockToggle = async (student) => {
     if (student.isBlocked) {
@@ -64,9 +58,7 @@ const StudentsManagement = () => {
         await unblockUser(student._id);
         toast.success('Student unblocked successfully');
         fetchStudents();
-      } catch (error) {
-        toast.error('Failed to unblock student');
-      }
+      } catch { toast.error('Failed to unblock student'); }
     } else {
       setSelectedStudent(student);
       setBlockReason('');
@@ -76,40 +68,34 @@ const StudentsManagement = () => {
 
   const handleConfirmBlock = async (e) => {
     e.preventDefault();
-    if (!blockReason.trim()) {
-      return toast.error('Please enter a reason for suspension.');
-    }
-
+    if (!blockReason.trim()) return toast.error('Please enter a reason.');
     try {
       setSubmittingBlock(true);
       await blockUser(selectedStudent._id, blockReason);
-      toast.success('Student account suspended successfully');
+      toast.success('Student suspended successfully');
       setShowBlockModal(false);
       setSelectedStudent(null);
       setBlockReason('');
       fetchStudents();
-    } catch (error) {
-      toast.error('Failed to block student');
-    } finally {
-      setSubmittingBlock(false);
-    }
+    } catch { toast.error('Failed to suspend student'); }
+    finally { setSubmittingBlock(false); }
   };
+
+  const FILTERS = ['all', 'active', 'blocked'];
 
   const columns = [
     {
       header: 'Student',
-      cell: (student) => (
+      cell: (s) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#27272a] overflow-hidden">
-            <img
-              src={student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-zinc-100">{student.name}</span>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Joined {new Date(student.createdAt).toLocaleDateString()}</span>
+          <img
+            src={s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=6366f1&color=fff`}
+            alt=""
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-200">{s.name}</p>
+            <p className="text-xs text-slate-500">Joined {new Date(s.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
       )
@@ -117,68 +103,54 @@ const StudentsManagement = () => {
     {
       header: 'Email',
       accessor: 'email',
-      className: 'hidden md:table-cell'
+      className: 'hidden md:table-cell text-slate-400'
     },
     {
-      header: 'Enrolled Courses',
-      cell: (student) => (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
-            <BookOpen className="w-4 h-4" />
-          </div>
-          <span className="font-bold">{student.enrolledCount || 0} Courses</span>
+      header: 'Courses',
+      cell: (s) => (
+        <div className="flex items-center gap-1.5 text-slate-300">
+          <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-sm">{s.enrolledCount || 0}</span>
         </div>
       )
     },
     {
-      header: 'Learning Progress',
-      cell: (student) => (
-        <div className="w-full max-w-[120px]">
+      header: 'Progress',
+      cell: (s) => (
+        <div className="w-28">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-zinc-500">{student.avgProgress || 0}%</span>
+            <span className="text-xs text-slate-400">{s.avgProgress || 0}%</span>
           </div>
-          <div className="h-1.5 w-full bg-[#27272a] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-purple-500 rounded-full transition-all duration-500"
-              style={{ width: `${student.avgProgress || 0}%` }}
-            />
+          <div className="h-1 w-full bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${s.avgProgress || 0}%` }} />
           </div>
         </div>
-      )
+      ),
+      className: 'hidden lg:table-cell'
     },
     {
-      header: 'Total Spent',
-      cell: (student) => (
-        <div className="font-bold text-zinc-100">
-          ₹{(student.totalSpent || 0).toLocaleString()}
-        </div>
-      )
+      header: 'Spent',
+      cell: (s) => <span className="text-sm text-slate-300">₹{(s.totalSpent || 0).toLocaleString()}</span>,
+      className: 'hidden lg:table-cell'
     },
     {
       header: 'Status',
-      cell: (student) => (
-        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${student.isBlocked
-          ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-          : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-          }`}>
-          {student.isBlocked ? 'Blocked' : 'Active'}
-        </span>
-      )
+      cell: (s) => <StatusBadge status={s.isBlocked ? 'blocked' : 'active'} />
     },
     {
       header: 'Actions',
       className: 'text-right',
-      cell: (student) => (
-        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="View Profile">
-            <Eye className="w-4 h-4" />
+      cell: (s) => (
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-500 hover:text-slate-300 transition-colors" title="View Profile">
+            <Eye className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => handleBlockToggle(student)}
-            className={`p-2 hover:bg-white/5 rounded-lg transition-colors ${student.isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-rose-400 hover:text-rose-300'}`}
-            title={student.isBlocked ? 'Unblock Student' : 'Block Student'}
+            onClick={() => handleBlockToggle(s)}
+            className={`p-1.5 hover:bg-slate-700 rounded-lg transition-colors ${s.isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-red-400 hover:text-red-300'}`}
+            title={s.isBlocked ? 'Unblock' : 'Block'}
           >
-            {student.isBlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            {s.isBlocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
           </button>
         </div>
       )
@@ -186,171 +158,91 @@ const StudentsManagement = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Students Management</h1>
-        <p className="text-zinc-500">Manage enrolled students, monitor learning activity, and control student access.</p>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader title="Students" subtitle="Manage enrolled students, monitor activity, and control access." />
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AnalyticsCard title="Total Students" value={stats?.totalStudents || 0} icon={Users} color="indigo" />
+        <AnalyticsCard title="Active Students" value={stats?.activeStudents || 0} icon={UserCheck} color="emerald" />
+        <AnalyticsCard title="New This Month" value={stats?.newStudents || 0} icon={UserPlus} color="blue" />
+        <AnalyticsCard title="Avg. Completion" value={`${stats?.avgCompletion || 0}%`} icon={TrendingUp} color="amber" />
       </div>
 
-      {/* Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AnalyticsCard
-          title="Total Students"
-          value={stats?.totalStudents || 0}
-          icon={Users}
-          color="purple"
-        />
-        <AnalyticsCard
-          title="Active Students"
-          value={stats?.activeStudents || 0}
-          icon={UserCheck}
-          color="emerald"
-        />
-        <AnalyticsCard
-          title="New This Month"
-          value={stats?.newStudents || 0}
-          icon={UserPlus}
-          color="blue"
-        />
-        <AnalyticsCard
-          title="Avg. Completion"
-          value={`${stats?.avgCompletion || 0}%`}
-          icon={TrendingUp}
-          color="amber"
-        />
-      </div>
-
-      {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-2xl border border-[#27272a]">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="Search students by name or email..."
-            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+            placeholder="Search by name or email…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           />
         </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-xl p-1">
+        <div className="flex items-center gap-1 p-1 bg-slate-800/50 border border-slate-700 rounded-lg">
+          {FILTERS.map(f => (
             <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'all' ? 'bg-[#27272a] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${statusFilter === f ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              All
+              {f}
             </button>
-            <button
-              onClick={() => setStatusFilter('active')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'active' ? 'bg-[#27272a] text-emerald-400 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setStatusFilter('blocked')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'blocked' ? 'bg-[#27272a] text-rose-400 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Blocked
-            </button>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Table */}
-      <DataTable
-        columns={columns}
-        data={students}
-        loading={loading}
-        emptyMessage="No students found"
-      />
+      <DataTable columns={columns} data={students} loading={loading} emptyMessage="No students found" emptyDescription="Try adjusting your search or filter." />
 
-      {/* Pagination (Simplified for now) */}
+      {/* Pagination */}
       {totalStudents > 10 && (
-        <div className="flex items-center justify-between px-2">
-          <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">
-            Showing {students.length} of {totalStudents} students
-          </p>
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-slate-500">Showing {students.length} of {totalStudents}</p>
           <div className="flex items-center gap-2">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
+              className="px-3 py-1.5 text-xs font-medium bg-slate-800 border border-slate-700 rounded-lg text-slate-400 disabled:opacity-40 hover:bg-slate-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              Previous
             </button>
-            <span className="text-sm font-bold text-zinc-200 px-4">{currentPage}</span>
+            <span className="text-sm font-medium text-slate-300 px-2">{currentPage}</span>
             <button
               disabled={students.length < 10}
               onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
+              className="px-3 py-1.5 text-xs font-medium bg-slate-800 border border-slate-700 rounded-lg text-slate-400 disabled:opacity-40 hover:bg-slate-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              Next
             </button>
           </div>
         </div>
       )}
 
-      {/* Block Confirmation Modal */}
-      {showBlockModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[#121215] border border-rose-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-rose-500">
-              <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Suspend Student Account</h3>
-            </div>
-            
-            <p className="text-xs text-zinc-400">
-              You are about to suspend <strong>{selectedStudent?.name}</strong> ({selectedStudent?.email}).
-              Suspended users will lose all protected dashboard access and active session tokens.
-            </p>
-
-            <form onSubmit={handleConfirmBlock} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">
-                  Reason for Suspension
-                </label>
-                <textarea
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="e.g. Violation of platform guidelines, abusive behavior, or suspicious payment activities..."
-                  rows={3}
-                  className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBlockModal(false);
-                    setSelectedStudent(null);
-                    setBlockReason('');
-                  }}
-                  className="px-4 py-2.5 bg-[#1c1c21] hover:bg-[#27272a] text-zinc-400 hover:text-zinc-200 text-xs font-bold rounded-xl border border-[#2d2d34] transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingBlock}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all"
-                >
-                  {submittingBlock ? 'Suspending...' : 'Confirm Suspension'}
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Block Modal */}
+      <ConfirmModal
+        isOpen={showBlockModal}
+        onClose={() => { setShowBlockModal(false); setSelectedStudent(null); setBlockReason(''); }}
+        onConfirm={handleConfirmBlock}
+        title="Suspend Student Account"
+        description={`You are about to suspend ${selectedStudent?.name} (${selectedStudent?.email}). They will lose all access until reinstated.`}
+        confirmLabel="Suspend Account"
+        loading={submittingBlock}
+      >
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Reason for suspension</label>
+          <textarea
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            placeholder="e.g. Violation of platform guidelines…"
+            rows={3}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
+            required
+          />
         </div>
-      )}
+      </ConfirmModal>
     </div>
   );
 };

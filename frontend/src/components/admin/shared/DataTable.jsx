@@ -1,54 +1,61 @@
 import React from 'react';
+import EmptyState from './EmptyState';
 
-const DataTable = ({ columns, data, loading, emptyMessage = "No data found" }) => {
-  if (loading) {
-    return (
-      <div className="w-full bg-[#1c1c21] rounded-2xl border border-[#27272a] overflow-hidden animate-pulse">
-        <div className="h-16 bg-[#27272a]/50 border-b border-[#27272a]" />
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-20 border-b border-[#27272a]/50 last:border-0" />
-        ))}
-      </div>
-    );
-  }
+const SkeletonRow = ({ cols }) => (
+  <tr>
+    {Array.from({ length: cols }).map((_, i) => (
+      <td key={i} className="px-5 py-4">
+        <div className="h-4 bg-slate-800 rounded animate-pulse" style={{ width: `${60 + Math.random() * 30}%` }} />
+      </td>
+    ))}
+  </tr>
+);
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="w-full bg-[#1c1c21] rounded-2xl border border-[#27272a] p-12 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-[#27272a] rounded-full flex items-center justify-center mb-4 text-zinc-500">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
-        </div>
-        <h3 className="text-zinc-300 font-bold text-lg mb-1">{emptyMessage}</h3>
-        <p className="text-zinc-500 text-sm">Try adjusting your filters or search criteria.</p>
-      </div>
-    );
-  }
-
+const DataTable = ({ columns, data, loading, emptyMessage = 'No data found', emptyDescription }) => {
   return (
-    <div className="w-full bg-[#1c1c21] rounded-2xl border border-[#27272a] overflow-hidden">
+    <div className="w-full bg-slate-800/50 rounded-xl border border-slate-700/60 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#27272a]/30 border-b border-[#27272a]">
+            <tr className="border-b border-slate-700/60 bg-slate-800/80">
               {columns.map((col, idx) => (
-                <th key={idx} className={`px-6 py-4 text-[11px] font-black text-zinc-500 uppercase tracking-widest ${col.className || ''}`}>
+                <th
+                  key={idx}
+                  className={`px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${col.className || ''}`}
+                >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#27272a]/50">
-            {data.map((row, rowIdx) => (
-              <tr key={rowIdx} className="hover:bg-white/[0.02] transition-colors group">
-                {columns.map((col, colIdx) => (
-                  <td key={colIdx} className={`px-6 py-4 text-sm text-zinc-300 ${col.className || ''}`}>
-                    {col.cell ? col.cell(row) : row[col.accessor]}
-                  </td>
-                ))}
+          <tbody className="divide-y divide-slate-700/40">
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonRow key={i} cols={columns.length} />
+              ))
+            ) : !data || data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length}>
+                  <EmptyState title={emptyMessage} description={emptyDescription} />
+                </td>
               </tr>
-            ))}
+            ) : (
+              data.map((row, rowIdx) => (
+                <tr
+                  key={rowIdx}
+                  className="hover:bg-slate-800/60 transition-colors duration-100 group"
+                >
+                  {columns.map((col, colIdx) => (
+                    <td
+                      key={colIdx}
+                      className={`px-5 py-4 text-sm text-slate-300 ${col.className || ''}`}
+                    >
+                      {col.cell ? col.cell(row) : row[col.accessor]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

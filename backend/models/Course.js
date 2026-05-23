@@ -16,7 +16,12 @@ const lessonSchema = new mongoose.Schema({
   },
   videoUrl: {
     type: String,
-    required: true
+    default: ''
+  },
+  source: {
+    type: String,
+    enum: ['upload', 'youtube', ''],
+    default: ''
   },
   duration: {
     type: Number,
@@ -28,7 +33,7 @@ const lessonSchema = new mongoose.Schema({
   },
   order: {
     type: Number,
-    required: true
+    default: 0
   }
 });
 
@@ -41,10 +46,15 @@ const moduleSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  description: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   lessons: [lessonSchema],
   order: {
     type: Number,
-    required: true
+    default: 0
   }
 });
 

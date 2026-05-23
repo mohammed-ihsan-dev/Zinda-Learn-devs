@@ -8,6 +8,8 @@ import {
 import { updateProgress } from '../../services/courseService';
 import toast from 'react-hot-toast';
 import VideoPlayer from '../../components/VideoPlayer';
+import CourseReviews from '../../components/course/CourseReviews';
+
 const fmtDuration = (mins) => {
   if (!mins) return '0:00';
   const h = Math.floor(mins / 60);
@@ -16,7 +18,7 @@ const fmtDuration = (mins) => {
 };
 
 // ─── Sub-component: Tab Bar ───────────────────────────────────────────────────
-const TABS = ['Overview', 'Notes', 'Q&A', 'Resources', 'Tests'];
+const TABS = ['Overview', 'Notes', 'Q&A', 'Resources', 'Tests', 'Reviews'];
 
 const TabBar = memo(({ active, onChange }) => (
   <div className="flex gap-1 border-b border-zinc-200 mb-8 overflow-x-auto scrollbar-hide">
@@ -117,7 +119,7 @@ ModuleRow.displayName = 'ModuleRow';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack }) => {
-  const { moduleIndex, lessonIndex, lesson, module } = activeLesson;
+  const { moduleIndex = 0, lessonIndex = 0, lesson = null, module: activeModule = null } = activeLesson || {};
   const [activeTab, setActiveTab] = useState('Overview');
   const [savingProgress, setSavingProgress] = useState(false);
   const [localCompleted, setLocalCompleted] = useState(
@@ -140,6 +142,81 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
 
   const totalLessons = allLessons.length;
   const completedCount = completedLessons.length;
+
+  // ── EMPTY STATE: course has no lessons ──────────────────────────
+  if (activeLesson?.isEmpty || !lesson) {
+    return (
+      <div className="animate-fade-in space-y-6">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back to Course
+        </button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            {/* Empty video placeholder */}
+            <div className="relative aspect-video w-full bg-slate-900 rounded-[24px] overflow-hidden shadow-2xl border border-slate-800 flex flex-col items-center justify-center">
+              <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-5">
+                <Play className="w-9 h-9 text-zinc-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">No Content Available</h3>
+              <p className="text-sm text-zinc-400 max-w-sm text-center leading-relaxed">
+                This course doesn't have any published lectures yet. The instructor is still preparing content — check back soon!
+              </p>
+            </div>
+
+            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-800 text-sm mb-1">Course content coming soon</p>
+                <p className="text-amber-700 text-sm leading-relaxed">
+                  The instructor will add lectures to this course. You're already enrolled, so you'll have full access as soon as they're published.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-5">
+            <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white text-xl font-bold shrink-0">
+                  {course.instructor?.name?.charAt(0) || 'I'}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-zinc-900 text-sm truncate">{course.instructor?.name || 'Instructor'}</p>
+                  <p className="text-xs text-zinc-400 truncate">Expert Instructor, Zinda Learn</p>
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-zinc-900 mb-3 leading-snug">{course.title}</p>
+              <div className="flex items-center justify-between text-xs text-zinc-500 mb-1.5">
+                <span className="font-bold text-zinc-700">Course Progress</span>
+                <span className="font-black text-primary-600 text-base">{progress}%</span>
+              </div>
+              <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-primary-600 h-full rounded-full transition-all duration-700"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <h3 className="font-bold text-zinc-900">Course Content</h3>
+              </div>
+              <div className="px-5 py-8 text-center">
+                <p className="text-zinc-400 text-sm">No lessons available yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleMarkComplete = async () => {
     if (localCompleted || savingProgress || !enrollment?._id) return;
@@ -349,6 +426,13 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onBack 
           {activeTab === 'Tests' && (
             <div className="text-center py-10 text-zinc-400 text-sm">
               No tests available for this lesson yet.
+            </div>
+          )}
+
+          {/* Reviews tab */}
+          {activeTab === 'Reviews' && (
+            <div className="py-4">
+              <CourseReviews courseId={course._id} isEnrolled={true} />
             </div>
           )}
         </div>

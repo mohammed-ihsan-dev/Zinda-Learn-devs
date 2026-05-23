@@ -41,3 +41,35 @@ export const enrollInCourse = async (courseId) => {
   const response = await api.post('/enrollments/enroll', { courseId });
   return response.data;
 };
+
+// ── Curriculum CRUD ─────────────────────────────────────────────────────────
+
+export const addSection = async (courseId, data) => {
+  const response = await api.post(`/courses/${courseId}/sections`, data);
+  return response.data;
+};
+
+export const updateSection = async (courseId, sectionId, data) => {
+  const response = await api.put(`/courses/${courseId}/sections/${sectionId}`, data);
+  return response.data;
+};
+
+export const deleteSection = async (courseId, sectionId) => {
+  const response = await api.delete(`/courses/${courseId}/sections/${sectionId}`);
+  return response.data;
+};
+
+export const addLessonToSection = async (courseId, sectionId, data) => {
+  const response = await api.post(`/courses/${courseId}/sections/${sectionId}/lessons`, data);
+  return response.data;
+};
+
+export const updateLessonInSection = async (courseId, sectionId, lessonId, data) => {
+  const response = await api.put(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}`, data);
+  return response.data;
+};
+
+export const deleteLessonFromSection = async (courseId, sectionId, lessonId) => {
+  const response = await api.delete(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}`);
+  return response.data;
+};

@@ -9,6 +9,7 @@ import { formatCurrency } from '../../utils/currencyFormatter';
 import { useAuth } from '../../context/AuthContext';
 import PurchaseModal from '../../components/course/PurchaseModal';
 import { loadRazorpayScript } from '../../utils/razorpayLoader';
+import CourseReviews from '../../components/course/CourseReviews';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -126,12 +127,34 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
   };
 
   const handleContinue = () => {
-    if (!course.modules?.length) return;
-    const m = enrollment?.currentLesson?.moduleIndex || 0;
-    const l = enrollment?.currentLesson?.lessonIndex || 0;
-    const module = course.modules[m];
-    const lesson = module?.lessons?.[l];
-    if (lesson) onLessonClick({ moduleIndex: m, lessonIndex: l, lesson, module });
+    // 1. Try the saved currentLesson from enrollment progress
+    if (course.modules?.length) {
+      const m = enrollment?.currentLesson?.moduleIndex || 0;
+      const l = enrollment?.currentLesson?.lessonIndex || 0;
+      const module = course.modules[m];
+      const lesson = module?.lessons?.[l];
+
+      if (lesson) {
+        onLessonClick({ moduleIndex: m, lessonIndex: l, lesson, module });
+        return;
+      }
+
+      // 2. Fallback: find the first module that has at least one lesson
+      const firstModuleWithLessons = course.modules.find(mod => mod.lessons?.length > 0);
+      if (firstModuleWithLessons) {
+        const mIdx = course.modules.indexOf(firstModuleWithLessons);
+        onLessonClick({
+          moduleIndex: mIdx,
+          lessonIndex: 0,
+          lesson: firstModuleWithLessons.lessons[0],
+          module: firstModuleWithLessons
+        });
+        return;
+      }
+    }
+
+    // 3. Course has zero modules/lectures — open player with empty state
+    onLessonClick({ isEmpty: true, moduleIndex: 0, lessonIndex: 0, lesson: null, module: null });
   };
 
   return (
@@ -281,6 +304,11 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── COURSE REVIEWS ── */}
+      <div className="bg-white rounded-3xl shadow-md border border-zinc-100 p-8 lg:p-10">
+        <CourseReviews courseId={course._id} isEnrolled={isEnrolled} />
       </div>
 
       <PurchaseModal 

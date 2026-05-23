@@ -8,6 +8,29 @@ import {
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 
+// Reusable avatar renderer — shows image if available, letter fallback otherwise
+const UserAvatar = ({ user, size = 'w-10 h-10', textSize = 'text-sm' }) => {
+  const [imgError, setImgError] = useState(false);
+  const avatarUrl = user?.avatar || user?.profilePic;
+
+  if (avatarUrl && !imgError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={user?.name || 'User'}
+        className={`${size} rounded-full object-cover border-2 border-white shadow-sm`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`${size} rounded-full gradient-primary flex items-center justify-center text-white ${textSize} font-bold`}>
+      {user?.name?.charAt(0) || 'S'}
+    </div>
+  );
+};
+
 const studentMenuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
   { label: 'My Learning', icon: BookOpen, path: '/student/my-learning' },
@@ -77,9 +100,7 @@ const StudentLayout = () => {
         {/* User Profile at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-surface-100">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white font-bold">
-              {user?.name?.charAt(0) || 'S'}
-            </div>
+            <UserAvatar user={user} size="w-10 h-10" textSize="text-sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-surface-900 truncate">{user?.name || 'Student'}</p>
               <p className="text-xs text-surface-500 truncate">{user?.email || 'student@zindalearn.com'}</p>
@@ -117,9 +138,7 @@ const StudentLayout = () => {
             <div className="flex items-center gap-3">
               <NotificationBell />
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-surface-50 transition-colors cursor-pointer">
-                <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold">
-                  {user?.name?.charAt(0) || 'S'}
-                </div>
+                <UserAvatar user={user} size="w-8 h-8" textSize="text-xs" />
                 <span className="text-sm font-medium text-surface-700">{user?.name?.split(' ')[0] || 'Student'}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-surface-400" />
               </div>

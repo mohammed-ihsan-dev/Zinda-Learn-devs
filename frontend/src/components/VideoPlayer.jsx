@@ -11,6 +11,10 @@ const VideoPlayer = ({ videoUrl, source, thumbnail, title }) => {
   }, [videoUrl]);
 
   const renderPlayer = () => {
+    if (!videoUrl) {
+      return <PlayerError message="No video content provided for this lesson" />;
+    }
+
     if (source === 'youtube') {
       const videoId = getYouTubeId(videoUrl);
       if (!videoId) return <PlayerError message="Invalid YouTube URL" />;

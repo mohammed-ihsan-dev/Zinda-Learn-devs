@@ -85,7 +85,7 @@ const StudentDashboard = () => {
               <div className="flex items-center gap-4 flex-wrap">
                 <Button 
                   className="!px-8 !py-3.5 !bg-white !text-zinc-900 hover:!bg-zinc-200 transition-colors font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center gap-3"
-                  onClick={() => navigate(`/student/my-learning?course=${enrollments[0].course?._id}`)}
+                  onClick={() => navigate(`/student/my-learning?course=${enrollments[0].course?._id}&play=true`)}
                 >
                   <Play className="w-5 h-5 fill-zinc-900 text-zinc-900" />
                   Resume
@@ -152,7 +152,11 @@ const StudentDashboard = () => {
           <div className="space-y-4">
             {(enrollments && enrollments.length > 0) ? (
               enrollments.map((enrollment) => (
-                <div key={enrollment._id} className="bg-white p-4 rounded-2xl shadow-sm hover:shadow-md border border-zinc-100 flex items-center gap-5 group cursor-pointer transition-all duration-300">
+                <div 
+                  key={enrollment._id} 
+                  className="bg-white p-4 rounded-2xl shadow-sm hover:shadow-md border border-zinc-100 flex items-center gap-5 group cursor-pointer transition-all duration-300"
+                  onClick={() => navigate(`/student/my-learning?course=${enrollment.course?._id}&play=true`)}
+                >
                   <div className="relative overflow-hidden rounded-xl w-32 h-20 shrink-0 border border-zinc-100">
                     <img 
                       src={enrollment.course?.thumbnail} 

@@ -13,7 +13,8 @@ import {
   updatePreferences, 
   updateNotifications, 
   deleteAccount,
-  uploadAvatar
+  uploadAvatar,
+  sendVerificationEmail
 } from '../../services/settingsService';
 import Loader from '../../components/Loader';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +27,7 @@ const SettingsPage = () => {
   const [settings, setSettings] = useState(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   
   // Form States
   const [profileForm, setProfileForm] = useState({
@@ -338,6 +340,38 @@ const SettingsPage = () => {
                 placeholder="alex.j@zindalearn.com"
                 className="w-full px-5 py-3.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" 
               />
+              {/* Email verification badge */}
+              <div className="flex items-center gap-2 pl-1 pt-1">
+                {settings?.emailVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-lg border border-emerald-200">
+                    <Check className="w-3 h-3" /> Verified
+                  </span>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-black rounded-lg border border-amber-200">
+                      <AlertCircle className="w-3 h-3" /> Unverified
+                    </span>
+                    <button
+                      type="button"
+                      disabled={sendingVerification}
+                      onClick={async () => {
+                        setSendingVerification(true);
+                        try {
+                          await sendVerificationEmail();
+                          toast.success('Verification email sent! Check your inbox.');
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || 'Failed to send verification email');
+                        } finally {
+                          setSendingVerification(false);
+                        }
+                      }}
+                      className="text-[10px] font-black text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50"
+                    >
+                      {sendingVerification ? 'Sending...' : 'Send Verification Email'}
+                    </button>
+                  </>
+                )}
+              </div>
            </div>
            <div className="md:col-span-2 space-y-2">
               <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest pl-1">Bio</label>

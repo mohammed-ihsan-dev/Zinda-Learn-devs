@@ -317,3 +317,199 @@ export const getInstructorStats = async (req, res) => {
     });
   }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CURRICULUM CRUD — Sections & Lessons
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Helper: verify course ownership
+const verifyCourseOwner = async (courseId, user) => {
+  const course = await Course.findOne({ _id: courseId, isDeleted: { $ne: true } });
+  if (!course) throw { status: 404, message: "Course not found" };
+  if (user.role !== "admin" && course.instructor.toString() !== user.id) {
+    throw { status: 403, message: "Not authorized" };
+  }
+  return course;
+};
+
+// Return full course with virtuals and populated instructor
+const returnFullCourse = async (courseId) => {
+  const course = await Course.findById(courseId).populate("instructor", "name avatar bio");
+  return course.toObject({ virtuals: true });
+};
+
+// POST /courses/:id/sections — Add a new section (module)
+export const addSection = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const { title, description } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: "Section title is required" });
+    }
+
+    course.modules.push({
+      title: title.trim(),
+      description: description?.trim() || '',
+      order: course.modules.length,
+      lessons: []
+    });
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(201).json({ success: true, message: "Section added", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /courses/:id/sections/:sectionId — Update section title/description
+export const updateSection = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const { title, description } = req.body;
+    if (title !== undefined) section.title = title.trim();
+    if (description !== undefined) section.description = description.trim();
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "Section updated", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /courses/:id/sections/:sectionId — Remove a section and all its lessons
+export const deleteSection = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    course.modules.pull(req.params.sectionId);
+
+    // Re-index order
+    course.modules.forEach((mod, i) => { mod.order = i; });
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "Section deleted", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /courses/:id/sections/reorder — Reorder all sections
+export const reorderSections = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const { sectionIds } = req.body; // array of module _id strings in desired order
+
+    if (!Array.isArray(sectionIds)) {
+      return res.status(400).json({ success: false, message: "sectionIds must be an array" });
+    }
+
+    // Reorder by mapping
+    const moduleMap = new Map(course.modules.map(m => [m._id.toString(), m]));
+    const reordered = [];
+    sectionIds.forEach((id, i) => {
+      const mod = moduleMap.get(id);
+      if (mod) {
+        mod.order = i;
+        reordered.push(mod);
+      }
+    });
+    course.modules = reordered;
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "Sections reordered", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /courses/:id/sections/:sectionId/lessons — Add a lesson to a section
+export const addLesson = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const { title, description, videoUrl, duration, isFree, source } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: "Lesson title is required" });
+    }
+
+    section.lessons.push({
+      title: title.trim(),
+      description: description?.trim() || '',
+      videoUrl: videoUrl || '',
+      source: source || '',
+      duration: duration || 0,
+      isFree: isFree || false,
+      order: section.lessons.length
+    });
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(201).json({ success: true, message: "Lesson added", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /courses/:id/sections/:sectionId/lessons/:lessonId — Update a lesson
+export const updateLesson = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const lesson = section.lessons.id(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found" });
+
+    const { title, description, videoUrl, duration, isFree, source } = req.body;
+    if (title !== undefined) lesson.title = title.trim();
+    if (description !== undefined) lesson.description = description.trim();
+    if (videoUrl !== undefined) lesson.videoUrl = videoUrl;
+    if (source !== undefined) lesson.source = source;
+    if (duration !== undefined) lesson.duration = duration;
+    if (isFree !== undefined) lesson.isFree = isFree;
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "Lesson updated", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /courses/:id/sections/:sectionId/lessons/:lessonId — Delete a lesson
+export const deleteLesson = async (req, res) => {
+  try {
+    const course = await verifyCourseOwner(req.params.id, req.user);
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    section.lessons.pull(req.params.lessonId);
+
+    // Re-index order
+    section.lessons.forEach((l, i) => { l.order = i; });
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "Lesson deleted", course: fullCourse });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};

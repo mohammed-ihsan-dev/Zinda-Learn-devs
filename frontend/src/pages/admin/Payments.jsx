@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, Download, Plus, MoreVertical, CreditCard, Wallet, TrendingUp, Loader2, ArrowUpRight, ArrowDownRight, CheckCircle2, XCircle, Clock, Banknote, User } from 'lucide-react';
+import { Calendar, ChevronDown, Download, MoreVertical, CreditCard, Wallet, TrendingUp, Loader2, ArrowUpRight, CheckCircle2, XCircle, Banknote } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { getPayments, getPayouts, updatePayoutStatus, getDashboardStats } from '../../services/adminService';
+import PageHeader from '../../components/admin/shared/PageHeader';
+import StatusBadge from '../../components/admin/shared/StatusBadge';
 import { toast } from 'react-hot-toast';
 
 const Payments = () => {
-  const [activeTab, setActiveTab] = useState('enrollments'); // 'enrollments' or 'payouts'
+  const [activeTab, setActiveTab] = useState('enrollments');
   const [transactions, setTransactions] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [stats, setStats] = useState(null);
@@ -13,9 +15,7 @@ const Payments = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0 });
   const [payoutPagination, setPayoutPagination] = useState({ page: 1, limit: 50, total: 0 });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab, pagination.page, payoutPagination.page]);
+  useEffect(() => { fetchData(); }, [activeTab, pagination.page, payoutPagination.page]);
 
   const fetchData = async () => {
     try {
@@ -33,337 +33,227 @@ const Payments = () => {
         setPayouts(payoutsRes.data || []);
         setPayoutPagination(prev => ({ ...prev, total: payoutsRes.total || 0 }));
       }
-    } catch (error) {
-      toast.error('Failed to load financial data');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load financial data'); }
+    finally { setLoading(false); }
   };
 
-  const handleUpdateStatus = async (id, status, adminComment = '') => {
+  const handleUpdateStatus = async (id, status) => {
     try {
-      await updatePayoutStatus(id, { status, adminComment });
+      await updatePayoutStatus(id, { status });
       toast.success(`Payout ${status} successfully`);
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to update status'); }
   };
 
+  const statCards = [
+    { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), icon: Wallet, color: 'text-indigo-400 bg-indigo-500/10', change: '+12.4%' },
+    { label: 'Platform Margin (15%)', value: formatCurrency((stats?.totalRevenue || 0) * 0.15), icon: CreditCard, color: 'text-emerald-400 bg-emerald-500/10', change: '+8.2%' },
+    { label: 'Total Enrollments', value: pagination.total.toLocaleString(), icon: TrendingUp, color: 'text-blue-400 bg-blue-500/10', change: '+18.5%' },
+  ];
+
   return (
-    <div className="animate-fade-in pb-10">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Financial Ledger</h1>
-          <p className="text-zinc-400 text-sm max-w-2xl">
-            Oversee global transactions, instructor earnings, and platform revenue performance.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Financial Ledger"
+        subtitle="Oversee transactions, instructor payouts, and platform revenue."
+      >
+        <button className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors">
+          <Download className="w-3.5 h-3.5" />
+          Export CSV
+        </button>
+      </PageHeader>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-purple-400">
-              <Wallet className="w-5 h-5" />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {statCards.map((s, i) => (
+          <div key={i} className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 hover:border-slate-600 transition-colors">
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
+                <s.icon className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 flex items-center gap-0.5 px-2 py-0.5 rounded-md">
+                <ArrowUpRight className="w-3 h-3" />
+                {s.change}
+              </span>
             </div>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> 12.4%
-            </span>
+            <p className="text-xs font-medium text-slate-400 mb-1">{s.label}</p>
+            <p className="text-2xl font-semibold text-slate-100 tracking-tight">{s.value}</p>
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
-            <h3 className="text-3xl font-bold text-white">{formatCurrency(stats?.totalRevenue || 0)}</h3>
-          </div>
-        </div>
-
-        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-blue-400">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> 8.2%
-            </span>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Platform Margin (15%)</p>
-            <h3 className="text-3xl font-bold text-white">{formatCurrency((stats?.totalRevenue || 0) * 0.15)}</h3>
-          </div>
-        </div>
-
-        <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl p-6 group hover:border-[#3f3f46] transition-colors relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl"></div>
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-10 h-10 rounded-xl bg-[#27272a] flex items-center justify-center text-rose-400">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> 18.5%
-            </span>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Enrollments</p>
-            <h3 className="text-3xl font-bold text-white">{pagination.total.toLocaleString()}</h3>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-1 p-1 bg-[#1c1c21] border border-[#27272a] rounded-xl w-fit mb-8">
-        <button
-          onClick={() => setActiveTab('enrollments')}
-          className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'enrollments' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'text-zinc-500 hover:text-white'}`}
-        >
-          Enrollment Revenue
-        </button>
-        <button
-          onClick={() => setActiveTab('payouts')}
-          className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'payouts' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'text-zinc-500 hover:text-white'}`}
-        >
-          Instructor Payouts
-        </button>
+      <div className="flex items-center gap-1 p-1 bg-slate-800/50 border border-slate-700 rounded-lg w-fit">
+        {[
+          { key: 'enrollments', label: 'Enrollment Revenue' },
+          { key: 'payouts', label: 'Instructor Payouts' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${activeTab === tab.key ? 'bg-slate-700 text-slate-100 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Filters & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
-            <Calendar className="w-4 h-4 text-zinc-500" />
-            Last 30 Days
-            <ChevronDown className="w-4 h-4 ml-2" />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
-            All Statuses
-            <ChevronDown className="w-4 h-4 ml-2" />
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1c1c21] border border-[#27272a] hover:bg-[#27272a] text-zinc-300 text-xs font-bold rounded-xl transition-colors">
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Table Container */}
-      <div className="bg-[#1c1c21] border border-[#27272a] rounded-2xl overflow-x-auto">
-        {activeTab === 'enrollments' ? (
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="border-b border-[#27272a]">
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">TRANSACTION ID</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">STUDENT</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">COURSE</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AMOUNT</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">DATE</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">STATUS</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#27272a]/50">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="p-20 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-4" />
-                    <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">Loading transactions...</p>
-                  </td>
+      {/* Table */}
+      <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          {activeTab === 'enrollments' ? (
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="border-b border-slate-700/60 bg-slate-800/80">
+                  {['Transaction ID', 'Student', 'Course', 'Amount', 'Date', 'Status', ''].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
-              ) : transactions.length > 0 ? transactions.map((tx) => (
-                <tr key={tx._id} className="hover:bg-[#25252b] transition-colors group">
-                  <td className="p-5 text-sm font-mono text-zinc-400">#{tx.razorpayOrderId?.split('_')[1] || tx._id.slice(-8).toUpperCase()}</td>
-                  <td className="p-5">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={tx.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.user?.name || 'User')}&background=random`}
-                        alt={tx.user?.name}
-                        className="w-8 h-8 rounded-full object-cover border border-[#27272a]"
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white">{tx.user?.name || 'Unknown User'}</span>
-                        <span className="text-[10px] text-zinc-500">{tx.user?.email}</span>
+              </thead>
+              <tbody className="divide-y divide-slate-700/40">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <td key={j} className="px-5 py-4"><div className="h-4 bg-slate-800 rounded animate-pulse" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : transactions.length > 0 ? transactions.map((tx) => (
+                  <tr key={tx._id} className="hover:bg-slate-800/60 transition-colors group">
+                    <td className="px-5 py-4 font-mono text-xs text-slate-500">#{tx.razorpayOrderId?.split('_')[1] || tx._id.slice(-8).toUpperCase()}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={tx.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.user?.name || 'User')}&background=6366f1&color=fff`}
+                          alt=""
+                          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{tx.user?.name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">{tx.user?.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-5">
-                    <span className="text-sm text-zinc-300 line-clamp-1">{tx.course?.title || 'Unknown Course'}</span>
-                  </td>
-                  <td className="p-5 text-sm font-bold text-white">{formatCurrency(tx.amountPaid)}</td>
-                  <td className="p-5 text-sm text-zinc-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
-                  <td className="p-5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${tx.paymentStatus === 'completed' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]'}`}></div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${tx.paymentStatus === 'completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {tx.paymentStatus}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-400 max-w-[200px] truncate">{tx.course?.title || 'Unknown'}</td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-200">{formatCurrency(tx.amountPaid)}</td>
+                    <td className="px-5 py-4 text-sm text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                    <td className="px-5 py-4">
+                      <StatusBadge status={tx.paymentStatus} />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button className="p-1.5 text-slate-500 hover:text-slate-300 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center text-sm text-slate-500">No transactions found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="border-b border-slate-700/60 bg-slate-800/80">
+                  {['Instructor', 'Amount', 'Method', 'Details', 'Date', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/40">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <td key={j} className="px-5 py-4"><div className="h-4 bg-slate-800 rounded animate-pulse" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : payouts.length > 0 ? payouts.map((p) => (
+                  <tr key={p._id} className="hover:bg-slate-800/60 transition-colors group">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={p.instructor?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.instructor?.name || 'Instructor')}&background=6366f1&color=fff`}
+                          alt=""
+                          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{p.instructor?.name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">{p.instructor?.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-200">{formatCurrency(p.amount)}</td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs font-medium text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded capitalize">
+                        {p.paymentMethod?.replace('_', ' ')}
                       </span>
-                    </div>
-                  </td>
-                  <td className="p-5 text-right">
-                    <button className="text-zinc-500 hover:text-white transition-colors p-2">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="7" className="p-20 text-center">
-                    <CreditCard className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-                    <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">No transactions found</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        ) : (
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="border-b border-[#27272a]">
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">INSTRUCTOR</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AMOUNT</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">METHOD</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">DETAILS</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">DATE</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">STATUS</th>
-                <th className="p-5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#27272a]/50">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="p-20 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-4" />
-                    <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">Loading payouts...</p>
-                  </td>
-                </tr>
-              ) : payouts.length > 0 ? payouts.map((p) => (
-                <tr key={p._id} className="hover:bg-[#25252b] transition-colors group">
-                  <td className="p-5">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={p.instructor?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.instructor?.name || 'User')}&background=random`}
-                        alt={p.instructor?.name}
-                        className="w-8 h-8 rounded-full object-cover border border-[#27272a]"
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white">{p.instructor?.name || 'Unknown Instructor'}</span>
-                        <span className="text-[10px] text-zinc-500">{p.instructor?.email}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-5 text-sm font-bold text-white">{formatCurrency(p.amount)}</td>
-                  <td className="p-5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 bg-zinc-500/10 px-2 py-1 rounded">
-                      {p.paymentMethod.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="p-5">
-                    <div className="text-[10px] text-zinc-500 flex flex-col gap-0.5">
+                    </td>
+                    <td className="px-5 py-4 text-xs text-slate-500">
                       {p.paymentMethod === 'bank_transfer' ? (
-                        <>
-                          <span className="font-bold text-zinc-300">{p.paymentDetails?.bankName}</span>
-                          <span>A/C: {p.paymentDetails?.accountNumber}</span>
-                          <span>IFSC: {p.paymentDetails?.ifscCode}</span>
-                        </>
+                        <span>{p.paymentDetails?.bankName} · {p.paymentDetails?.accountNumber}</span>
                       ) : (
-                        <span className="font-bold text-zinc-300">UPI: {p.paymentDetails?.upiId}</span>
+                        <span>{p.paymentDetails?.upiId}</span>
                       )}
-                    </div>
-                  </td>
-                  <td className="p-5 text-sm text-zinc-400">{new Date(p.createdAt).toLocaleDateString()}</td>
-                  <td className="p-5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        p.status === 'paid' ? 'bg-emerald-500' : 
-                        p.status === 'pending' ? 'bg-amber-500' : 
-                        p.status === 'approved' ? 'bg-blue-500' : 'bg-rose-500'
-                      }`}></div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                        p.status === 'paid' ? 'text-emerald-400' : 
-                        p.status === 'pending' ? 'text-amber-400' : 
-                        p.status === 'approved' ? 'text-blue-400' : 'text-rose-400'
-                      }`}>
-                        {p.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {p.status === 'pending' && (
-                        <>
-                          <button 
-                            onClick={() => handleUpdateStatus(p._id, 'approved')}
-                            className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
-                            title="Approve"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <td className="px-5 py-4"><StatusBadge status={p.status} /></td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-1">
+                        {p.status === 'pending' && (
+                          <>
+                            <button onClick={() => handleUpdateStatus(p._id, 'approved')} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-colors" title="Approve">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => handleUpdateStatus(p._id, 'rejected')} className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors" title="Reject">
+                              <XCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                        {p.status === 'approved' && (
+                          <button onClick={() => handleUpdateStatus(p._id, 'paid')} className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-colors text-[10px] font-medium">
+                            <Banknote className="w-3 h-3" />
+                            Mark Paid
                           </button>
-                          <button 
-                            onClick={() => handleUpdateStatus(p._id, 'rejected')}
-                            className="p-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
-                            title="Reject"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      {p.status === 'approved' && (
-                        <button 
-                          onClick={() => handleUpdateStatus(p._id, 'paid')}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-all text-[10px] font-bold uppercase"
-                        >
-                          <Banknote className="w-3.5 h-3.5" />
-                          Mark Paid
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="7" className="p-20 text-center">
-                    <Banknote className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-                    <p className="text-sm text-zinc-500 font-bold uppercase tracking-widest">No payout requests found</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-        
-        {/* Pagination */}
-        <div className="p-4 border-t border-[#27272a] bg-[#121212]/30 flex justify-between items-center">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-            {activeTab === 'enrollments' ? (
-              `Showing ${(pagination.page - 1) * pagination.limit + 1}-${Math.min(pagination.page * pagination.limit, pagination.total)} of ${pagination.total.toLocaleString()} transactions`
-            ) : (
-              `Showing ${(payoutPagination.page - 1) * payoutPagination.limit + 1}-${Math.min(payoutPagination.page * payoutPagination.limit, payoutPagination.total)} of ${payoutPagination.total.toLocaleString()} requests`
-            )}
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center text-sm text-slate-500">No payout requests found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-5 py-3 border-t border-slate-700/60 flex justify-between items-center">
+          <span className="text-xs text-slate-500">
+            {activeTab === 'enrollments'
+              ? `${pagination.total.toLocaleString()} transactions`
+              : `${payoutPagination.total.toLocaleString()} payout requests`
+            }
           </span>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <button
               disabled={activeTab === 'enrollments' ? pagination.page === 1 : payoutPagination.page === 1}
-              onClick={() => activeTab === 'enrollments' 
-                ? setPagination(prev => ({ ...prev, page: prev.page - 1 }))
-                : setPayoutPagination(prev => ({ ...prev, page: prev.page - 1 }))
-              }
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#1c1c21] border border-[#27272a] text-zinc-400 hover:text-white transition-colors text-xs font-bold disabled:opacity-30"
+              onClick={() => activeTab === 'enrollments' ? setPagination(p => ({ ...p, page: p.page - 1 })) : setPayoutPagination(p => ({ ...p, page: p.page - 1 }))}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 disabled:opacity-30 text-xs transition-colors"
             >‹</button>
-            <button className="w-6 h-6 flex items-center justify-center rounded bg-purple-600 text-white font-bold text-xs shadow-[0_0_10px_rgba(147,51,234,0.3)]">
+            <span className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-700 text-slate-200 text-xs font-semibold">
               {activeTab === 'enrollments' ? pagination.page : payoutPagination.page}
-            </button>
+            </span>
             <button
-              disabled={activeTab === 'enrollments' 
-                ? pagination.page * pagination.limit >= pagination.total
-                : payoutPagination.page * payoutPagination.limit >= payoutPagination.total
-              }
-              onClick={() => activeTab === 'enrollments'
-                ? setPagination(prev => ({ ...prev, page: prev.page + 1 }))
-                : setPayoutPagination(prev => ({ ...prev, page: prev.page + 1 }))
-              }
-              className="w-6 h-6 flex items-center justify-center rounded bg-[#1c1c21] border border-[#27272a] text-zinc-400 hover:bg-[#27272a] hover:text-white transition-colors text-xs font-bold disabled:opacity-30"
+              disabled={activeTab === 'enrollments' ? pagination.page * pagination.limit >= pagination.total : payoutPagination.page * payoutPagination.limit >= payoutPagination.total}
+              onClick={() => activeTab === 'enrollments' ? setPagination(p => ({ ...p, page: p.page + 1 })) : setPayoutPagination(p => ({ ...p, page: p.page + 1 }))}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 disabled:opacity-30 text-xs transition-colors"
             >›</button>
           </div>
         </div>

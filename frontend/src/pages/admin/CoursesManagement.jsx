@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BookOpen, CheckCircle, Clock, Users, Search, Filter,
-  MoreVertical, Eye, Trash2, Ban, Star, IndianRupee,
-  Plus, AlertCircle, TrendingUp, LayoutGrid, Lock, Unlock, AlertTriangle
+  BookOpen, CheckCircle, Clock, Users, Search,
+  Eye, Trash2, Ban, Star, Lock, Unlock
 } from 'lucide-react';
 import {
-  getAllCourses,
-  updateCourseStatus,
-  deleteCourse,
-  getDashboardStats,
-  blockCourse,
-  unblockCourse
+  getAllCourses, updateCourseStatus, deleteCourse,
+  getDashboardStats, blockCourse, unblockCourse
 } from '../../services/adminService';
 import DataTable from '../../components/admin/shared/DataTable';
 import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
+import StatusBadge from '../../components/admin/shared/StatusBadge';
+import PageHeader from '../../components/admin/shared/PageHeader';
+import ConfirmModal from '../../components/admin/shared/ConfirmModal';
 import toast from 'react-hot-toast';
 
 const CoursesManagement = () => {
@@ -41,60 +39,44 @@ const CoursesManagement = () => {
       });
       setCourses(data.data);
       setTotalCourses(data.total);
-    } catch (error) {
-      toast.error('Failed to fetch courses');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to fetch courses'); }
+    finally { setLoading(false); }
   };
 
   const fetchStats = async () => {
     try {
       const data = await getDashboardStats();
       setStats(data.data);
-    } catch (error) {
-      console.error('Failed to fetch stats', error);
-    }
+    } catch (error) { console.error('Failed to fetch stats', error); }
   };
 
-  useEffect(() => {
-    fetchCourses();
-  }, [searchTerm, statusFilter, currentPage]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchCourses(); }, [searchTerm, statusFilter, currentPage]);
+  useEffect(() => { fetchStats(); }, []);
 
   const handleStatusUpdate = async (id, status) => {
     try {
       await updateCourseStatus(id, status);
       toast.success(`Course ${status} successfully`);
       fetchCourses();
-    } catch (error) {
-      toast.error('Failed to update status');
-    }
+    } catch { toast.error('Failed to update status'); }
   };
 
   const handleDeleteCourse = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) return;
+    if (!window.confirm('Delete this course? This cannot be undone.')) return;
     try {
       await deleteCourse(id);
-      toast.success('Course deleted successfully');
+      toast.success('Course deleted');
       fetchCourses();
-    } catch (error) {
-      toast.error('Failed to delete course');
-    }
+    } catch { toast.error('Failed to delete course'); }
   };
 
   const handleBlockToggle = async (course) => {
     if (course.isBlocked) {
       try {
         await unblockCourse(course._id);
-        toast.success('Course unblocked successfully');
+        toast.success('Course unblocked');
         fetchCourses();
-      } catch (error) {
-        toast.error('Failed to unblock course');
-      }
+      } catch { toast.error('Failed to unblock'); }
     } else {
       setSelectedCourse(course);
       setBlockReason('');
@@ -104,144 +86,117 @@ const CoursesManagement = () => {
 
   const handleConfirmBlock = async (e) => {
     e.preventDefault();
-    if (!blockReason.trim()) {
-      return toast.error('Please enter a reason for suspension.');
-    }
-
+    if (!blockReason.trim()) return toast.error('Please enter a reason.');
     try {
       setSubmittingBlock(true);
       await blockCourse(selectedCourse._id, blockReason);
-      toast.success('Course suspended successfully');
+      toast.success('Course suspended');
       setShowBlockModal(false);
       setSelectedCourse(null);
       setBlockReason('');
       fetchCourses();
-    } catch (error) {
-      toast.error('Failed to block course');
-    } finally {
-      setSubmittingBlock(false);
-    }
+    } catch { toast.error('Failed to suspend'); }
+    finally { setSubmittingBlock(false); }
   };
+
+  const STATUS_FILTERS = ['all', 'published', 'pending', 'declined', 'draft'];
 
   const columns = [
     {
       header: 'Course',
       cell: (course) => (
         <div className="flex items-center gap-3">
-          <div className="w-16 h-10 rounded-lg bg-[#27272a] overflow-hidden border border-[#3f3f46]">
+          <div className="w-14 h-9 rounded-lg bg-slate-700 overflow-hidden flex-shrink-0">
             <img
               src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=200&h=120&fit=crop'}
               alt=""
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-zinc-100 line-clamp-1 max-w-[200px]">{course.title}</span>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{course.category}</span>
+          <div>
+            <p className="text-sm font-medium text-slate-200 line-clamp-1 max-w-[200px]">{course.title}</p>
+            <p className="text-xs text-slate-500 capitalize">{course.category}</p>
           </div>
         </div>
       )
     },
     {
       header: 'Instructor',
-      cell: (course) => (
-        <div className="flex items-center gap-2">
-          <span className="text-zinc-300 font-medium">{course.instructor?.name || 'Unknown'}</span>
-        </div>
-      ),
+      cell: (course) => <span className="text-sm text-slate-400">{course.instructor?.name || 'Unknown'}</span>,
       className: 'hidden lg:table-cell'
     },
     {
-      header: 'Enrollments',
+      header: 'Students',
       cell: (course) => (
-        <div className="flex items-center gap-2">
-          <Users className="w-3.5 h-3.5 text-zinc-500" />
-          <span className="font-bold text-zinc-200">{course.totalStudents || 0}</span>
+        <div className="flex items-center gap-1.5 text-slate-300">
+          <Users className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-sm">{course.totalStudents || 0}</span>
         </div>
       )
     },
     {
       header: 'Revenue',
       cell: (course) => (
-        <div className="font-bold text-emerald-400">
+        <span className="text-sm text-emerald-400">
           ₹{((course.totalStudents || 0) * (course.price || 0)).toLocaleString()}
-        </div>
+        </span>
       )
     },
     {
       header: 'Rating',
       cell: (course) => (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 text-slate-300">
           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span className="font-bold text-zinc-200">{course.rating || 0}</span>
+          <span className="text-sm">{course.rating || 0}</span>
         </div>
       ),
       className: 'hidden md:table-cell'
     },
     {
       header: 'Status',
-      cell: (course) => {
-        const statusColors = {
-          published: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-          pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-          draft: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20',
-          declined: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-          blocked: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-        };
-        const isBlocked = course.isBlocked;
-        return (
-          <div className="flex flex-col gap-1 items-start">
-            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${statusColors[course.status] || statusColors.draft}`}>
-              {course.status}
-            </span>
-            {isBlocked && (
-              <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/25">
-                Suspended
-              </span>
-            )}
-          </div>
-        );
-      }
+      cell: (course) => (
+        <div className="flex flex-col gap-1">
+          <StatusBadge status={course.status} />
+          {course.isBlocked && <StatusBadge status="suspended" />}
+        </div>
+      )
     },
     {
       header: 'Actions',
       className: 'text-right',
       cell: (course) => (
-        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {course.status === 'pending' && (
             <>
               <button
                 onClick={() => handleStatusUpdate(course._id, 'published')}
-                className="p-2 hover:bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors"
-                title="Approve Course"
+                className="p-1.5 hover:bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors"
+                title="Approve"
               >
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => handleStatusUpdate(course._id, 'declined')}
-                className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 transition-colors"
-                title="Decline Course"
+                className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+                title="Decline"
               >
-                <Ban className="w-4 h-4" />
+                <Ban className="w-3.5 h-3.5" />
               </button>
             </>
           )}
           <button
             onClick={() => handleBlockToggle(course)}
-            className={`p-2 hover:bg-white/5 rounded-lg transition-colors ${course.isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-rose-400 hover:text-rose-300'}`}
-            title={course.isBlocked ? 'Unblock Course' : 'Block Course'}
+            className={`p-1.5 hover:bg-slate-700 rounded-lg transition-colors ${course.isBlocked ? 'text-emerald-400' : 'text-red-400'}`}
+            title={course.isBlocked ? 'Unblock' : 'Block'}
           >
-            {course.isBlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-          </button>
-          <button className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="View Course">
-            <Eye className="w-4 h-4" />
+            {course.isBlocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => handleDeleteCourse(course._id)}
-            className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 hover:text-rose-300 transition-colors"
-            title="Delete Course"
+            className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+            title="Delete"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       )
@@ -249,163 +204,79 @@ const CoursesManagement = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Courses Management</h1>
-          <p className="text-zinc-500">Monitor course performance, approve pending submissions, and manage platform content.</p>
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader title="Courses" subtitle="Monitor course performance, approve submissions, and manage content." />
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AnalyticsCard title="Total Courses" value={stats?.totalCourses || 0} icon={BookOpen} color="indigo" />
+        <AnalyticsCard title="Published" value={courses.filter(c => c.status === 'published').length} icon={CheckCircle} color="emerald" />
+        <AnalyticsCard title="Pending Review" value={stats?.pendingCoursesCount || 0} icon={Clock} color="amber" />
+        <AnalyticsCard title="Enrollments" value={stats?.totalEnrollments || 0} icon={Users} color="blue" />
       </div>
 
-      {/* Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AnalyticsCard
-          title="Total Courses"
-          value={stats?.totalCourses || 0}
-          icon={BookOpen}
-          color="purple"
-        />
-        <AnalyticsCard
-          title="Published"
-          value={courses.filter(c => c.status === 'published').length || 0}
-          icon={CheckCircle}
-          color="emerald"
-        />
-        <AnalyticsCard
-          title="Pending Review"
-          value={stats?.pendingCoursesCount || 0}
-          icon={Clock}
-          color="amber"
-        />
-        <AnalyticsCard
-          title="Total Enrollments"
-          value={stats?.totalEnrollments || 0}
-          icon={Users}
-          color="blue"
-        />
-      </div>
-
-      {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#1c1c21] p-4 rounded-2xl border border-[#27272a]">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="Search courses by title or instructor..."
-            className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+            placeholder="Search by title or instructor…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
           />
         </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto hide-scrollbar">
-          <div className="flex items-center bg-[#0a0a0b] border border-[#27272a] rounded-xl p-1 shrink-0">
-            {['all', 'published', 'pending', 'declined', 'draft'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${statusFilter === status ? 'bg-[#27272a] text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1 p-1 bg-slate-800/50 border border-slate-700 rounded-lg overflow-x-auto">
+          {STATUS_FILTERS.map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize whitespace-nowrap transition-colors ${statusFilter === s ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              {s}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Table */}
-      <DataTable
-        columns={columns}
-        data={courses}
-        loading={loading}
-        emptyMessage="No courses found"
-      />
+      <DataTable columns={columns} data={courses} loading={loading} emptyMessage="No courses found" />
 
       {/* Pagination */}
       {totalCourses > 10 && (
-        <div className="flex items-center justify-between px-2">
-          <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">
-            Showing {courses.length} of {totalCourses} courses
-          </p>
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-slate-500">Showing {courses.length} of {totalCourses}</p>
           <div className="flex items-center gap-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-sm font-bold text-zinc-200 px-4">{currentPage}</span>
-            <button
-              disabled={courses.length < 10}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 bg-[#1c1c21] border border-[#27272a] rounded-lg text-zinc-400 disabled:opacity-30 transition-all hover:bg-[#27272a]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 text-xs font-medium bg-slate-800 border border-slate-700 rounded-lg text-slate-400 disabled:opacity-40 hover:bg-slate-700 transition-colors">Previous</button>
+            <span className="text-sm font-medium text-slate-300 px-2">{currentPage}</span>
+            <button disabled={courses.length < 10} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 text-xs font-medium bg-slate-800 border border-slate-700 rounded-lg text-slate-400 disabled:opacity-40 hover:bg-slate-700 transition-colors">Next</button>
           </div>
         </div>
       )}
-      {/* Block Confirmation Modal */}
-      {showBlockModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[#121215] border border-rose-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-rose-500">
-              <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Suspend Course</h3>
-            </div>
-            
-            <p className="text-xs text-zinc-400">
-              You are about to suspend the course <strong>{selectedCourse?.title}</strong>.
-              Suspended courses will be hidden from search results, details pages, student recommendations, and block new checkouts immediately.
-            </p>
 
-            <form onSubmit={handleConfirmBlock} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">
-                  Reason for Suspension
-                </label>
-                <textarea
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="e.g. Inappropriate course content, policy violations, incorrect claims, etc..."
-                  rows={3}
-                  className="w-full bg-[#0a0a0b] border border-[#27272a] rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBlockModal(false);
-                    setSelectedCourse(null);
-                    setBlockReason('');
-                  }}
-                  className="px-4 py-2.5 bg-[#1c1c21] hover:bg-[#27272a] text-zinc-400 hover:text-zinc-200 text-xs font-bold rounded-xl border border-[#2d2d34] transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingBlock}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all"
-                >
-                  {submittingBlock ? 'Suspending...' : 'Confirm Suspension'}
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Block Modal */}
+      <ConfirmModal
+        isOpen={showBlockModal}
+        onClose={() => { setShowBlockModal(false); setSelectedCourse(null); setBlockReason(''); }}
+        onConfirm={handleConfirmBlock}
+        title="Suspend Course"
+        description={`Suspending "${selectedCourse?.title}". It will be hidden from search and new enrollments will be blocked.`}
+        confirmLabel="Suspend Course"
+        loading={submittingBlock}
+      >
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Reason for suspension</label>
+          <textarea
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            placeholder="e.g. Inappropriate content, policy violations…"
+            rows={3}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
+            required
+          />
         </div>
-      )}
+      </ConfirmModal>
     </div>
   );
 };

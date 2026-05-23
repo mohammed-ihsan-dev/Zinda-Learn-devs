@@ -6,6 +6,8 @@ import Button from '../../components/Button';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import CourseOverview from './CourseOverview';
 import CoursePlayer from './CoursePlayer';
+import toast from 'react-hot-toast';
+import Skeleton, { CourseCardSkeleton } from '../../components/Skeleton';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const formatDuration = (mins) => {
@@ -16,7 +18,6 @@ const formatDuration = (mins) => {
 };
 
 // ── Main Component ─────────────────────────────────────────────────
-import Skeleton, { CourseCardSkeleton } from '../../components/Skeleton';
 
 const MyLearning = () => {
   const [enrollments, setEnrollments] = useState([]);
@@ -26,6 +27,7 @@ const MyLearning = () => {
 
   // State: which course is open, and which lesson is playing
   const activeCourseId = searchParams.get('course');
+  const playMode = searchParams.get('play') === 'true';
   const [activeLesson, setActiveLesson] = useState(null); // { moduleIndex, lessonIndex, lesson, module }
 
   useEffect(() => {
@@ -49,6 +51,37 @@ const MyLearning = () => {
     setActiveLesson(null);
   }, [activeCourseId]);
 
+  const activeEnrollment = enrollments.find((e) => e.course._id === activeCourseId);
+
+  // Auto-play logic
+  useEffect(() => {
+    if (activeEnrollment && playMode && !activeLesson) {
+       const course = activeEnrollment.course;
+       const m = activeEnrollment.currentLesson?.moduleIndex || 0;
+       const l = activeEnrollment.currentLesson?.lessonIndex || 0;
+       const module = course?.modules?.[m];
+       const lesson = module?.lessons?.[l];
+       
+       if (lesson) {
+         setActiveLesson({ moduleIndex: m, lessonIndex: l, lesson, module });
+       } else {
+         // Fallback: find first available lesson in any module
+         const firstModuleWithLessons = course?.modules?.find(mod => mod.lessons?.length > 0);
+         if (firstModuleWithLessons) {
+            const mIdx = course.modules.indexOf(firstModuleWithLessons);
+            setActiveLesson({ moduleIndex: mIdx, lessonIndex: 0, lesson: firstModuleWithLessons.lessons[0], module: firstModuleWithLessons });
+         } else {
+            // Course has zero modules/lectures — show empty state in player
+            setActiveLesson({ isEmpty: true, moduleIndex: 0, lessonIndex: 0, lesson: null, module: null });
+         }
+       }
+       
+       // Remove play=true from URL without reloading
+       searchParams.delete('play');
+       setSearchParams(searchParams, { replace: true });
+    }
+  }, [activeEnrollment, playMode, activeLesson, searchParams, setSearchParams]);
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto space-y-10 pb-10">
@@ -62,8 +95,6 @@ const MyLearning = () => {
       </div>
     );
   }
-
-  const activeEnrollment = enrollments.find((e) => e.course._id === activeCourseId);
 
   // ── STATE: COURSE PLAYER ─────────────────────────────────────────
   if (activeEnrollment && activeLesson) {
