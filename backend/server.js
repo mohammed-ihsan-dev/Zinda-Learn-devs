@@ -24,6 +24,7 @@ import publicRoutes from './routes/public.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
+import { startLiveClassScheduler } from './services/liveClassScheduler.js';
 
 
 // Load env vars
@@ -103,4 +104,5 @@ const PORT = process.env.PORT || 5005;
 httpServer.listen(PORT, () => {
   console.log(` Server running on port ${PORT}`);
   console.log(` API: http://localhost:${PORT}/api`);
+  startLiveClassScheduler();
 });

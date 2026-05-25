@@ -22,7 +22,15 @@ const enrollmentSchema = new mongoose.Schema({
   }],
   currentLesson: {
     moduleIndex: { type: Number, default: 0 },
-    lessonIndex: { type: Number, default: 0 }
+    lessonIndex: { type: Number, default: 0 },
+    lessonId: { type: String, default: '' }
+  },
+  lastVideoTimestamp: {
+    type: Number,
+    default: 0
+  },
+  lastWatchedAt: {
+    type: Date
   },
   isCompleted: {
     type: Boolean,

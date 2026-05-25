@@ -1,6 +1,7 @@
 import Review from '../models/Review.js';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
+import { dispatchNotification } from '../services/notificationDispatcher.js';
 
 // @desc    Get reviews for a course
 // @route   GET /api/courses/:courseId/reviews
@@ -44,8 +45,18 @@ export const getCourseReviews = async (req, res) => {
 export const addReview = async (req, res) => {
   try {
     const { courseId } = req.params;
-    req.body.course = courseId;
-    req.body.user = req.user.id;
+    const { rating } = req.body;
+    const reviewText = (req.body.review || req.body.comment || '').trim();
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+
+    // Validate review content
+    if (!reviewText) {
+      return res.status(400).json({ success: false, message: 'Review content is required and cannot be empty' });
+    }
 
     // Check if course exists
     const course = await Course.findById(courseId);
@@ -65,7 +76,25 @@ export const addReview = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You have already reviewed this course' });
     }
 
-    const review = await Review.create(req.body);
+    const review = await Review.create({
+      course: courseId,
+      user: req.user.id,
+      rating,
+      review: reviewText,
+      comment: reviewText
+    });
+
+    // Notify instructor
+    if (course.instructor) {
+      const studentName = req.user.name || 'A student';
+      await dispatchNotification({
+        userId: course.instructor,
+        type: 'reviews',
+        title: 'New Course Review! ⭐',
+        message: `${studentName} left a ${rating}-star review on your course "${course.title}".`,
+        link: '/instructor/reviews'
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -96,7 +125,27 @@ export const updateReview = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this review' });
     }
 
-    review = await Review.findByIdAndUpdate(req.params.id, req.body, {
+    const { rating } = req.body;
+    const reviewText = (req.body.review || req.body.comment || '').trim();
+
+    if (rating !== undefined && (rating < 1 || rating > 5)) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+
+    if (req.body.review !== undefined || req.body.comment !== undefined) {
+      if (!reviewText) {
+        return res.status(400).json({ success: false, message: 'Review content is required and cannot be empty' });
+      }
+    }
+
+    const updateData = {};
+    if (rating !== undefined) updateData.rating = rating;
+    if (req.body.review !== undefined || req.body.comment !== undefined) {
+      updateData.review = reviewText;
+      updateData.comment = reviewText;
+    }
+
+    review = await Review.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true
     });
@@ -131,6 +180,65 @@ export const deleteReview = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Review removed'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Reply to a review
+// @route   PUT /api/courses/:courseId/reviews/:id/reply
+// @access  Private (Instructor/Admin Only)
+export const replyReview = async (req, res) => {
+  try {
+    const { reply } = req.body;
+    if (reply === undefined) {
+      return res.status(400).json({ success: false, message: 'Reply field is required' });
+    }
+
+    const review = await Review.findById(req.params.id).populate('course');
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    // Check if course exists and requester is the instructor of the course or admin
+    if (review.course.instructor.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to reply to this review' });
+    }
+
+    review.reply = reply.trim();
+    await review.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Reply updated successfully',
+      review
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Report a review
+// @route   POST /api/courses/:courseId/reviews/:id/report
+// @access  Private
+export const reportReview = async (req, res) => {
+  try {
+    const { reportReason } = req.body;
+
+    const review = await Review.findById(req.params.id);
+    if (!review) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    review.isReported = true;
+    review.reportReason = (reportReason || '').trim() || 'No reason specified';
+    await review.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Review reported successfully',
+      review
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -34,7 +34,7 @@ const liveClassService = {
 
   // Student APIs
   getStudentLiveClasses: async () => {
-    const response = await api.get('/live-classes/student/all');
+    const response = await api.get('/live-classes/student');
     return response.data;
   },
 

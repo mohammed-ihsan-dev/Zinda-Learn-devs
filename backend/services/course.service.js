@@ -55,7 +55,15 @@ export const courseService = {
 
   getCourseById: async (id, userId = null) => {
     const course = await Course.findOne({ _id: id, isDeleted: { $ne: true } })
-      .populate("instructor", "name avatar bio");
+      .populate("instructor", "name avatar bio")
+      .populate({
+        path: "modules.lessons.qa.askedBy",
+        select: "name avatar profilePic"
+      })
+      .populate({
+        path: "modules.lessons.reviews.user",
+        select: "name avatar profilePic"
+      });
 
     if (!course) return null;
 

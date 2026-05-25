@@ -23,12 +23,8 @@ export const getMyEnrollments = async () => {
   return response.data;
 };
 
-export const updateProgress = async (enrollmentId, { lessonId, moduleIndex, lessonIndex }) => {
-  const response = await api.put(`/enrollments/${enrollmentId}/progress`, {
-    lessonId,
-    moduleIndex,
-    lessonIndex,
-  });
+export const updateProgress = async (enrollmentId, progressData) => {
+  const response = await api.put(`/enrollments/${enrollmentId}/progress`, progressData);
   return response.data;
 };
 
@@ -71,5 +67,29 @@ export const updateLessonInSection = async (courseId, sectionId, lessonId, data)
 
 export const deleteLessonFromSection = async (courseId, sectionId, lessonId) => {
   const response = await api.delete(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}`);
+  return response.data;
+};
+
+export const addLessonQA = async (courseId, sectionId, lessonId, qaData) => {
+  const response = await api.post(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/qa`, qaData);
+  return response.data;
+};
+
+export const replyOrEditQA = async (courseId, sectionId, lessonId, qaId, replyData) => {
+  const response = await api.put(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/qa/${qaId}`, replyData);
+  return response.data;
+};
+
+export const addLessonReview = async (courseId, sectionId, lessonId, reviewData) => {
+  const response = await api.post(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/reviews`, reviewData);
+  return response.data;
+};
+
+export const uploadFile = async (formData) => {
+  const response = await api.post('/uploads', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return response.data;
 };

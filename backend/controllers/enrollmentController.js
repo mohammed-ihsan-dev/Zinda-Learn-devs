@@ -3,6 +3,7 @@ import Course from "../models/Course.js";
 import User from "../models/User.js";
 import Progress from "../models/Progress.js";
 import Certificate from "../models/Certificate.js";
+import { dispatchNotification } from "../services/notificationDispatcher.js";
 
 // Get user enrollments
 export const getMyEnrollments = async (req, res) => {
@@ -46,7 +47,7 @@ export const getMyEnrollments = async (req, res) => {
 // Update progress
 export const updateProgress = async (req, res) => {
   try {
-    const { lessonId, moduleIndex, lessonIndex } = req.body;
+    const { lessonId, moduleIndex, lessonIndex, lastVideoTimestamp, markCompleted } = req.body;
 
     const enrollment = await Enrollment.findById(req.params.id);
 
@@ -64,7 +65,17 @@ export const updateProgress = async (req, res) => {
       });
     }
 
-    if (lessonId && !enrollment.completedLessons.includes(lessonId)) {
+    // 1. Process timestamps if provided
+    if (lastVideoTimestamp !== undefined && lastVideoTimestamp !== null) {
+      enrollment.lastVideoTimestamp = Number(lastVideoTimestamp);
+      enrollment.lastWatchedAt = new Date();
+    }
+
+    // 2. Determine if we should complete this lesson
+    const isAutoSavePing = lastVideoTimestamp !== undefined;
+    const shouldMarkComplete = (markCompleted === true) || (lessonId && !isAutoSavePing);
+
+    if (shouldMarkComplete && lessonId && !enrollment.completedLessons.includes(lessonId)) {
       enrollment.completedLessons.push(lessonId);
       
       // Log progress activity
@@ -78,70 +89,80 @@ export const updateProgress = async (req, res) => {
           });
         }
         
-        await Progress.create({
+        // Prevent duplicate Progress documents for the same user, course, and lesson
+        const existingProgress = await Progress.findOne({
           user: req.user.id,
           course: enrollment.course,
-          lessonId,
-          minutesLearned: lessonDuration,
-          date: new Date()
+          lessonId
         });
-        
-        // Update user's total hours
-        await User.findByIdAndUpdate(req.user.id, { 
-          $inc: { hoursLearned: Math.round((lessonDuration / 60) * 10) / 10 || 0, points: 10 } 
-        });
+
+        if (!existingProgress) {
+          await Progress.create({
+            user: req.user.id,
+            course: enrollment.course,
+            lessonId,
+            minutesLearned: lessonDuration,
+            date: new Date()
+          });
+          
+          // Update user's total hours and award points
+          await User.findByIdAndUpdate(req.user.id, { 
+            $inc: { hoursLearned: Math.round((lessonDuration / 60) * 10) / 10 || 0, points: 10 } 
+          });
+        }
       } catch (logErr) {
         console.error("Failed to log progress:", logErr);
       }
     }
 
-    if (
-      moduleIndex !== undefined &&
-      lessonIndex !== undefined
-    ) {
-      enrollment.currentLesson = { moduleIndex, lessonIndex };
+    // 3. Update current lesson coordinates
+    if (moduleIndex !== undefined && lessonIndex !== undefined) {
+      enrollment.currentLesson = {
+        moduleIndex,
+        lessonIndex,
+        lessonId: lessonId || enrollment.currentLesson?.lessonId || ''
+      };
     }
 
+    // 4. Recalculate course progress percentage
     const course = await Course.findById(enrollment.course);
+    if (course && course.modules) {
+      const totalLessons = course.modules.reduce(
+        (acc, mod) => acc + (mod.lessons?.length || 0),
+        0
+      );
 
-    const totalLessons = course.modules.reduce(
-      (acc, mod) => acc + mod.lessons.length,
-      0
-    );
+      enrollment.progress =
+        totalLessons > 0
+          ? Math.min(100, Math.round((enrollment.completedLessons.length / totalLessons) * 100))
+          : 0;
 
-    enrollment.progress =
-      totalLessons > 0
-        ? Math.round(
-          (enrollment.completedLessons.length / totalLessons) * 100
-        )
-        : 0;
-
-    if (enrollment.progress >= 100 && !enrollment.isCompleted) {
-      enrollment.isCompleted = true;
-      enrollment.completedAt = new Date();
-      
-      // Issue Certificate
-      try {
-        const existingCert = await Certificate.findOne({ enrollment: enrollment._id });
-        if (!existingCert) {
-          const certId = `ZL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-          const course = await Course.findById(enrollment.course);
-          
-          await Certificate.create({
-            user: req.user.id,
-            course: enrollment.course,
-            enrollment: enrollment._id,
-            certificateId: certId,
-            skills: course?.tags || []
-          });
-          
-          // Update user certificates array
-          await User.findByIdAndUpdate(req.user.id, { 
-            $addToSet: { certificates: certId } 
-          });
+      // 5. Complete Course and Issue Certificate
+      if (enrollment.progress >= 100 && !enrollment.isCompleted) {
+        enrollment.isCompleted = true;
+        enrollment.completedAt = new Date();
+        
+        try {
+          const existingCert = await Certificate.findOne({ enrollment: enrollment._id });
+          if (!existingCert) {
+            const certId = `ZL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            
+            await Certificate.create({
+              user: req.user.id,
+              course: enrollment.course,
+              enrollment: enrollment._id,
+              certificateId: certId,
+              skills: course?.tags || []
+            });
+            
+            // Add certificate ID to user's certificates array
+            await User.findByIdAndUpdate(req.user.id, { 
+              $addToSet: { certificates: certId } 
+            });
+          }
+        } catch (certErr) {
+          console.error("Failed to issue certificate:", certErr);
         }
-      } catch (certErr) {
-        console.error("Failed to issue certificate:", certErr);
       }
     }
 
@@ -233,23 +254,22 @@ export const enrollInCourse = async (req, res) => {
 
     // Trigger notification
     try {
-      const { notificationService } = await import('../services/notification.service.js');
       // Notify student
-      await notificationService.createNotification({
+      await dispatchNotification({
         userId: req.user.id,
-        title: "Course Enrolled",
+        type: "courseEnrollments",
+        title: "Course Enrolled 🎓",
         message: `You have successfully enrolled in "${course.title}". Enjoy your learning journey!`,
-        type: "enrollment",
         link: "/student/my-learning"
       });
 
       // Notify instructor
       if (course.instructor) {
-        await notificationService.createNotification({
+        await dispatchNotification({
           userId: course.instructor,
-          title: "New Student Enrolled",
-          message: `A new student has enrolled in your course "${course.title}".`,
-          type: "enrollment",
+          type: "courseEnrollments",
+          title: "New Student Enrolled! 🎓",
+          message: `${req.user.name || 'A student'} has enrolled in your course "${course.title}".`,
           link: "/instructor/students"
         });
       }
@@ -263,40 +283,6 @@ export const enrollInCourse = async (req, res) => {
       enrollment
     });
 
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Get all students enrolled in instructor's courses
-// @route   GET /api/instructor/students
-// @access  Private/Instructor
-export const getInstructorStudents = async (req, res) => {
-  try {
-    const courses = await Course.find({ instructor: req.user.id });
-    const courseIds = courses.map(c => c._id);
-
-    const enrollments = await Enrollment.find({ course: { $in: courseIds } })
-      .populate("user", "name email avatar")
-      .populate("course", "title")
-      .sort({ createdAt: -1 });
-
-    // Format the data to return a list of students with their enrollment info
-    const students = enrollments.map(e => ({
-      _id: e.user?._id,
-      name: e.user?.name,
-      email: e.user?.email,
-      avatar: e.user?.avatar,
-      courseTitle: e.course?.title,
-      enrolledAt: e.createdAt,
-      progress: e.progress,
-      isCompleted: e.isCompleted
-    }));
-
-    res.status(200).json({
-      success: true,
-      students
-    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

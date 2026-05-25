@@ -36,6 +36,14 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    // Check token version consistency (logout of all devices)
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== (user.tokenVersion || 0)) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired or logged out from other devices"
+      });
+    }
+
     if (user.isBlocked) {
       const isSupportRoute = req.originalUrl && req.originalUrl.includes('/api/support');
       if (!isSupportRoute) {

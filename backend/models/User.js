@@ -141,8 +141,41 @@ const userSchema = new mongoose.Schema({
     courseUpdates: { type: Boolean, default: true },
     newEnrollments: { type: Boolean, default: true },
     newReviews: { type: Boolean, default: true },
-    payoutUpdates: { type: Boolean, default: true }
+    payoutUpdates: { type: Boolean, default: true },
+    // New standardized preferences
+    courseEnrollments: { type: Boolean, default: true },
+    reviews: { type: Boolean, default: true },
+    qaQuestions: { type: Boolean, default: true },
+    payouts: { type: Boolean, default: true },
+    messages: { type: Boolean, default: true },
+    liveClasses: { type: Boolean, default: true }
   },
+  privacySettings: {
+    showEmail: { type: Boolean, default: true },
+    showProfile: { type: Boolean, default: true }
+  },
+  tempEmail: {
+    type: String,
+    trim: true,
+    lowercase: true
+  },
+  emailOtp: {
+    type: String
+  },
+  emailOtpExpires: {
+    type: Date
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+  activeSessions: [
+    {
+      device: { type: String, default: 'Unknown Device' },
+      ip: { type: String, default: 'Unknown IP' },
+      lastActive: { type: Date, default: Date.now }
+    }
+  ],
   preferences: {
     darkMode: { type: Boolean, default: false },
     videoQuality: { type: String, enum: ['720p', '1080p', '4K'], default: '1080p' }
@@ -185,7 +218,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 // Generate JWT token
 userSchema.methods.generateToken = function() {
   return jwt.sign(
-    { id: this._id, role: this.role },
+    { id: this._id, role: this.role, tokenVersion: this.tokenVersion || 0 },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE }
   );

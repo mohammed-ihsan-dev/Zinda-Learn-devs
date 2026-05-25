@@ -305,7 +305,10 @@ export const adminService = {
 
   // 4. Dashboard Stats
   getDashboardStats: async () => {
-    // Basic counts
+    // Basic counts and aggregation of monthly revenue
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
     const [
       totalUsers,
       totalStudents,
@@ -313,10 +316,12 @@ export const adminService = {
       totalCourses,
       pendingTutors,
       pendingCoursesCount,
-      totalEnrollments,
+      totalEnrollments, // total enrolled students across all courses
+      totalTransactions, // count of only successful/completed payments
       enrollments,
       latestUsers,
-      latestCourses
+      latestCourses,
+      monthlyRevenueData
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: "student" }),
@@ -324,10 +329,30 @@ export const adminService = {
       Course.countDocuments(),
       User.countDocuments({ role: "instructor", isApproved: false }),
       Course.countDocuments({ status: "pending" }),
-      Enrollment.countDocuments({ paymentStatus: "completed" }),
+      Enrollment.countDocuments(), // Total enrollments dynamically from database
+      Enrollment.countDocuments({ paymentStatus: "completed" }), // Total successful payments dynamically
       Enrollment.find({ paymentStatus: "completed" }).populate("course"),
       User.find({ role: "instructor" }).sort({ createdAt: -1 }).limit(5).select("name email createdAt isApproved role"),
-      Course.find().populate("instructor", "name").sort({ createdAt: -1 }).limit(5).select("title category createdAt status")
+      Course.find().populate("instructor", "name").sort({ createdAt: -1 }).limit(5).select("title category createdAt status"),
+      Enrollment.aggregate([
+        {
+          $match: {
+            paymentStatus: "completed",
+            createdAt: { $gte: twelveMonthsAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" }
+            },
+            revenue: { $sum: "$amountPaid" },
+            transactions: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } }
+      ])
     ]);
 
     const totalRevenue = enrollments.reduce((sum, current) => sum + (current.amountPaid || 0), 0);
@@ -364,6 +389,13 @@ export const adminService = {
     const userGrowth = userGrowthData.map(item => ({
       month: monthNames[item._id - 1],
       users: item.count
+    }));
+
+    // Format Monthly Revenue for the Recharts AreaChart
+    const monthlyRevenue = monthlyRevenueData.map(item => ({
+      month: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+      revenue: item.revenue,
+      transactions: item.transactions
     }));
 
     // Combine recent activity
@@ -405,6 +437,8 @@ export const adminService = {
       pendingCoursesCount,
       totalEnrollments,
       totalRevenue,
+      totalTransactions,
+      monthlyRevenue,
       userGrowth,
       revenueBreakdown,
       recentActivity,

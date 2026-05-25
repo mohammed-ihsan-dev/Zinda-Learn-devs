@@ -5,12 +5,54 @@ import Course from '../../../models/Course.js';
 import Enrollment from '../../../models/Enrollment.js';
 import { getIO } from '../../../sockets/index.js';
 
+// Helper to normalize live class status on raw objects (useful for lean queries)
+const normalizeLiveClassObj = (lc) => {
+  if (!lc) return lc;
+  const now = new Date();
+  
+  let start = new Date(lc.startTime);
+  if (isNaN(start.getTime())) {
+    // If startTime is a legacy HH:mm string
+    const datePart = lc.scheduledDate ? new Date(lc.scheduledDate).toISOString().split('T')[0] : now.toISOString().split('T')[0];
+    const timePart = typeof lc.startTime === 'string' && lc.startTime.includes(':') ? lc.startTime : '00:00';
+    start = new Date(`${datePart}T${timePart}:00`);
+  }
+  
+  let end = new Date(lc.endTime);
+  if (isNaN(end.getTime())) {
+    // Fallback to start + duration
+    const dur = Number(lc.duration) || 60;
+    end = new Date(start.getTime() + dur * 60 * 1000);
+  }
+
+  if (lc.status !== 'cancelled') {
+    if (now >= start && now <= end) {
+      lc.status = 'live';
+    } else if (now < start) {
+      lc.status = 'upcoming';
+    } else {
+      lc.status = 'ended';
+    }
+  }
+
+  // Update properties on the object
+  lc.startTime = start;
+  lc.endTime = end;
+
+  // Add formatted virtual properties for forms
+  lc.scheduledDateStr = start.toISOString().split('T')[0];
+  const hours = String(start.getHours()).padStart(2, '0');
+  const minutes = String(start.getMinutes()).padStart(2, '0');
+  lc.startTimeStr = `${hours}:${minutes}`;
+  return lc;
+};
+
 // @desc    Create a new live class
 // @route   POST /api/live-classes
 // @access  Instructor
 export const createLiveClass = async (req, res) => {
   try {
-    const { title, description, courseId, meetingLink, scheduledDate, startTime, duration, thumbnail } = req.body;
+    const { title, description, courseId, meetingLink, scheduledDate, startTime, duration, thumbnail, lessonId } = req.body;
 
     // Validate course ownership
     const course = await Course.findOne({ _id: courseId, instructor: req.user._id });
@@ -18,17 +60,27 @@ export const createLiveClass = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You are not authorized to create a live class for this course' });
     }
 
+    // Parse start & end times as Date objects
+    const start = new Date(`${scheduledDate}T${startTime}:00`);
+    const end = new Date(start.getTime() + Number(duration) * 60 * 1000);
+
+    // Initialize enrolled students from course enrollments
+    const enrollments = await Enrollment.find({ course: courseId }).select('user');
+    const studentIds = enrollments.map(e => e.user);
+
     const liveClass = await LiveClass.create({
       title,
       description,
       course: courseId,
       instructor: req.user._id,
+      lesson: lessonId || undefined,
       meetingLink,
-      scheduledDate,
-      startTime,
-      duration,
+      startTime: start,
+      endTime: end,
+      duration: Number(duration),
+      enrolledStudents: studentIds,
       thumbnail,
-      status: 'UPCOMING'
+      status: 'upcoming'
     });
 
     // Notify students via Socket.IO
@@ -41,12 +93,6 @@ export const createLiveClass = async (req, res) => {
 
     // Notify students via DB Notifications
     try {
-      const enrollments = await Enrollment.find({ 
-        course: courseId, 
-        paymentStatus: { $in: ['completed', 'free'] } 
-      }).select('user');
-      const studentIds = enrollments.map(e => e.user);
-
       if (studentIds.length > 0) {
         const { notificationService } = await import('../../../services/notification.service.js');
         const notifPromises = studentIds.map(studentId => 
@@ -81,11 +127,25 @@ export const updateLiveClass = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Live class not found or unauthorized' });
     }
 
-    if (liveClass.status === 'ENDED') {
-      return res.status(400).json({ success: false, message: 'Cannot update an ended class' });
+    const currentStatus = normalizeLiveClassObj(liveClass.toObject()).status;
+    if (currentStatus === 'ended' || currentStatus === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Cannot update an ended or cancelled class' });
     }
 
-    const updatedClass = await LiveClass.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // Support updating startTime / endTime from form scheduledDate & startTime parameters
+    const updateData = { ...req.body };
+    const scheduledDate = updateData.scheduledDate || new Date(liveClass.startTime).toISOString().split('T')[0];
+    const startTimeStr = updateData.startTime || liveClass.startTimeStr;
+    const duration = updateData.duration !== undefined ? Number(updateData.duration) : liveClass.duration;
+
+    if (updateData.scheduledDate || updateData.startTime || updateData.duration !== undefined) {
+      const start = new Date(`${scheduledDate}T${startTimeStr}:00`);
+      updateData.startTime = start;
+      updateData.endTime = new Date(start.getTime() + duration * 60 * 1000);
+      updateData.duration = duration;
+    }
+
+    const updatedClass = await LiveClass.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
     res.status(200).json({ success: true, data: updatedClass });
   } catch (error) {
@@ -122,7 +182,11 @@ export const startLiveClass = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Live class not found or unauthorized' });
     }
 
-    liveClass.status = 'LIVE';
+    // Force startTime to now
+    const now = new Date();
+    liveClass.startTime = now;
+    liveClass.endTime = new Date(now.getTime() + liveClass.duration * 60 * 1000);
+    liveClass.status = 'live';
     await liveClass.save();
 
     // Notify students via Socket.IO
@@ -149,7 +213,9 @@ export const endLiveClass = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Live class not found or unauthorized' });
     }
 
-    liveClass.status = 'ENDED';
+    // Force endTime to now
+    liveClass.endTime = new Date();
+    liveClass.status = 'ended';
     await liveClass.save();
 
     // Notify students via Socket.IO
@@ -179,22 +245,22 @@ export const getInstructorLiveClasses = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized: No ID found' });
     }
 
-    // Use lean() for performance and avoid complex Mongoose document issues
-    // Added fallback sorting and filtering
     const liveClasses = await LiveClass.find({
       instructor: instructorId,
       isDeleted: { $ne: true }
     })
       .populate('course', 'title thumbnail')
-      .sort({ scheduledDate: -1 })
+      .sort({ startTime: -1 })
       .lean();
 
-    console.log(`[LIVE_CLASS_DEBUG] Successfully found ${liveClasses.length} classes for ${instructorId}`);
+    const normalized = liveClasses.map(normalizeLiveClassObj);
+
+    console.log(`[LIVE_CLASS_DEBUG] Successfully found ${normalized.length} classes for ${instructorId}`);
 
     return res.status(200).json({
       success: true,
-      count: liveClasses.length,
-      data: liveClasses
+      count: normalized.length,
+      data: normalized
     });
 
   } catch (error) {
@@ -209,42 +275,42 @@ export const getInstructorLiveClasses = async (req, res) => {
 };
 
 // @desc    Get student live classes (from enrolled courses)
-// @route   GET /api/student/live-classes
+// @route   GET /api/live-classes/student
 // @access  Student
 export const getStudentLiveClasses = async (req, res) => {
   try {
-    if (!req.user || !req.user._id) {
+    const studentId = req.user?._id || req.user?.id;
+    if (!studentId) {
       return res.status(401).json({ success: false, message: 'Authentication data missing' });
     }
 
-    console.log(`[LIVE_CLASS_DEBUG] Fetching live classes for student: ${req.user._id}`);
+    console.log(`[LIVE_CLASS_DEBUG] Fetching live classes for student: ${studentId}`);
 
     // 1. Get all courses the student is enrolled in
-    const enrollments = await Enrollment.find({ user: req.user._id });
+    const enrollments = await Enrollment.find({ user: studentId });
     const enrolledCourseIds = enrollments.map(e => e.course);
 
-    console.log(`[LIVE_CLASS_DEBUG] Student ${req.user._id} enrollments:`, enrolledCourseIds.length);
-    if (enrolledCourseIds.length > 0) {
-      console.log(`[LIVE_CLASS_DEBUG] Enrolled Course IDs: ${enrolledCourseIds.join(', ')}`);
-    }
+    console.log(`[LIVE_CLASS_DEBUG] Student ${studentId} enrollments:`, enrolledCourseIds.length);
 
     // 2. Get live classes for these courses
     const liveClasses = await LiveClass.find({
       course: { $in: enrolledCourseIds },
       isDeleted: { $ne: true },
-      status: { $ne: 'CANCELLED' }
+      status: { $ne: 'cancelled' }
     })
       .populate('instructor', 'name avatar')
       .populate('course', 'title thumbnail')
-      .sort({ scheduledDate: 1 })
+      .sort({ startTime: 1 })
       .lean();
 
-    console.log(`[LIVE_CLASS_DEBUG] Found ${liveClasses.length} live classes for student ${req.user._id}`);
+    const normalized = liveClasses.map(normalizeLiveClassObj);
+
+    console.log(`[LIVE_CLASS_DEBUG] Found ${normalized.length} live classes for student ${studentId}`);
 
     res.status(200).json({
       success: true,
-      count: liveClasses.length,
-      data: liveClasses
+      count: normalized.length,
+      data: normalized
     });
   } catch (error) {
     console.error('[LIVE_CLASS_ERROR] Error in getStudentLiveClasses:', error);
@@ -263,7 +329,6 @@ export const getLiveClassById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       console.warn(`[LIVE_CLASS_WARN] Invalid live class ID: ${id}`);
       return res.status(400).json({ success: false, message: 'Invalid live class ID format' });
@@ -277,17 +342,21 @@ export const getLiveClassById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Live class not found' });
     }
 
+    const userId = req.user?._id || req.user?.id;
+
     // Security: Check if student is enrolled if they are not the instructor
     if (req.user.role === 'student') {
-      const enrollment = await Enrollment.findOne({ user: req.user._id, course: liveClass.course });
+      const enrollment = await Enrollment.findOne({ user: userId, course: liveClass.course });
       if (!enrollment) {
         return res.status(403).json({ success: false, message: 'You are not enrolled in this course' });
       }
-    } else if (req.user.role === 'instructor' && liveClass.instructor?._id.toString() !== req.user._id.toString()) {
+    } else if (req.user.role === 'instructor' && liveClass.instructor?._id.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
-    res.status(200).json({ success: true, data: liveClass });
+    const dataObj = normalizeLiveClassObj(liveClass.toObject());
+
+    res.status(200).json({ success: true, data: dataObj });
   } catch (error) {
     console.error('[LIVE_CLASS_ERROR] Error in getLiveClassById:', error);
     res.status(500).json({
@@ -303,38 +372,42 @@ export const getLiveClassById = async (req, res) => {
 // @access  Student
 export const joinLiveClass = async (req, res) => {
   try {
+    const studentId = req.user?._id || req.user?.id;
     const liveClass = await LiveClass.findById(req.params.id);
     if (!liveClass || liveClass.isDeleted) {
       return res.status(404).json({ success: false, message: 'Live class not found' });
     }
 
     // Enrollment check
-    const enrollment = await Enrollment.findOne({ user: req.user._id, course: liveClass.course });
+    const enrollment = await Enrollment.findOne({ user: studentId, course: liveClass.course });
     if (!enrollment) {
       return res.status(403).json({ success: false, message: 'You are not enrolled in this course' });
     }
 
-    // Join rules: Class must be LIVE or within 10 mins before start
     const now = new Date();
-    const scheduledTime = new Date(liveClass.scheduledDate);
-    // Parse startTime HH:mm
-    const [hours, minutes] = liveClass.startTime.split(':');
-    scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const start = new Date(liveClass.startTime);
+    const diffInMinutes = (start - now) / (1000 * 60);
 
-    const diffInMinutes = (scheduledTime - now) / (1000 * 60);
+    const resolvedStatus = normalizeLiveClassObj(liveClass.toObject()).status;
 
-    if (liveClass.status !== 'LIVE' && diffInMinutes > 10) {
+    if (resolvedStatus !== 'live' && diffInMinutes > 10) {
       return res.status(400).json({
         success: false,
         message: 'You can only join when the class is LIVE or 10 minutes before it starts'
       });
     }
 
+    // Add student to enrolledStudents array if not already present
+    if (!liveClass.enrolledStudents.includes(studentId)) {
+      liveClass.enrolledStudents.push(studentId);
+      await liveClass.save();
+    }
+
     // Track attendance
-    let attendance = await LiveAttendance.findOne({ student: req.user._id, liveClass: liveClass._id });
+    let attendance = await LiveAttendance.findOne({ student: studentId, liveClass: liveClass._id });
     if (!attendance) {
       attendance = await LiveAttendance.create({
-        student: req.user._id,
+        student: studentId,
         liveClass: liveClass._id,
         joinedAt: now
       });

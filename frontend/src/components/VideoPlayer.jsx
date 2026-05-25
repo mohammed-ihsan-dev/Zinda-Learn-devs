@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Loader2, AlertCircle } from 'lucide-react';
 
-const VideoPlayer = ({ videoUrl, source, thumbnail, title }) => {
+const VideoPlayer = ({ videoUrl, source, thumbnail, title, onTimeUpdate, onEnded, initialTime }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -9,6 +9,26 @@ const VideoPlayer = ({ videoUrl, source, thumbnail, title }) => {
     setLoading(true);
     setError(false);
   }, [videoUrl]);
+
+  const handleLoadedMetadata = (e) => {
+    const video = e.target;
+    if (initialTime && initialTime > 0 && initialTime < video.duration) {
+      video.currentTime = Number(initialTime);
+    }
+  };
+
+  const handleTimeUpdate = (e) => {
+    const video = e.target;
+    if (onTimeUpdate) {
+      onTimeUpdate(video.currentTime, video.duration);
+    }
+  };
+
+  const handleEnded = () => {
+    if (onEnded) {
+      onEnded();
+    }
+  };
 
   const renderPlayer = () => {
     if (!videoUrl) {
@@ -52,6 +72,9 @@ const VideoPlayer = ({ videoUrl, source, thumbnail, title }) => {
         controls
         className="absolute inset-0 w-full h-full object-contain bg-black"
         poster={thumbnail}
+        onLoadedMetadata={handleLoadedMetadata}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
         onLoadedData={() => setLoading(false)}
         onError={() => {
           setLoading(false);

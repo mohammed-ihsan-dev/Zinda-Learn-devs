@@ -4,6 +4,7 @@ import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import User from '../models/User.js';
 import { emitToConversation, emitToUser } from '../sockets/index.js';
+import { dispatchNotification } from '../services/notificationDispatcher.js';
 
 /**
  * Authorization helper to check if messaging is allowed between two users for a specific course
@@ -143,13 +144,12 @@ export const sendMessage = async (req, res) => {
 
     // Create DB Notification for receiver
     try {
-      const { notificationService } = await import('../services/notification.service.js');
       const redirectLink = req.user.role === 'student' ? '/instructor/messages' : '/student/messages';
-      await notificationService.createNotification({
+      await dispatchNotification({
         userId: receiverId,
-        title: "New Message Received",
+        type: 'messages',
+        title: 'New Message 💬',
         message: `You received a message from ${req.user.name}: "${text ? text.substring(0, 50) : 'Media Attachment'}"`,
-        type: "message",
         link: redirectLink,
         metadata: { conversationId: conversation._id }
       });
@@ -383,12 +383,11 @@ export const broadcastMessage = async (req, res) => {
 
       // Create DB Notification for student
       try {
-        const { notificationService } = await import('../services/notification.service.js');
-        await notificationService.createNotification({
+        await dispatchNotification({
           userId: studentId,
-          title: "New Broadcast Message",
+          type: 'messages',
+          title: 'New Announcement 📢',
           message: `Broadcast from ${req.user.name} in "${course.title}": "${text ? text.substring(0, 50) : ''}"`,
-          type: "message",
           link: "/student/messages",
           metadata: { conversationId: conversation._id }
         });

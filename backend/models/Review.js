@@ -17,12 +17,35 @@ const reviewSchema = new mongoose.Schema({
     min: 1,
     max: 5
   },
+  review: {
+    type: String,
+    required: [true, 'Please provide a review'],
+    trim: true
+  },
   comment: {
     type: String,
-    required: [true, 'Please provide a comment'],
+    trim: true
+  },
+  reply: {
+    type: String,
+    trim: true
+  },
+  isReported: {
+    type: Boolean,
+    default: false
+  },
+  reportReason: {
+    type: String,
     trim: true
   }
 }, { timestamps: true });
+
+// Auto map legacy comment into review on document load
+reviewSchema.post('init', function(doc) {
+  if (!doc.review && doc.comment) {
+    doc.review = doc.comment;
+  }
+});
 
 reviewSchema.index({ user: 1, course: 1 }, { unique: true });
 

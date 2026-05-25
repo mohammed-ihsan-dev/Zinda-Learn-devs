@@ -266,21 +266,7 @@ const MyCourses = () => {
               </div>
             )}
 
-            {/* Add New Course Card (only show on first page if not searching) */}
-            {pagination.currentPage === 1 && !searchTerm && activeTab === 'All' && courses.length > 0 && (
-              <button
-                onClick={() => navigate('/instructor/create-course')}
-                className="group flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[32px] border-2 border-dashed border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-all p-8 h-full min-h-[400px]"
-              >
-                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:scale-110 transition-all shadow-sm">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-slate-900 mb-1">Add New Course</p>
-                  <p className="text-xs text-slate-500 px-4">Start creating your next learning masterpiece</p>
-                </div>
-              </button>
-            )}
+
           </>
         )}
       </div>

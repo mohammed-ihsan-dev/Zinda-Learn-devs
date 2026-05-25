@@ -14,7 +14,7 @@ const CourseReviews = ({ courseId, isEnrolled }) => {
   // Form State
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [userReview, setUserReview] = useState(null);
 
@@ -33,7 +33,7 @@ const CourseReviews = ({ courseId, isEnrolled }) => {
         if (existing) {
           setUserReview(existing);
           setRating(existing.rating);
-          setComment(existing.comment);
+          setReviewText(existing.review || existing.comment || '');
         }
       }
     } catch (error) {
@@ -48,19 +48,19 @@ const CourseReviews = ({ courseId, isEnrolled }) => {
     if (rating === 0) {
       return toast.error('Please select a rating');
     }
-    if (!comment.trim()) {
-      return toast.error('Please write a review comment');
+    if (!reviewText.trim()) {
+      return toast.error('Please write a review');
     }
 
     setSubmitting(true);
     try {
       if (userReview) {
         // Update existing
-        await api.put(`/courses/${courseId}/reviews/${userReview._id}`, { rating, comment });
+        await api.put(`/courses/${courseId}/reviews/${userReview._id}`, { rating, review: reviewText.trim() });
         toast.success('Review updated successfully!');
       } else {
         // Create new
-        await api.post(`/courses/${courseId}/reviews`, { rating, comment });
+        await api.post(`/courses/${courseId}/reviews`, { rating, review: reviewText.trim() });
         toast.success('Review submitted successfully!');
       }
       setShowForm(false);
@@ -126,8 +126,8 @@ const CourseReviews = ({ courseId, isEnrolled }) => {
               ))}
             </div>
             <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
               placeholder="Tell us what you think about the course..."
               rows={4}
               className="w-full rounded-xl border border-zinc-200 p-4 focus:ring-2 focus:ring-primary-500 outline-none text-sm"
@@ -193,28 +193,28 @@ const CourseReviews = ({ courseId, isEnrolled }) => {
 
           {/* Reviews List */}
           <div className="md:col-span-8 lg:col-span-9 space-y-5">
-            {reviews.map((review) => (
-              <div key={review._id} className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm">
+            {reviews.map((rev) => (
+              <div key={rev._id} className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
-                      {review.user?.name?.charAt(0) || 'U'}
+                      {rev.user?.name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-900 text-sm">{review.user?.name || 'Anonymous User'}</p>
-                      <p className="text-xs text-zinc-400">{new Date(review.createdAt).toLocaleDateString()}</p>
+                      <p className="font-bold text-zinc-900 text-sm">{rev.user?.name || 'Anonymous User'}</p>
+                      <p className="text-xs text-zinc-400">{new Date(rev.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star 
                         key={star} 
-                        className={`w-3.5 h-3.5 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-zinc-200'}`} 
+                        className={`w-3.5 h-3.5 ${star <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-zinc-200'}`} 
                       />
                     ))}
                   </div>
                 </div>
-                <p className="text-zinc-600 text-sm leading-relaxed">{review.comment}</p>
+                <p className="text-zinc-600 text-sm leading-relaxed">{rev.review || rev.comment || 'No written feedback provided'}</p>
               </div>
             ))}
           </div>

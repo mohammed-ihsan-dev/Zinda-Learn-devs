@@ -3,6 +3,7 @@ import Order from '../models/Order.js';
 import Course from '../models/Course.js';
 import Enrollment from '../models/Enrollment.js';
 import User from '../models/User.js';
+import { dispatchNotification } from '../services/notificationDispatcher.js';
 
 export const createOrder = async (req, res) => {
   try {
@@ -177,23 +178,25 @@ export const verifyPayment = async (req, res) => {
     // Trigger notification
     try {
       const course = await Course.findById(order.course);
-      const { notificationService } = await import('../services/notification.service.js');
+      const studentUser = await User.findById(order.user).select('name');
+      const studentName = studentUser ? studentUser.name : 'A student';
+
       // Notify student
-      await notificationService.createNotification({
+      await dispatchNotification({
         userId: order.user,
-        title: "Course Enrolled",
+        type: "courseEnrollments",
+        title: "Course Enrolled 🎓",
         message: `Payment successful! You have been enrolled in "${course.title}".`,
-        type: "enrollment",
         link: "/student/my-learning"
       });
 
       // Notify instructor
       if (course && course.instructor) {
-        await notificationService.createNotification({
+        await dispatchNotification({
           userId: course.instructor,
-          title: "New Student Enrolled",
-          message: `A new student has enrolled in your course "${course.title}".`,
-          type: "enrollment",
+          type: "courseEnrollments",
+          title: "New Student Enrolled! 🎓",
+          message: `${studentName} has enrolled in your course "${course.title}".`,
           link: "/instructor/students"
         });
       }

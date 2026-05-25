@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
-import { getReviewData } from '../../services/instructorDashboardService';
+import { getReviewData, replyToReview, reportReview } from '../../services/instructorDashboardService';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,9 +26,99 @@ const Reviews = () => {
   const [ratingFilter, setRatingFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
 
+  // Reply & Report States
+  const [activeReplyId, setActiveReplyId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [activeReportId, setActiveReportId] = useState(null);
+  const [reportReason, setReportReason] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+
   useEffect(() => {
     fetchReviewData();
   }, []);
+
+  const handleStartReply = (review) => {
+    setActiveReplyId(review._id);
+    setReplyText(review.reply || '');
+    setActiveReportId(null);
+  };
+
+  const handleCancelReply = () => {
+    setActiveReplyId(null);
+    setReplyText('');
+  };
+
+  const handleSubmitReply = async (review) => {
+    if (!replyText.trim()) return toast.error('Please enter a response');
+    setSubmittingReply(true);
+    try {
+      const res = await replyToReview(review.course?._id || review.course, review._id, replyText.trim());
+      if (res.success) {
+        toast.success('Reply saved successfully!');
+        setData(prev => ({
+          ...prev,
+          reviews: prev.reviews.map(r => r._id === review._id ? { ...r, reply: replyText.trim() } : r)
+        }));
+        handleCancelReply();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save reply');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (review) => {
+    if (!window.confirm('Are you sure you want to delete your reply?')) return;
+    setSubmittingReply(true);
+    try {
+      const res = await replyToReview(review.course?._id || review.course, review._id, '');
+      if (res.success) {
+        toast.success('Reply deleted successfully!');
+        setData(prev => ({
+          ...prev,
+          reviews: prev.reviews.map(r => r._id === review._id ? { ...r, reply: '' } : r)
+        }));
+        handleCancelReply();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete reply');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleStartReport = (review) => {
+    setActiveReportId(review._id);
+    setReportReason('');
+    setActiveReplyId(null);
+  };
+
+  const handleCancelReport = () => {
+    setActiveReportId(null);
+    setReportReason('');
+  };
+
+  const handleSubmitReport = async (review) => {
+    if (!reportReason.trim()) return toast.error('Please specify a reason for reporting');
+    setSubmittingReport(true);
+    try {
+      const res = await reportReview(review.course?._id || review.course, review._id, reportReason.trim());
+      if (res.success) {
+        toast.success('Review reported successfully!');
+        setData(prev => ({
+          ...prev,
+          reviews: prev.reviews.map(r => r._id === review._id ? { ...r, isReported: true, reportReason: reportReason.trim() } : r)
+        }));
+        handleCancelReport();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to report review');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
 
   const fetchReviewData = async () => {
     try {
@@ -53,8 +143,10 @@ const Reviews = () => {
   }
 
   const filteredReviews = data?.reviews?.filter(r => {
-    const matchesSearch = r.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          r.review?.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = r.user?.name?.toLowerCase().includes(searchLower) || 
+                          (r.review || '').toLowerCase().includes(searchLower) ||
+                          (r.comment || '').toLowerCase().includes(searchLower);
     const matchesRating = ratingFilter === 'all' || r.rating === parseInt(ratingFilter);
     const matchesCourse = courseFilter === 'all' || r.course?._id === courseFilter;
     return matchesSearch && matchesRating && matchesCourse;
@@ -154,7 +246,7 @@ const Reviews = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:shadow-md transition-all"
+            className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm hover:border-violet-200 hover:shadow-lg transition-all duration-300 group"
           >
             <div className="flex flex-col md:flex-row gap-6">
               {/* Student Info */}
@@ -184,6 +276,11 @@ const Reviews = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
+                    {review.isReported && (
+                      <span className="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Reported
+                      </span>
+                    )}
                     <span>{new Date(review.createdAt).toLocaleDateString()}</span>
                     <button className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
                       <MoreVertical className="w-5 h-5" />
@@ -192,23 +289,103 @@ const Reviews = () => {
                 </div>
 
                 <p className="text-slate-600 leading-relaxed italic">
-                  "{review.review}"
+                  {review.review || review.comment ? `"${review.review || review.comment}"` : 'No written feedback provided'}
                 </p>
 
                 {/* Actions */}
                 <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                  <button className="flex items-center gap-2 text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                  <button 
+                    onClick={() => handleStartReply(review)}
+                    className="flex items-center gap-2 text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors"
+                  >
                     <Reply className="w-4 h-4" />
-                    Reply
+                    {review.reply ? 'Edit Reply' : 'Reply'}
                   </button>
-                  <button className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors">
+                  <button 
+                    onClick={() => handleStartReport(review)}
+                    disabled={review.isReported}
+                    className={`flex items-center gap-2 text-xs font-bold transition-colors ${
+                      review.isReported 
+                        ? 'text-red-500 cursor-default opacity-85' 
+                        : 'text-slate-400 hover:text-red-600'
+                    }`}
+                  >
                     <Flag className="w-4 h-4" />
-                    Report
+                    {review.isReported ? 'Reported' : 'Report'}
                   </button>
                 </div>
 
-                {/* Reply Section (Placeholder) */}
-                {review.reply && (
+                {/* Inline Reply Form */}
+                {activeReplyId === review._id && (
+                  <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                    <label className="text-xs font-bold text-slate-600 block">
+                      {review.reply ? 'Edit your response' : 'Write a response'}
+                    </label>
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Write your reply to this student..."
+                      rows={2}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none text-slate-800"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      {review.reply && (
+                        <button
+                          onClick={() => handleDeleteReply(review)}
+                          className="px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Reply
+                        </button>
+                      )}
+                      <button
+                        onClick={handleCancelReply}
+                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSubmitReply(review)}
+                        disabled={submittingReply || !replyText.trim()}
+                        className="px-4 py-2 text-xs font-bold bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50"
+                      >
+                        {submittingReply ? 'Saving...' : 'Save Response'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Report Form */}
+                {activeReportId === review._id && (
+                  <div className="mt-4 p-4 bg-red-50/50 rounded-2xl border border-red-100 space-y-3">
+                    <label className="text-xs font-bold text-red-800 block">Report Review</label>
+                    <input
+                      type="text"
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      placeholder="Why are you reporting this review? (e.g. Abusive, Spam)"
+                      className="w-full px-4 py-2 bg-white border border-red-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none text-slate-800"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={handleCancelReport}
+                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSubmitReport(review)}
+                        disabled={submittingReport || !reportReason.trim()}
+                        className="px-4 py-2 text-xs font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {submittingReport ? 'Submitting...' : 'Submit Report'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reply Section (Rendered when not editing) */}
+                {review.reply && activeReplyId !== review._id && (
                   <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />

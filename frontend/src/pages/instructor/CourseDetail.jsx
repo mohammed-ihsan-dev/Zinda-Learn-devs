@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getInstructorCourses, submitCourse } from '../../services/instructorService';
-import { getCourseById, updateCourse, addSection as addSectionAPI, updateSection as updateSectionAPI, deleteSection as deleteSectionAPI, addLessonToSection, updateLessonInSection, deleteLessonFromSection } from '../../services/courseService';
+import { getCourseById, updateCourse, addSection as addSectionAPI, updateSection as updateSectionAPI, deleteSection as deleteSectionAPI, addLessonToSection, updateLessonInSection, deleteLessonFromSection, replyOrEditQA, uploadFile } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,8 @@ import {
   Send,
   AlertTriangle,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Paperclip
 } from 'lucide-react';
 import VideoUpload from '../../components/instructor/VideoUpload';
 
@@ -210,12 +211,28 @@ const CreateLessonModal = ({ onClose, onSave, courseId }) => {
 };
 
 // ── Edit Lesson Modal ────────────────────────────────────────────────────────
-const EditLessonModal = ({ lesson, onClose, onSave }) => {
-  const [formData, setFormData] = useState({ 
-    title: lesson.title, 
+const EditLessonModal = ({ lesson, courseId, sectionId, onCourseUpdate, onClose, onSave }) => {
+  const [activeTab, setActiveTab] = useState('Info');
+  
+  const [formData, setFormData] = useState({
+    title: lesson.title || '',
     description: lesson.description || '',
-    isFree: lesson.isFree || false
+    isFree: lesson.isFree || false,
+    videoUrl: lesson.videoUrl || '',
+    source: lesson.source || '',
+    overview: lesson.overview || '',
+    notes: lesson.notes || [],
+    resources: lesson.resources || [],
+    keyTakeaways: lesson.keyTakeaways || [],
+    requiredTools: lesson.requiredTools || [],
+    tests: lesson.tests || [],
+    difficultyLevel: lesson.difficultyLevel || 'All Levels',
+    estimatedDuration: lesson.estimatedDuration || 0,
+    tags: lesson.tags || []
   });
+
+  const [qaList, setQaList] = useState(lesson.qa || []);
+  const [replyText, setReplyText] = useState({});
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -224,57 +241,701 @@ const EditLessonModal = ({ lesson, onClose, onSave }) => {
     onClose();
   };
 
+  const TABS = ['Info', 'Overview', 'Takeaways & Tools', 'Notes', 'Resources', 'MCQ Tests', 'Student Q&A'];
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden">
-        <div className="flex items-center justify-between p-8 pb-6 border-b border-slate-50">
-          <h3 className="text-xl font-bold text-slate-900">Edit Lesson</h3>
+      <div className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl animate-scale-in overflow-hidden flex flex-col max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-8 pb-4 border-b border-slate-50 shrink-0">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Configure Lesson Content</h3>
+            <p className="text-xs text-slate-400 mt-1">Add overview details, notes, resources, quizzes, or reply to Q&A.</p>
+          </div>
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 transition-colors">
             <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Lesson Title</label>
-            <input
-              autoFocus
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium"
-            />
-          </div>
+        {/* Tab Selection */}
+        <div className="flex border-b border-slate-100 overflow-x-auto scrollbar-hide shrink-0 bg-slate-50/55 px-4">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-4 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all border-b-2 relative ${
+                activeTab === tab 
+                  ? 'text-purple-600 border-purple-600' 
+                  : 'text-slate-400 border-transparent hover:text-slate-600'
+              }`}
+            >
+              {tab}
+              {tab === 'Student Q&A' && qaList.length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-black rounded-full">
+                  {qaList.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
-            <textarea
-              rows="3"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium resize-none"
-            />
-          </div>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-8 flex-1 overflow-y-auto space-y-6">
+          
+          {/* TAB 1: Info */}
+          {activeTab === 'Info' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Lesson Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Introduction to React components"
+                  className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-slate-900"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Short Description</label>
+                <textarea
+                  rows="2"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Provide a brief summary of the lesson video..."
+                  className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium resize-none text-slate-800"
+                />
+              </div>
 
-          <div className="flex items-center gap-4 px-1">
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                checked={formData.isFree}
-                onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
-                className="w-5 h-5 rounded-lg border-slate-200 text-purple-600 focus:ring-purple-500 transition-all"
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Difficulty Level</label>
+                  <select
+                    value={formData.difficultyLevel}
+                    onChange={(e) => setFormData({ ...formData, difficultyLevel: e.target.value })}
+                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-slate-700"
+                  >
+                    <option value="All Levels">All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Expert">Expert</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Duration (Mins)</label>
+                  <input
+                    type="number"
+                    value={formData.estimatedDuration || ''}
+                    onChange={(e) => setFormData({ ...formData, estimatedDuration: Number(e.target.value) })}
+                    placeholder="e.g. 15"
+                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Video URL</label>
+                  <input
+                    type="text"
+                    value={formData.videoUrl}
+                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                    placeholder="e.g. https://res.cloudinary.com/..."
+                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-slate-900"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Video Source</label>
+                  <select
+                    value={formData.source}
+                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-slate-700"
+                  >
+                    <option value="upload">Upload</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="">None</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Lesson Tags (Comma separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. react, hooks, components"
+                  value={formData.tags?.join(', ') || ''}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
+                  className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.isFree}
+                    onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
+                    className="w-5 h-5 rounded-lg border-slate-200 text-purple-600 focus:ring-purple-500 transition-all"
+                  />
+                  <span className="text-sm font-bold text-slate-600 group-hover:text-purple-600 transition-colors">Available as Free Preview</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: Overview */}
+          {activeTab === 'Overview' && (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Detailed Overview / Lesson Script</label>
+              <textarea
+                rows="10"
+                placeholder="Write details about what students will learn, code snippets, or lesson instructions. Supports markdown styling..."
+                value={formData.overview}
+                onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-[20px] focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-slate-700 placeholder:text-slate-300 resize-y min-h-[250px]"
               />
-              <span className="text-sm font-bold text-slate-600 group-hover:text-purple-600 transition-colors">Available as Free Preview</span>
-            </label>
-          </div>
+            </div>
+          )}
 
-          <div className="flex items-center gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-all">
+          {/* TAB 3: Takeaways & Tools */}
+          {activeTab === 'Takeaways & Tools' && (
+            <div className="space-y-6">
+              {/* Takeaways Section */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Key Takeaways</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="takeaway-input"
+                    placeholder="e.g. Understand React component lifecycle"
+                    className="flex-1 px-5 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-sm text-slate-900 placeholder:text-slate-300"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = e.target.value.trim();
+                        if (val) {
+                          setFormData({ ...formData, keyTakeaways: [...formData.keyTakeaways, val] });
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('takeaway-input');
+                      const val = input.value.trim();
+                      if (val) {
+                        setFormData({ ...formData, keyTakeaways: [...formData.keyTakeaways, val] });
+                        input.value = '';
+                      }
+                    }}
+                    className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm"
+                  >
+                    Add
+                  </button>
+                </div>
+                <ul className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                  {formData.keyTakeaways.map((item, idx) => (
+                    <li key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                      <span className="text-sm font-semibold text-slate-700 truncate max-w-[90%]">• {item}</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, keyTakeaways: formData.keyTakeaways.filter((_, i) => i !== idx) })}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                  {formData.keyTakeaways.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-50 rounded-xl">No takeaways added. Students will see course-level takeaways.</p>
+                  )}
+                </ul>
+              </div>
+
+              {/* Tools Section */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Required Tools</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="tool-input"
+                    placeholder="e.g. VS Code, Node.js"
+                    className="flex-1 px-5 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-sm text-slate-900 placeholder:text-slate-300"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = e.target.value.trim();
+                        if (val) {
+                          setFormData({ ...formData, requiredTools: [...formData.requiredTools, val] });
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('tool-input');
+                      const val = input.value.trim();
+                      if (val) {
+                        setFormData({ ...formData, requiredTools: [...formData.requiredTools, val] });
+                        input.value = '';
+                      }
+                    }}
+                    className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto pr-1">
+                  {formData.requiredTools.map((item, idx) => (
+                    <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full font-bold text-xs">
+                      {item}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, requiredTools: formData.requiredTools.filter((_, i) => i !== idx) })}
+                        className="text-purple-400 hover:text-purple-700 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {formData.requiredTools.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-50 rounded-xl w-full">No tools added. Students will see course-level tools.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: Notes */}
+          {activeTab === 'Notes' && (
+            <div className="space-y-6">
+              {/* Add Note Form */}
+              <div className="p-5 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-4">
+                <h4 className="text-xs font-black text-purple-700 uppercase tracking-widest">Create Lesson Note</h4>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    id="note-title-input"
+                    placeholder="Note Title (e.g. Summary of SSR vs SSG)"
+                    className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-sm text-slate-900"
+                  />
+                  <textarea
+                    rows="3"
+                    id="note-content-input"
+                    placeholder="Note content description or cheat sheet details..."
+                    className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-sm resize-none text-slate-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const titleInput = document.getElementById('note-title-input');
+                      const contentInput = document.getElementById('note-content-input');
+                      const title = titleInput.value.trim();
+                      const content = contentInput.value.trim();
+                      if (!title || !content) return toast.error('Note Title and Content are required');
+                      setFormData({ ...formData, notes: [...formData.notes, { title, content }] });
+                      titleInput.value = '';
+                      contentInput.value = '';
+                      toast.success('Note added to draft ✓');
+                    }}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition-all shadow-md"
+                  >
+                    Add Note to Lesson
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes List */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Lesson Notes ({formData.notes.length})</label>
+                <div className="space-y-2.5">
+                  {formData.notes.map((note, idx) => (
+                    <div key={idx} className="flex justify-between items-start p-4 bg-slate-50 rounded-2xl">
+                      <div className="min-w-0">
+                        <h5 className="font-bold text-slate-800 text-sm">{note.title}</h5>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{note.content}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, notes: formData.notes.filter((_, i) => i !== idx) })}
+                        className="text-slate-400 hover:text-red-500 transition-colors ml-3 p-1 shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {formData.notes.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-6 bg-slate-50 rounded-2xl">No notes added to this lesson yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: Resources */}
+          {activeTab === 'Resources' && (
+            <div className="space-y-6">
+              {/* Add Resource Form */}
+              <div className="p-5 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-4">
+                <h4 className="text-xs font-black text-purple-700 uppercase tracking-widest">Attach Resource File / Link</h4>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      id="resource-title-input"
+                      placeholder="Resource Title (e.g. React Cheatsheet)"
+                      className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-sm text-slate-900"
+                    />
+                    <select
+                      id="resource-type-input"
+                      defaultValue="link"
+                      className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-sm text-slate-700"
+                      onChange={(e) => {
+                        const isFile = ['pdf', 'zip', 'image'].includes(e.target.value);
+                        document.getElementById('file-upload-block').style.display = isFile ? 'block' : 'none';
+                        document.getElementById('url-input-block').style.display = isFile ? 'none' : 'block';
+                      }}
+                    >
+                      <option value="link">Documentation Link</option>
+                      <option value="pdf">PDF Document</option>
+                      <option value="zip">ZIP Archive</option>
+                      <option value="image">Image Asset</option>
+                      <option value="video">Additional Video</option>
+                    </select>
+                  </div>
+
+                  {/* File Upload Block */}
+                  <div id="file-upload-block" style={{ display: 'none' }} className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Upload File</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        id="resource-file-input"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const nameSpan = document.getElementById('selected-filename');
+                          if (nameSpan) nameSpan.innerText = file.name;
+                          const upToast = toast.loading('Uploading file to Cloudinary...');
+                          try {
+                            const fileData = new FormData();
+                            fileData.append('file', file);
+                            fileData.append('folder', `zinda-learn/courses/resources/${courseId}`);
+                            const res = await uploadFile(fileData);
+                            if (res?.success && res?.url) {
+                              document.getElementById('resource-url-input').value = res.url;
+                              toast.success('File uploaded successfully! ✓', { id: upToast });
+                            } else {
+                              throw new Error('Upload response invalid');
+                            }
+                          } catch (err) {
+                            toast.error('File upload failed. Please try again.', { id: upToast });
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('resource-file-input').click()}
+                        className="px-5 py-3 bg-white border border-dashed border-purple-300 text-purple-700 font-bold rounded-xl text-sm hover:bg-purple-50 transition-all flex items-center gap-2"
+                      >
+                        <Paperclip className="w-4 h-4" /> Choose File
+                      </button>
+                      <span className="text-xs text-slate-400 truncate max-w-[200px]" id="selected-filename"></span>
+                    </div>
+                  </div>
+
+                  {/* URL Block */}
+                  <div id="url-input-block" className="space-y-2">
+                    <input
+                      type="text"
+                      id="resource-url-input"
+                      placeholder="Resource URL (e.g. https://github.com/...)"
+                      className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-medium text-sm text-slate-900"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const titleInput = document.getElementById('resource-title-input');
+                      const typeInput = document.getElementById('resource-type-input');
+                      const urlInput = document.getElementById('resource-url-input');
+                      const title = titleInput.value.trim();
+                      const type = typeInput.value;
+                      const url = urlInput.value.trim();
+                      if (!title || !url) return toast.error('Resource Title and URL are required');
+                      setFormData({ ...formData, resources: [...formData.resources, { title, type, url }] });
+                      titleInput.value = '';
+                      urlInput.value = '';
+                      const filename = document.getElementById('selected-filename');
+                      if (filename) filename.innerText = '';
+                      toast.success('Resource attached ✓');
+                    }}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition-all"
+                  >
+                    Attach to Lesson
+                  </button>
+                </div>
+              </div>
+
+              {/* Resources List */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resources ({formData.resources.length})</label>
+                <div className="space-y-2">
+                  {formData.resources.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div className="flex items-center gap-3 truncate">
+                        <span className="text-slate-400 capitalize bg-white p-2 rounded-lg border border-slate-100 font-black text-[10px] select-none shrink-0">{item.type}</span>
+                        <a href={item.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-purple-700 hover:underline truncate">{item.title}</a>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, resources: formData.resources.filter((_, i) => i !== idx) })}
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {formData.resources.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-6 bg-slate-50 rounded-2xl">No files or resources attached yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MCQ Tests */}
+          {activeTab === 'MCQ Tests' && (
+            <div className="space-y-6">
+              {/* Add MCQ Question Form */}
+              <div className="p-5 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-4">
+                <h4 className="text-xs font-black text-purple-700 uppercase tracking-widest">Add MCQ Question</h4>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Question Text</label>
+                    <input
+                      type="text"
+                      id="mcq-question"
+                      placeholder="e.g. Which hook is used to handle side effects in React?"
+                      className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-purple-500/20 transition-all font-semibold text-sm text-slate-900"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Option A</label>
+                      <input type="text" id="mcq-optA" placeholder="Option A" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-900" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Option B</label>
+                      <input type="text" id="mcq-optB" placeholder="Option B" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-900" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Option C</label>
+                      <input type="text" id="mcq-optC" placeholder="Option C" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-900" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Option D</label>
+                      <input type="text" id="mcq-optD" placeholder="Option D" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-900" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Correct Option</label>
+                      <select id="mcq-correct" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-700">
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Explanation</label>
+                      <input type="text" id="mcq-explain" placeholder="Why is this answer correct?" className="w-full px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-sm font-semibold text-slate-900" />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const q = document.getElementById('mcq-question').value.trim();
+                      const oA = document.getElementById('mcq-optA').value.trim();
+                      const oB = document.getElementById('mcq-optB').value.trim();
+                      const oC = document.getElementById('mcq-optC').value.trim();
+                      const oD = document.getElementById('mcq-optD').value.trim();
+                      const correct = document.getElementById('mcq-correct').value;
+                      const exp = document.getElementById('mcq-explain').value.trim();
+
+                      if (!q || !oA || !oB || !oC || !oD) return toast.error('Question text and all 4 options are required');
+                      
+                      let correctText = '';
+                      if (correct === 'A') correctText = oA;
+                      else if (correct === 'B') correctText = oB;
+                      else if (correct === 'C') correctText = oC;
+                      else correctText = oD;
+
+                      const newQuestion = {
+                        question: q,
+                        options: [oA, oB, oC, oD],
+                        correctAnswer: correctText,
+                        explanation: exp
+                      };
+
+                      setFormData({ ...formData, tests: [...formData.tests, newQuestion] });
+                      
+                      document.getElementById('mcq-question').value = '';
+                      document.getElementById('mcq-optA').value = '';
+                      document.getElementById('mcq-optB').value = '';
+                      document.getElementById('mcq-optC').value = '';
+                      document.getElementById('mcq-optD').value = '';
+                      document.getElementById('mcq-explain').value = '';
+                      
+                      toast.success('Question added to test ✓');
+                    }}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition-all shadow-md"
+                  >
+                    Add Question
+                  </button>
+                </div>
+              </div>
+
+              {/* MCQ List */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Test Questions ({formData.tests.length})</label>
+                <div className="space-y-3">
+                  {formData.tests.map((item, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50 rounded-2xl space-y-2 border border-slate-100">
+                      <div className="flex justify-between items-start">
+                        <h5 className="font-bold text-slate-800 text-sm">Q{idx + 1}: {item.question}</h5>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, tests: formData.tests.filter((_, i) => i !== idx) })}
+                          className="text-slate-400 hover:text-red-500 transition-colors ml-3 p-1 shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 pl-4 text-xs font-semibold text-slate-500">
+                        {item.options.map((opt, oIdx) => (
+                          <div key={oIdx} className={opt === item.correctAnswer ? "text-emerald-600 font-bold" : ""}>
+                            {String.fromCharCode(65 + oIdx)}. {opt}
+                          </div>
+                        ))}
+                      </div>
+                      {item.explanation && (
+                        <p className="text-[11px] text-slate-400 italic bg-white p-2 rounded-lg border border-slate-50">Explanation: {item.explanation}</p>
+                      )}
+                    </div>
+                  ))}
+                  {formData.tests.length === 0 && (
+                    <p className="text-xs text-slate-400 italic text-center py-6 bg-slate-50 rounded-2xl">No test questions added to this lesson yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: Student Q&A */}
+          {activeTab === 'Student Q&A' && (
+            <div className="space-y-5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Lesson Q&A Discussion ({qaList.length})</label>
+              <div className="space-y-4">
+                {qaList.map((qa) => (
+                  <div key={qa._id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold font-mono">
+                          {qa.askedBy?.name?.charAt(0) || 'S'}
+                        </div>
+                        <div>
+                          <h5 className="text-xs font-black text-slate-800 leading-none">{qa.askedBy?.name || 'Student'}</h5>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase">{new Date(qa.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700 pl-1">{qa.question}</p>
+                    
+                    {qa.answer ? (
+                      <div className="pl-4 border-l-2 border-purple-400 py-1 space-y-1">
+                        <h6 className="text-[10px] font-black text-purple-700 uppercase tracking-widest">Your Answer:</h6>
+                        <p className="text-xs font-semibold text-slate-600 bg-white p-3 rounded-xl border border-slate-50">{qa.answer}</p>
+                      </div>
+                    ) : (
+                      <div className="pl-4 py-1">
+                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Unanswered</span>
+                      </div>
+                    )}
+
+                    {/* Reply Form */}
+                    <div className="space-y-2 pt-2">
+                      <textarea
+                        rows="2"
+                        value={replyText[qa._id] || ''}
+                        onChange={(e) => setReplyText({ ...replyText, [qa._id]: e.target.value })}
+                        placeholder="Write an answer or update your existing answer..."
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium resize-none focus:outline-none focus:border-purple-400 text-slate-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const answer = replyText[qa._id]?.trim();
+                          if (!answer) return toast.error('Answer text is required');
+                          const replyToast = toast.loading('Saving answer...');
+                          try {
+                            const res = await replyOrEditQA(courseId, sectionId, lesson._id, qa._id, { answer });
+                            if (res?.success) {
+                              toast.success('Answer posted successfully! ✓', { id: replyToast });
+                              
+                              let updatedLesson = null;
+                              res.course.modules.forEach(mod => {
+                                if (mod._id === sectionId) {
+                                  const l = mod.lessons.find(ls => ls._id === lesson._id);
+                                  if (l) updatedLesson = l;
+                                }
+                              });
+                              if (updatedLesson) {
+                                setQaList(updatedLesson.qa || []);
+                              }
+                              onCourseUpdate(res.course);
+                              setReplyText({ ...replyText, [qa._id]: '' });
+                            } else {
+                              throw new Error('API failure');
+                            }
+                          } catch (err) {
+                            toast.error('Failed to post reply.', { id: replyToast });
+                          }
+                        }}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                      >
+                        <Send className="w-3.5 h-3.5" /> Submit Answer
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {qaList.length === 0 && (
+                  <p className="text-xs text-slate-400 italic text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-100">No student questions have been asked for this lesson yet.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Buttons Footer */}
+          <div className="flex items-center gap-3 pt-4 border-t border-slate-50 shrink-0">
+            <button type="button" onClick={onClose} className="flex-1 py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-all">
               Cancel
             </button>
-            <button type="submit" className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all">
-              Save Changes
-            </button>
+            {activeTab !== 'Student Q&A' && (
+              <button type="submit" className="flex-1 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-purple-200 transition-all">
+                Save Changes
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -448,6 +1109,9 @@ const ContentTab = ({ modules = [], courseId, onCourseUpdate }) => {
       {editingLesson && (
         <EditLessonModal
           lesson={editingLesson.lesson}
+          courseId={courseId}
+          sectionId={modules[selectedModule]._id}
+          onCourseUpdate={onCourseUpdate}
           onClose={() => setEditingLesson(null)}
           onSave={handleUpdateLesson}
         />

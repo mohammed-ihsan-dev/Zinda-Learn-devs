@@ -31,10 +31,10 @@ const Students = () => {
 
   const totalStudentsCount = courses.reduce((a, c) => a + (c.totalStudents || 0), 0);
 
-  const filteredStudents = students.filter(student =>
-    student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.courseTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = students.filter(item =>
+    item.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.course?.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -97,65 +97,78 @@ const Students = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredStudents.map((student, idx) => (
-                  <motion.tr
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    key={idx}
-                    className="hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={student.avatar || `https://ui-avatars.com/api/?name=${student.name}&background=6366f1&color=fff`}
-                          className="w-10 h-10 rounded-xl object-cover shadow-sm"
-                          alt=""
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-slate-900 leading-none mb-1">{student.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold tracking-tight flex items-center gap-1">
-                            <Mail size={10} /> {student.email}
-                          </p>
+                {filteredStudents.map((enrollment, idx) => {
+                  const status = enrollment.isCompleted
+                    ? "Completed"
+                    : enrollment.progress > 0
+                    ? "In Progress"
+                    : "Not Started";
+
+                  return (
+                    <motion.tr
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      key={idx}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={enrollment.student?.avatar || `https://ui-avatars.com/api/?name=${enrollment.student?.name || 'Student'}&background=6366f1&color=fff`}
+                            className="w-10 h-10 rounded-xl object-cover shadow-sm"
+                            alt=""
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 leading-none mb-1">{enrollment.student?.name || "Unknown Student"}</p>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-tight flex items-center gap-1">
+                              <Mail size={10} /> {enrollment.student?.email}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <p className="text-xs font-bold text-slate-600 line-clamp-1">{student.courseTitle}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="w-32">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="text-[10px] font-black text-purple-600">{student.progress || 0}%</span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-xs font-bold text-slate-600 line-clamp-1">{enrollment.course?.title || "Unknown Course"}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="w-32">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[10px] font-black text-purple-600">{enrollment.progress}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
+                              style={{ width: `${enrollment.progress}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                            style={{ width: `${student.progress || 0}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      {student.isCompleted ? (
-                        <div className="flex items-center gap-1.5 text-emerald-600">
-                          <CheckCircle2 size={14} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-amber-500">
-                          <Clock size={14} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">In Progress</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <button className="p-2.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all">
-                        <MoreVertical size={16} />
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
+                      </td>
+                      <td className="px-8 py-5">
+                        {status === "Completed" ? (
+                          <div className="flex items-center gap-1.5 text-emerald-600">
+                            <CheckCircle2 size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
+                          </div>
+                        ) : status === "In Progress" ? (
+                          <div className="flex items-center gap-1.5 text-amber-500">
+                            <Clock size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">In Progress</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <Clock size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Not Started</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button className="p-2.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all">
+                          <MoreVertical size={16} />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (

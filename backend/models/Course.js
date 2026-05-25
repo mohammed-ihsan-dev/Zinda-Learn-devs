@@ -34,7 +34,73 @@ const lessonSchema = new mongoose.Schema({
   order: {
     type: Number,
     default: 0
-  }
+  },
+  overview: {
+    type: String,
+    default: ''
+  },
+  notes: [
+    {
+      title: { type: String, required: true },
+      content: { type: String, required: true }
+    }
+  ],
+  resources: [
+    {
+      title: { type: String, required: true },
+      type: {
+        type: String,
+        enum: ['pdf', 'zip', 'link', 'image', 'video'],
+        default: 'link'
+      },
+      url: { type: String, required: true }
+    }
+  ],
+  keyTakeaways: [String],
+  requiredTools: [String],
+  qa: [
+    {
+      question: { type: String, required: true },
+      answer: { type: String, default: '' },
+      askedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  tests: [
+    {
+      question: { type: String, required: true },
+      options: [String],
+      correctAnswer: { type: String, required: true },
+      explanation: { type: String, default: '' }
+    }
+  ],
+  reviews: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      rating: { type: Number, required: true, min: 1, max: 5 },
+      review: { type: String, required: [true, 'Please provide a review'], trim: true },
+      comment: { type: String },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  difficultyLevel: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'All Levels'],
+    default: 'All Levels'
+  },
+  estimatedDuration: {
+    type: Number,
+    default: 0
+  },
+  tags: [String]
 });
 
 /* =========================
@@ -248,12 +314,14 @@ const courseSchema = new mongoose.Schema({
 ========================= */
 
 courseSchema.virtual('totalLessons').get(function () {
-  return this.modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
+  if (!this.modules) return 0;
+  return this.modules.reduce((acc, mod) => acc + (mod.lessons?.length || 0), 0);
 });
 
 courseSchema.virtual('totalDuration').get(function () {
+  if (!this.modules) return 0;
   return this.modules.reduce((acc, mod) => {
-    return acc + mod.lessons.reduce((a, l) => a + l.duration, 0);
+    return acc + (mod.lessons?.reduce((a, l) => a + (l.duration || 0), 0) || 0);
   }, 0);
 });
 
@@ -270,6 +338,25 @@ courseSchema.index({ price: 1 });
 courseSchema.index({ createdAt: -1 });
 courseSchema.index({ status: 1, isApproved: 1 });
 courseSchema.index({ title: 1, instructor: 1 }, { unique: true });
+
+// Auto map legacy comments to reviews for lessons inside modules on document load
+courseSchema.post('init', function(doc) {
+  if (doc.modules) {
+    doc.modules.forEach(mod => {
+      if (mod.lessons) {
+        mod.lessons.forEach(les => {
+          if (les.reviews) {
+            les.reviews.forEach(rev => {
+              if (!rev.review && rev.comment) {
+                rev.review = rev.comment;
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+});
 
 /* =========================
    MIDDLEWARE

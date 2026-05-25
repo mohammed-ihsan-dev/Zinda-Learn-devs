@@ -17,6 +17,7 @@ const router = express.Router();
 // Specific routes first
 router.get('/instructor/all', protect, authorize('instructor'), getInstructorLiveClasses);
 router.get('/student/all', protect, authorize('student'), getStudentLiveClasses);
+router.get('/student', protect, getStudentLiveClasses);
 
 // Parameterized routes last
 router.get('/:id', protect, getLiveClassById);
@@ -32,3 +33,4 @@ router.patch('/:id/end', protect, authorize('instructor'), endLiveClass);
 router.post('/:id/join', protect, authorize('student'), joinLiveClass);
 
 export default router;
+

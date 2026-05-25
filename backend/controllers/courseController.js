@@ -1,5 +1,6 @@
 import Course from "../models/Course.js";
 import { courseService } from "../services/course.service.js";
+import { dispatchNotification } from "../services/notificationDispatcher.js";
 
 // Get all courses 
 export const getCourses = async (req, res) => {
@@ -334,7 +335,16 @@ const verifyCourseOwner = async (courseId, user) => {
 
 // Return full course with virtuals and populated instructor
 const returnFullCourse = async (courseId) => {
-  const course = await Course.findById(courseId).populate("instructor", "name avatar bio");
+  const course = await Course.findById(courseId)
+    .populate("instructor", "name avatar bio")
+    .populate({
+      path: "modules.lessons.qa.askedBy",
+      select: "name avatar profilePic"
+    })
+    .populate({
+      path: "modules.lessons.reviews.user",
+      select: "name avatar profilePic"
+    });
   return course.toObject({ virtuals: true });
 };
 
@@ -442,7 +452,10 @@ export const addLesson = async (req, res) => {
     const section = course.modules.id(req.params.sectionId);
     if (!section) return res.status(404).json({ success: false, message: "Section not found" });
 
-    const { title, description, videoUrl, duration, isFree, source } = req.body;
+    const { 
+      title, description, videoUrl, duration, isFree, source,
+      overview, notes, resources, keyTakeaways, requiredTools, tests, difficultyLevel, estimatedDuration, tags
+    } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: "Lesson title is required" });
     }
@@ -454,7 +467,16 @@ export const addLesson = async (req, res) => {
       source: source || '',
       duration: duration || 0,
       isFree: isFree || false,
-      order: section.lessons.length
+      order: section.lessons.length,
+      overview: overview || '',
+      notes: notes || [],
+      resources: resources || [],
+      keyTakeaways: keyTakeaways || [],
+      requiredTools: requiredTools || [],
+      tests: tests || [],
+      difficultyLevel: difficultyLevel || 'All Levels',
+      estimatedDuration: estimatedDuration || 0,
+      tags: tags || []
     });
 
     await course.save();
@@ -476,13 +498,26 @@ export const updateLesson = async (req, res) => {
     const lesson = section.lessons.id(req.params.lessonId);
     if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found" });
 
-    const { title, description, videoUrl, duration, isFree, source } = req.body;
+    const { 
+      title, description, videoUrl, duration, isFree, source,
+      overview, notes, resources, keyTakeaways, requiredTools, tests, difficultyLevel, estimatedDuration, tags
+    } = req.body;
     if (title !== undefined) lesson.title = title.trim();
-    if (description !== undefined) lesson.description = description.trim();
+    if (description !== undefined) lesson.description = description?.trim() || '';
     if (videoUrl !== undefined) lesson.videoUrl = videoUrl;
     if (source !== undefined) lesson.source = source;
     if (duration !== undefined) lesson.duration = duration;
     if (isFree !== undefined) lesson.isFree = isFree;
+
+    if (overview !== undefined) lesson.overview = overview;
+    if (notes !== undefined) lesson.notes = notes;
+    if (resources !== undefined) lesson.resources = resources;
+    if (keyTakeaways !== undefined) lesson.keyTakeaways = keyTakeaways;
+    if (requiredTools !== undefined) lesson.requiredTools = requiredTools;
+    if (tests !== undefined) lesson.tests = tests;
+    if (difficultyLevel !== undefined) lesson.difficultyLevel = difficultyLevel;
+    if (estimatedDuration !== undefined) lesson.estimatedDuration = estimatedDuration;
+    if (tags !== undefined) lesson.tags = tags;
 
     await course.save();
     const fullCourse = await returnFullCourse(course._id);
@@ -511,5 +546,160 @@ export const deleteLesson = async (req, res) => {
     res.status(200).json({ success: true, message: "Lesson deleted", course: fullCourse });
   } catch (error) {
     res.status(error.status || 500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /courses/:id/sections/:sectionId/lessons/:lessonId/qa — Ask a question under a lesson
+export const addLessonQA = async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || !question.trim()) {
+      return res.status(400).json({ success: false, message: "Question content is required" });
+    }
+
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    // Validate enrollment or permission
+    const isEnrolled = course.students.includes(req.user.id) || course.instructor.toString() === req.user.id || req.user.role === 'admin';
+    if (!isEnrolled) {
+      return res.status(403).json({ success: false, message: "You must be enrolled to ask questions" });
+    }
+
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const lesson = section.lessons.id(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found" });
+
+    lesson.qa.push({
+      question: question.trim(),
+      askedBy: req.user.id,
+      createdAt: new Date()
+    });
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    // Notify instructor
+    if (course.instructor && course.instructor.toString() !== req.user.id) {
+      const studentName = req.user.name || 'A student';
+      await dispatchNotification({
+        userId: course.instructor,
+        type: 'qaQuestions',
+        title: 'New Student Question ❓',
+        message: `${studentName} asked a question under lesson "${lesson.title}" of "${course.title}": "${question.trim()}"`,
+        link: `/instructor/courses`
+      });
+    }
+
+    res.status(201).json({ success: true, message: "Question posted", course: fullCourse });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /courses/:id/sections/:sectionId/lessons/:lessonId/qa/:qaId — Answer or edit QA
+export const replyOrEditQA = async (req, res) => {
+  try {
+    const { question, answer } = req.body;
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const lesson = section.lessons.id(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found" });
+
+    const qaItem = lesson.qa.id(req.params.qaId);
+    if (!qaItem) return res.status(404).json({ success: false, message: "Question not found" });
+
+    const isInstructor = course.instructor.toString() === req.user.id || req.user.role === 'admin';
+    const isOwner = qaItem.askedBy.toString() === req.user.id;
+
+    if (!isInstructor && !isOwner) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (question !== undefined && isOwner) {
+      qaItem.question = question.trim();
+    }
+    if (answer !== undefined && isInstructor) {
+      qaItem.answer = answer.trim();
+    }
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    res.status(200).json({ success: true, message: "QA updated", course: fullCourse });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /courses/:id/sections/:sectionId/lessons/:lessonId/reviews — Submit a lesson review
+export const addLessonReview = async (req, res) => {
+  try {
+    const { rating } = req.body;
+    const reviewText = (req.body.review || req.body.comment || '').trim();
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
+    }
+    if (!reviewText) {
+      return res.status(400).json({ success: false, message: "Review content is required and cannot be empty" });
+    }
+
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    // Validate enrollment
+    const isEnrolled = course.students.includes(req.user.id) || course.instructor.toString() === req.user.id || req.user.role === 'admin';
+    if (!isEnrolled) {
+      return res.status(403).json({ success: false, message: "You must be enrolled to rate this lesson" });
+    }
+
+    const section = course.modules.id(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false, message: "Section not found" });
+
+    const lesson = section.lessons.id(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found" });
+
+    // Prevent duplicate reviews on the same lesson by the same user
+    const existing = lesson.reviews.find(r => r.user.toString() === req.user.id);
+    if (existing) {
+      existing.rating = rating;
+      existing.review = reviewText;
+      existing.comment = reviewText;
+      existing.createdAt = new Date();
+    } else {
+      lesson.reviews.push({
+        user: req.user.id,
+        rating,
+        review: reviewText,
+        comment: reviewText,
+        createdAt: new Date()
+      });
+    }
+
+    await course.save();
+    const fullCourse = await returnFullCourse(course._id);
+
+    // Notify instructor
+    if (course.instructor) {
+      const studentName = req.user.name || 'A student';
+      await dispatchNotification({
+        userId: course.instructor,
+        type: 'reviews',
+        title: 'New Lesson Review! ⭐',
+        message: `${studentName} left a ${rating}-star review on lesson "${lesson.title}" of "${course.title}".`,
+        link: `/instructor/reviews`
+      });
+    }
+
+    res.status(201).json({ success: true, message: "Review saved", course: fullCourse });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

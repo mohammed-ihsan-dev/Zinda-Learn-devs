@@ -1,5 +1,6 @@
 import { adminService } from "../services/admin.service.js";
 import mongoose from "mongoose";
+import { dispatchNotification } from "../services/notificationDispatcher.js";
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -328,21 +329,20 @@ export const updatePayoutStatus = async (req, res) => {
     if (payout && payout.instructor) {
       const instId = payout.instructor._id || payout.instructor;
       try {
-        const { notificationService } = await import('../services/notification.service.js');
         if (req.body.status === 'paid' || req.body.status === 'approved') {
-          await notificationService.createNotification({
+          await dispatchNotification({
             userId: instId,
-            title: "Payout Approved",
+            type: "payouts",
+            title: "Payout Approved 💳",
             message: `Your payout request of ₹${payout.amount} has been approved.`,
-            type: "payout_approved",
             link: "/instructor/earnings"
           });
         } else if (req.body.status === 'rejected') {
-          await notificationService.createNotification({
+          await dispatchNotification({
             userId: instId,
-            title: "Payout Rejected",
+            type: "payouts",
+            title: "Payout Rejected ❌",
             message: `Your payout request of ₹${payout.amount} was rejected. Comment: ${req.body.adminComment || 'None'}.`,
-            type: "payout_rejected",
             link: "/instructor/earnings"
           });
         }

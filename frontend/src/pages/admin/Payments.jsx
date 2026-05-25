@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, Download, MoreVertical, CreditCard, Wallet, TrendingUp, Loader2, ArrowUpRight, CheckCircle2, XCircle, Banknote } from 'lucide-react';
+import { Calendar, ChevronDown, Download, MoreVertical, CreditCard, Wallet, TrendingUp, Loader2, ArrowUpRight, CheckCircle2, XCircle, Banknote, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { getPayments, getPayouts, updatePayoutStatus, getDashboardStats } from '../../services/adminService';
 import PageHeader from '../../components/admin/shared/PageHeader';
 import StatusBadge from '../../components/admin/shared/StatusBadge';
 import { toast } from 'react-hot-toast';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const Payments = () => {
   const [activeTab, setActiveTab] = useState('enrollments');
@@ -46,9 +47,30 @@ const Payments = () => {
   };
 
   const statCards = [
-    { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), icon: Wallet, color: 'text-indigo-400 bg-indigo-500/10', change: '+12.4%' },
-    { label: 'Platform Margin (15%)', value: formatCurrency((stats?.totalRevenue || 0) * 0.15), icon: CreditCard, color: 'text-emerald-400 bg-emerald-500/10', change: '+8.2%' },
-    { label: 'Total Enrollments', value: pagination.total.toLocaleString(), icon: TrendingUp, color: 'text-blue-400 bg-blue-500/10', change: '+18.5%' },
+    { 
+      label: 'Total Revenue', 
+      value: formatCurrency(stats?.totalRevenue || 0), 
+      icon: Wallet, 
+      color: 'text-indigo-400 bg-indigo-500/10', 
+      change: '+14.2%',
+      desc: 'All-time platform earnings'
+    },
+    { 
+      label: 'Total Enrollments', 
+      value: (stats?.totalEnrollments || 0).toLocaleString(), 
+      icon: TrendingUp, 
+      color: 'text-blue-400 bg-blue-500/10', 
+      change: '+18.5%',
+      desc: 'Student courses enrolled count'
+    },
+    { 
+      label: 'Total Transactions', 
+      value: (stats?.totalTransactions || 0).toLocaleString(), 
+      icon: CheckCircle2, 
+      color: 'text-emerald-400 bg-emerald-500/10', 
+      change: '+9.8%',
+      desc: 'Successful billing entries'
+    },
   ];
 
   return (
@@ -66,7 +88,7 @@ const Payments = () => {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {statCards.map((s, i) => (
-          <div key={i} className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 hover:border-slate-600 transition-colors">
+          <div key={i} className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 hover:border-slate-600 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
                 <s.icon className="w-4 h-4" />
@@ -78,8 +100,72 @@ const Payments = () => {
             </div>
             <p className="text-xs font-medium text-slate-400 mb-1">{s.label}</p>
             <p className="text-2xl font-semibold text-slate-100 tracking-tight">{s.value}</p>
+            <p className="text-[10px] text-slate-500 mt-2 font-medium">{s.desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* Monthly Revenue Chart */}
+      <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-5 hover:border-slate-600 transition-colors space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-200">Revenue & Trends</h3>
+            <p className="text-xs text-slate-500">Track dynamic monthly growth and platform transactions</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+              Monthly Revenue
+            </span>
+          </div>
+        </div>
+        <div className="h-72 w-full">
+          {stats?.monthlyRevenue && stats.monthlyRevenue.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.monthlyRevenue} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#64748b" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  stroke="#64748b" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickFormatter={(val) => `₹${val.toLocaleString()}`}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px' }}
+                  labelStyle={{ color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }}
+                  itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
+                  formatter={(value) => [formatCurrency(value), 'Revenue']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#6366f1" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#colorRevenue)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center border border-dashed border-slate-700/60 rounded-xl bg-slate-800/10">
+              <p className="text-xs text-slate-500">Insufficient monthly financial data to plot chart</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tab Switcher */}
@@ -105,7 +191,7 @@ const Payments = () => {
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-slate-700/60 bg-slate-800/80">
-                  {['Transaction ID', 'Student', 'Course', 'Amount', 'Date', 'Status', ''].map(h => (
+                  {['Transaction ID', 'Student', 'Course', 'Amount', 'Payment Method', 'Date', 'Status', ''].map(h => (
                     <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -114,14 +200,14 @@ const Payments = () => {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <td key={j} className="px-5 py-4"><div className="h-4 bg-slate-800 rounded animate-pulse" /></td>
                       ))}
                     </tr>
                   ))
                 ) : transactions.length > 0 ? transactions.map((tx) => (
                   <tr key={tx._id} className="hover:bg-slate-800/60 transition-colors group">
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500">#{tx.razorpayOrderId?.split('_')[1] || tx._id.slice(-8).toUpperCase()}</td>
+                    <td className="px-5 py-4 font-mono text-xs text-slate-500">#{tx.razorpayOrderId?.split('_')[1] || tx.paymentId?.slice(-8).toUpperCase() || tx._id.slice(-8).toUpperCase()}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -137,6 +223,11 @@ const Payments = () => {
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-400 max-w-[200px] truncate">{tx.course?.title || 'Unknown'}</td>
                     <td className="px-5 py-4 text-sm font-semibold text-slate-200">{formatCurrency(tx.amountPaid)}</td>
+                    <td className="px-5 py-4 text-sm text-slate-400">
+                      <span className="text-xs font-medium text-slate-300 bg-slate-700/40 border border-slate-700/50 px-2 py-0.5 rounded capitalize">
+                        {tx.paymentStatus === 'free' ? 'Free Access' : (tx.paymentId ? 'Razorpay (Online)' : 'Online Card/UPI')}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 text-sm text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
                     <td className="px-5 py-4">
                       <StatusBadge status={tx.paymentStatus} />
@@ -149,7 +240,7 @@ const Payments = () => {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center text-sm text-slate-500">No transactions found</td>
+                    <td colSpan={8} className="py-16 text-center text-sm text-slate-500 animate-fade-in">No transactions found</td>
                   </tr>
                 )}
               </tbody>
