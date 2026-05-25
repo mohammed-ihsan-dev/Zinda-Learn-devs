@@ -1,12 +1,10 @@
 import './config/env.js';
-
 import express from 'express';
 import cors from 'cors';
-
 import morgan from 'morgan';
-import { createServer } from 'http';
-import connectDB from './config/db.js';
-import { initSocket } from './sockets/index.js';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -26,41 +24,30 @@ import publicRoutes from './routes/public.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
-import { startLiveClassScheduler } from './services/liveClassScheduler.js';
-
-// ─── Global error handlers — prevent PM2/Node process from dying on unhandled errors ──
-process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught Exception:', err.message);
-  console.error(err.stack);
-  // Give in-flight requests a moment to complete, then exit so PM2 can restart cleanly
-  setTimeout(() => process.exit(1), 500);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[FATAL] Unhandled Promise Rejection at:', promise);
-  console.error('Reason:', reason);
-  // Do NOT exit on unhandledRejection in production — log and continue
-  // PM2 will restart only if the process actually crashes
-});
-
-// Connect to database
-connectDB();
 
 const app = express();
+
+// Trust reverse proxy for accurate IP logging and rate limiting
 app.set('trust proxy', 1);
-const httpServer = createServer(app);
 
-// Initialize Socket.io
-initSocket(httpServer);
+// Security Middleware
+app.use(helmet());
+app.use(compression());
 
-// ─── Middleware ────────────────────────────────────────────────────────────────
+// Global Rate Limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api/', limiter);
 
+// CORS
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   next();
 });
 
-// CORS — allow Vercel frontend + local dev origins
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = [
@@ -74,7 +61,6 @@ app.use(cors({
       ] : [])
     ].filter(Boolean);
 
-    // Allow requests with no origin (mobile apps, curl, Postman, same-origin SSR)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -93,11 +79,10 @@ app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
-  // Compact production log: IP, method, URL, status, response time
   app.use(morgan('combined'));
 }
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
@@ -125,7 +110,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling middleware (must be after routes)
+// Error handling middleware
 app.use(errorMiddleware);
 
 // 404 handler
@@ -136,11 +121,4 @@ app.use((req, res) => {
   });
 });
 
-// ─── Server Start ─────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5005;
-
-// Bind to '0.0.0.0' so EC2 accepts external connections (not just 127.0.0.1)
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(` Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-  startLiveClassScheduler();
-});
+export default app;

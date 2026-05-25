@@ -7,11 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-import User from './models/User.js';
-import Course from './models/Course.js';
-import Enrollment from './models/Enrollment.js';
-import Payout from './models/Payout.js';
-import { adminService } from './services/admin.service.js';
+import User from '../models/User.js';
+import Course from '../models/Course.js';
+import Enrollment from '../models/Enrollment.js';
+import Payout from '../models/Payout.js';
+import { adminService } from '../services/admin.service.js';
 
 async function run() {
   try {

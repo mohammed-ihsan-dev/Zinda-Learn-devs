@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Enrollment from '../backend/models/Enrollment.js';
-import Course from '../backend/models/Course.js';
-import User from '../backend/models/User.js';
+import Enrollment from '../../backend/models/Enrollment.js';
+import Course from '../../backend/models/Course.js';
+import User from '../../backend/models/User.js';
 
 dotenv.config({ path: '../backend/.env' });
 

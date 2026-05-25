@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { seedUsers } from './user.seed.js';
-import { seedCourses } from './course.seed.js';
+import { seedUsers } from '../user.seed.js';
+import { seedCourses } from '../course.seed.js';
 
 dotenv.config();
 

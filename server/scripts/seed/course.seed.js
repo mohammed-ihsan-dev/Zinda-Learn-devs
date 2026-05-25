@@ -1,4 +1,4 @@
-import Course from '../models/Course.js';
+import Course from '../../models/Course.js';
 
 export const seedCourses = async (instructorId) => {
   await Course.deleteMany();

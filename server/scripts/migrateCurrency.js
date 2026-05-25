@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Course from '../models/Course.js';
-import Enrollment from '../models/Enrollment.js';
+import Course from '../../models/Course.js';
+import Enrollment from '../../models/Enrollment.js';
 
 dotenv.config();
 
