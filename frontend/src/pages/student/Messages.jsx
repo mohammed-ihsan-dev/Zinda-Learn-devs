@@ -67,27 +67,27 @@ const Messages = () => {
       socketService.connect(token);
     }
 
-    socketService.onNewMessage((msg) => {
+    const handleNewMessage = (msg) => {
       setMessages(prev => {
         if (prev.some(m => m._id === msg._id)) return prev;
         return [...prev, msg];
       });
       fetchConversations();
-    });
+    };
 
-    socketService.onUserTyping(({ userName, conversationId }) => {
+    const handleUserTyping = ({ userName, conversationId }) => {
       setTypingUsers(prev => ({ ...prev, [conversationId]: userName }));
-    });
+    };
 
-    socketService.onUserStoppedTyping(({ conversationId }) => {
+    const handleUserStoppedTyping = ({ conversationId }) => {
       setTypingUsers(prev => {
         const newState = { ...prev };
         delete newState[conversationId];
         return newState;
       });
-    });
+    };
 
-    socketService.onMessageSeen(({ conversationId, userId }) => {
+    const handleMessageSeen = ({ conversationId, userId }) => {
       // If we are looking at this conversation, update the messages
       setMessages(prev => prev.map(msg => {
         const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
@@ -99,13 +99,18 @@ const Messages = () => {
         }
         return msg;
       }));
-    });
+    };
+
+    socketService.onNewMessage(handleNewMessage);
+    socketService.onUserTyping(handleUserTyping);
+    socketService.onUserStoppedTyping(handleUserStoppedTyping);
+    socketService.onMessageSeen(handleMessageSeen);
 
     return () => {
-      socketService.offNewMessage();
-      socketService.offUserTyping();
-      socketService.offUserStoppedTyping();
-      socketService.offMessageSeen();
+      socketService.offNewMessage(handleNewMessage);
+      socketService.offUserTyping(handleUserTyping);
+      socketService.offUserStoppedTyping(handleUserStoppedTyping);
+      socketService.offMessageSeen(handleMessageSeen);
     };
   }, []);
 

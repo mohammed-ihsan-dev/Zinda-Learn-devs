@@ -14,15 +14,15 @@ import { useLiveClasses } from '../hooks/useLiveClasses';
 
 const StudentLiveClasses = () => {
   const { liveClasses, loading } = useLiveClasses();
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('all');
 
   const filteredClasses = liveClasses.filter(c => {
-    if (filter === 'ALL') return true;
+    if (filter === 'all') return true;
     return c.status === filter;
   });
 
-  const liveNow = liveClasses.filter(c => c.status === 'LIVE');
-  const upcoming = liveClasses.filter(c => c.status === 'UPCOMING');
+  const liveNow = liveClasses.filter(c => c.status === 'live');
+  const upcoming = liveClasses.filter(c => c.status === 'upcoming');
 
   if (loading) {
     return (
@@ -122,7 +122,7 @@ const StudentLiveClasses = () => {
           </div>
 
           <div className="flex items-center p-1.5 bg-slate-100 rounded-2xl border border-slate-200/50">
-            {['ALL', 'UPCOMING', 'ENDED'].map(f => (
+            {['all', 'upcoming', 'ended'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -149,7 +149,7 @@ const StudentLiveClasses = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredClasses.filter(c => c.status !== 'LIVE').map(c => (
+            {filteredClasses.filter(c => c.status !== 'live').map(c => (
               <StudentLiveClassCard key={c._id} liveClass={c} />
             ))}
           </div>
@@ -160,12 +160,12 @@ const StudentLiveClasses = () => {
 };
 
 const StudentLiveClassCard = ({ liveClass }) => {
-  const formattedDate = new Date(liveClass.scheduledDate).toLocaleDateString('en-US', {
+  const formattedDate = new Date(liveClass.scheduledDateStr || liveClass.startTime).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric'
   });
 
-  const isLive = liveClass.status === 'LIVE';
+  const isLive = liveClass.status === 'live';
 
   return (
     <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group flex flex-col h-full border-b-4 border-b-transparent hover:border-b-indigo-500">
@@ -205,7 +205,7 @@ const StudentLiveClassCard = ({ liveClass }) => {
           </div>
           <div className="flex items-center gap-2 text-slate-400 text-[11px] font-black uppercase tracking-wider">
             <Clock size={14} className="text-indigo-400" />
-            {liveClass.startTime}
+            {liveClass.startTimeStr}
           </div>
         </div>
 

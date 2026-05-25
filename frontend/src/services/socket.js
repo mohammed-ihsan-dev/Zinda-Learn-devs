@@ -1,16 +1,28 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
+// Use environment variable, fallback to origin in production or localhost in development
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:5005' : window.location.origin);
 
 class SocketService {
   socket = null;
 
   connect(token) {
-    if (this.socket) return;
+    if (this.socket) {
+      if (this.socket.auth.token !== token) {
+        this.socket.disconnect();
+      } else {
+        if (!this.socket.connected) {
+          this.socket.connect();
+        }
+        return;
+      }
+    }
 
     this.socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['websocket'],
+      // Allow polling first so it works behind reverse proxies (nginx, AWS ALB)
+      // Socket.IO will automatically upgrade to websocket when possible
+      transports: ['polling', 'websocket'],
     });
 
     this.socket.on('connect', () => {
@@ -108,36 +120,44 @@ class SocketService {
   }
 
   // Remove listeners to prevent memory leaks
-  offNewMessage() {
-    this.socket?.off('newMessage');
+  offNewMessage(callback) {
+    if (callback) this.socket?.off('newMessage', callback);
+    else this.socket?.off('newMessage');
   }
 
-  offUserTyping() {
-    this.socket?.off('userTyping');
+  offUserTyping(callback) {
+    if (callback) this.socket?.off('userTyping', callback);
+    else this.socket?.off('userTyping');
   }
 
-  offUserStoppedTyping() {
-    this.socket?.off('userStoppedTyping');
+  offUserStoppedTyping(callback) {
+    if (callback) this.socket?.off('userStoppedTyping', callback);
+    else this.socket?.off('userStoppedTyping');
   }
 
-  offMessageSeen() {
-    this.socket?.off('messageSeen');
+  offMessageSeen(callback) {
+    if (callback) this.socket?.off('messageSeen', callback);
+    else this.socket?.off('messageSeen');
   }
 
-  offNotification() {
-    this.socket?.off('newNotification');
+  offNotification(callback) {
+    if (callback) this.socket?.off('newNotification', callback);
+    else this.socket?.off('newNotification');
   }
 
-  offLiveClassStarted() {
-    this.socket?.off('liveClassStarted');
+  offLiveClassStarted(callback) {
+    if (callback) this.socket?.off('liveClassStarted', callback);
+    else this.socket?.off('liveClassStarted');
   }
 
-  offLiveClassEnded() {
-    this.socket?.off('liveClassEnded');
+  offLiveClassEnded(callback) {
+    if (callback) this.socket?.off('liveClassEnded', callback);
+    else this.socket?.off('liveClassEnded');
   }
 
-  offLiveClassScheduled() {
-    this.socket?.off('liveClassScheduled');
+  offLiveClassScheduled(callback) {
+    if (callback) this.socket?.off('liveClassScheduled', callback);
+    else this.socket?.off('liveClassScheduled');
   }
 
   // Voice Call Signaling

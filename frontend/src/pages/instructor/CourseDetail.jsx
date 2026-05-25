@@ -1359,9 +1359,9 @@ const CourseDetail = () => {
 
   const fetchCourse = async () => {
     try {
-      console.log(`[COURSE_DETAIL] Fetching course with ID: ${id}`);
+      if (import.meta.env.DEV) console.log(`[COURSE_DETAIL] Fetching course with ID: ${id}`);
       const data = await getCourseById(id);
-      console.log(`[COURSE_DETAIL] Received data:`, data);
+      if (import.meta.env.DEV) console.log(`[COURSE_DETAIL] Received data:`, data);
       
       if (data) {
         setCourse(data);

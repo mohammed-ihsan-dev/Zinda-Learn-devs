@@ -2,9 +2,12 @@ const errorMiddleware = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log to console for dev
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error Stack:', err.stack);
+  // Always log the error stack — PM2 captures this in logs/pm2-error.log
+  // In production this is essential for debugging 500 errors on EC2
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  console.error('Error:', err.message);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('Stack:', err.stack);
   }
 
   // Mongoose bad ObjectId

@@ -1,7 +1,9 @@
+import './config/env.js';
+
 import express from 'express';
 import cors from 'cors';
+
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import connectDB from './config/db.js';
 import { initSocket } from './sockets/index.js';
@@ -26,45 +28,76 @@ import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { startLiveClassScheduler } from './services/liveClassScheduler.js';
 
+// ─── Global error handlers — prevent PM2/Node process from dying on unhandled errors ──
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+  // Give in-flight requests a moment to complete, then exit so PM2 can restart cleanly
+  setTimeout(() => process.exit(1), 500);
+});
 
-// Load env vars
-dotenv.config();
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Promise Rejection at:', promise);
+  console.error('Reason:', reason);
+  // Do NOT exit on unhandledRejection in production — log and continue
+  // PM2 will restart only if the process actually crashes
+});
 
 // Connect to database
 connectDB();
 
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 // Initialize Socket.io
 initSocket(httpServer);
 
-// Middleware
+// ─── Middleware ────────────────────────────────────────────────────────────────
+
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   next();
 });
 
+// CORS — allow Vercel frontend + local dev origins
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'https://zinda-learn.vercel.app', // update this to your actual Vercel/Netlify frontend URL if different
-    'https://zindalearn.vercel.app'
-  ],
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      process.env.APP_URL,
+      // Local dev only — excluded in production
+      ...(process.env.NODE_ENV === 'development' ? [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175'
+      ] : [])
+    ].filter(Boolean);
+
+    // Allow requests with no origin (mobile apps, curl, Postman, same-origin SSR)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// HTTP request logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
+} else {
+  // Compact production log: IP, method, URL, status, response time
+  app.use(morgan('combined'));
 }
 
-// Routes
+// ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
@@ -82,13 +115,17 @@ app.use('/api/public', publicRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/support', supportRoutes);
 
-
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Zinda Learn API is running' });
+  res.json({
+    success: true,
+    message: 'Zinda Learn API is running',
+    env: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Error handling middleware
+// Error handling middleware (must be after routes)
 app.use(errorMiddleware);
 
 // 404 handler
@@ -99,10 +136,11 @@ app.use((req, res) => {
   });
 });
 
+// ─── Server Start ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5005;
 
-httpServer.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
-  console.log(` API: http://localhost:${PORT}/api`);
+// Bind to '0.0.0.0' so EC2 accepts external connections (not just 127.0.0.1)
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(` Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
   startLiveClassScheduler();
 });

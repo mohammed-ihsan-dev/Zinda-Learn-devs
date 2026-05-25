@@ -40,7 +40,7 @@ export const useLiveClasses = () => {
       setLiveClasses(prev => {
         const exists = prev.find(c => c._id === liveClassId);
         if (exists) {
-          return prev.map(c => c._id === liveClassId ? { ...c, status: 'LIVE' } : c);
+          return prev.map(c => c._id === liveClassId ? { ...c, status: 'live' } : c);
         } else {
           fetchLiveClasses(); // Fetch if it's a new class we didn't have
           return prev;
@@ -54,7 +54,7 @@ export const useLiveClasses = () => {
         duration: 5000
       });
       setLiveClasses(prev => prev.map(c =>
-        c._id === liveClassId ? { ...c, status: 'ENDED' } : c
+        c._id === liveClassId ? { ...c, status: 'ended' } : c
       ));
     };
 
@@ -72,9 +72,9 @@ export const useLiveClasses = () => {
 
     return () => {
       // Cleanup listeners
-      socketService.offLiveClassStarted();
-      socketService.offLiveClassEnded();
-      socketService.offLiveClassScheduled();
+      socketService.offLiveClassStarted(handleStarted);
+      socketService.offLiveClassEnded(handleEnded);
+      socketService.offLiveClassScheduled(handleScheduled);
     };
   }, [token]);
 

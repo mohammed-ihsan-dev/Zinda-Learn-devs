@@ -28,7 +28,7 @@ const LiveClassDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!liveClass || liveClass.status !== 'UPCOMING') return;
+    if (!liveClass || liveClass.status !== 'upcoming') return;
 
     const timer = setInterval(() => {
       calculateTimeLeft();
@@ -54,20 +54,20 @@ const LiveClassDetail = () => {
   };
 
   const checkJoinStatus = (data) => {
-    if (data.status === 'LIVE') {
+    if (data.status === 'live') {
       setCanJoin(true);
       return;
     }
 
-    if (data.status === 'ENDED' || data.status === 'CANCELLED') {
+    if (data.status === 'ended' || data.status === 'cancelled') {
       setCanJoin(false);
       return;
     }
 
     // Check if within 10 minutes
     const now = new Date();
-    const scheduledTime = new Date(data.scheduledDate);
-    const [hours, minutes] = data.startTime.split(':');
+    const scheduledTime = new Date(data.scheduledDateStr || data.startTime);
+    const [hours, minutes] = data.startTimeStr ? data.startTimeStr.split(':') : [0, 0];
     scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
     const diffInMinutes = (scheduledTime - now) / (1000 * 60);
@@ -82,8 +82,8 @@ const LiveClassDetail = () => {
     if (!liveClass) return;
 
     const now = new Date();
-    const scheduledTime = new Date(liveClass.scheduledDate);
-    const [hours, minutes] = liveClass.startTime.split(':');
+    const scheduledTime = new Date(liveClass.scheduledDateStr || liveClass.startTime);
+    const [hours, minutes] = liveClass.startTimeStr ? liveClass.startTimeStr.split(':') : [0, 0];
     scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
     const difference = scheduledTime - now;
@@ -104,7 +104,7 @@ const LiveClassDetail = () => {
     } else {
       setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       // If time passed but status still UPCOMING, maybe instructor hasn't started
-      if (liveClass.status === 'UPCOMING') {
+      if (liveClass.status === 'upcoming') {
         setCanJoin(true); // Still allow joining/waiting
       }
     }
@@ -158,7 +158,7 @@ const LiveClassDetail = () => {
                   <Video className="text-white/20" size={80} />
                 </div>
               )}
-              {liveClass.status === 'LIVE' && (
+              {liveClass.status === 'live' && (
                 <div className="absolute top-6 left-6 px-4 py-2 bg-rose-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 animate-pulse">
                   <span className="w-2 h-2 bg-white rounded-full"></span>
                   Live Now
@@ -182,14 +182,14 @@ const LiveClassDetail = () => {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</span>
                   <div className="flex items-center gap-2 text-slate-900 font-bold">
                     <Calendar size={18} className="text-indigo-500" />
-                    {new Date(liveClass.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {new Date(liveClass.scheduledDateStr || liveClass.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Start Time</span>
                   <div className="flex items-center gap-2 text-slate-900 font-bold">
                     <Clock size={18} className="text-indigo-500" />
-                    {liveClass.startTime}
+                    {liveClass.startTimeStr}
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -225,7 +225,7 @@ const LiveClassDetail = () => {
         {/* Sidebar Actions */}
         <div className="space-y-6">
           <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm text-center">
-            {liveClass.status === 'UPCOMING' && (
+            {liveClass.status === 'upcoming' && (
               <>
                 <h3 className="text-lg font-bold text-slate-900 mb-6">Class Starts In</h3>
                 <div className="grid grid-cols-4 gap-2 mb-8">
@@ -237,7 +237,7 @@ const LiveClassDetail = () => {
               </>
             )}
 
-            {liveClass.status === 'LIVE' && (
+            {liveClass.status === 'live' && (
               <div className="mb-8">
                 <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                   <Play size={32} fill="currentColor" />
@@ -247,7 +247,7 @@ const LiveClassDetail = () => {
               </div>
             )}
 
-            {liveClass.status === 'ENDED' && (
+            {liveClass.status === 'ended' && (
               <div className="mb-8">
                 <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 size={32} />
@@ -281,7 +281,7 @@ const LiveClassDetail = () => {
               )}
             </button>
 
-            {!canJoin && liveClass.status === 'UPCOMING' && (
+            {!canJoin && liveClass.status === 'upcoming' && (
               <p className="text-[10px] text-slate-400 mt-4 leading-relaxed">
                 Join button will be enabled 10 minutes before the scheduled start time.
               </p>

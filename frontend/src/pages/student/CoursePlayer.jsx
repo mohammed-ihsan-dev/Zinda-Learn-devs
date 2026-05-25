@@ -415,6 +415,7 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
   const [newRating, setNewRating] = useState(5);
   const [newReview, setNewReview] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   const [testAnswers, setTestAnswers] = useState({});
   const [testSubmitted, setTestSubmitted] = useState(false);

@@ -3,12 +3,22 @@ import multer from 'multer';
 import { uploadFile } from '../controllers/uploadController.js';
 import { protect } from '../middleware/auth.js';
 import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
+// Use absolute path for uploads directory — relative paths break when PM2
+// starts the process from a different working directory on EC2
+const uploadsDir = path.join(process.cwd(), 'uploads');
+
+// Ensure the uploads directory exists on startup
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

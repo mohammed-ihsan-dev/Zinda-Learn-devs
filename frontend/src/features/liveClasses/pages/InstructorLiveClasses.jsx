@@ -19,7 +19,7 @@ import liveClassService from '../services/liveClassService';
 const InstructorLiveClasses = () => {
   const [liveClasses, setLiveClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     fetchLiveClasses();
@@ -78,15 +78,15 @@ const InstructorLiveClasses = () => {
   };
 
   const filteredClasses = liveClasses.filter(c => {
-    if (filter === 'ALL') return true;
+    if (filter === 'all') return true;
     return c.status === filter;
   });
 
   const stats = {
     total: liveClasses.length,
-    upcoming: liveClasses.filter(c => c.status === 'UPCOMING').length,
-    live: liveClasses.filter(c => c.status === 'LIVE').length,
-    completed: liveClasses.filter(c => c.status === 'ENDED').length
+    upcoming: liveClasses.filter(c => c.status === 'upcoming').length,
+    live: liveClasses.filter(c => c.status === 'live').length,
+    completed: liveClasses.filter(c => c.status === 'ended').length
   };
 
   if (loading) {
@@ -135,7 +135,7 @@ const InstructorLiveClasses = () => {
       {/* Filters & Navigation */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 bg-white/50 backdrop-blur-sm p-2 rounded-[28px] border border-slate-100/50">
         <div className="flex items-center gap-1 w-full md:w-auto">
-          {['ALL', 'UPCOMING', 'LIVE', 'ENDED'].map(f => (
+          {['all', 'upcoming', 'live', 'ended'].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -203,15 +203,15 @@ const StatCard = ({ title, value, icon, color, pulse }) => (
 
 const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
   const statusConfig = {
-    UPCOMING: { color: 'text-amber-600 bg-amber-50 border-amber-100', label: 'Upcoming' },
-    LIVE: { color: 'text-rose-600 bg-rose-50 border-rose-100 animate-pulse', label: 'Live Now' },
-    ENDED: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', label: 'Completed' },
-    CANCELLED: { color: 'text-slate-400 bg-slate-50 border-slate-100', label: 'Cancelled' }
+    upcoming: { color: 'text-amber-600 bg-amber-50 border-amber-100', label: 'Upcoming' },
+    live: { color: 'text-rose-600 bg-rose-50 border-rose-100 animate-pulse', label: 'Live Now' },
+    ended: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', label: 'Completed' },
+    cancelled: { color: 'text-slate-400 bg-slate-50 border-slate-100', label: 'Cancelled' }
   };
 
-  const config = statusConfig[liveClass.status] || statusConfig.UPCOMING;
+  const config = statusConfig[liveClass.status] || statusConfig.upcoming;
 
-  const formattedDate = new Date(liveClass.scheduledDate).toLocaleDateString('en-US', {
+  const formattedDate = new Date(liveClass.scheduledDateStr || liveClass.startTime).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric'
@@ -263,14 +263,14 @@ const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
               <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
                 <Clock size={14} className="text-slate-400" />
               </div>
-              {liveClass.startTime} • {liveClass.duration} Minutes
+              {liveClass.startTimeStr} • {liveClass.duration} Minutes
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-50">
-          {liveClass.status === 'UPCOMING' && (
+          {liveClass.status === 'upcoming' && (
             <>
               <button
                 onClick={onStart}
@@ -288,7 +288,7 @@ const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
             </>
           )}
 
-          {liveClass.status === 'LIVE' && (
+          {liveClass.status === 'live' && (
             <>
               <a
                 href={liveClass.meetingLink}
@@ -309,7 +309,7 @@ const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
             </>
           )}
 
-          {liveClass.status === 'ENDED' && (
+          {liveClass.status === 'ended' && (
             <div className="w-full flex items-center justify-center py-4 bg-slate-50 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100">
               Session Completed
             </div>
