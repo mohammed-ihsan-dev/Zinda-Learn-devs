@@ -1,19 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Video, 
-  Calendar, 
-  Clock, 
-  Link as LinkIcon, 
-  FileText, 
+import {
+  ArrowLeft,
+  Video,
+  Calendar,
+  Clock,
+  Link as LinkIcon,
+  FileText,
   BookOpen,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Timer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import liveClassService from '../services/liveClassService';
 import { getInstructorCourses } from '../../../services/instructorService';
 
+/* ─── Shared form field components ──────────────────────────── */
+const Field = ({ label, required, hint, children }) => (
+  <div>
+    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+      {label}
+      {required && <span className="text-violet-500 ml-0.5">*</span>}
+    </label>
+    {children}
+    {hint && <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">{hint}</p>}
+  </div>
+);
+
+const inputCls =
+  'w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-colors';
+
+/* ─── Section divider ────────────────────────────────────────── */
+const Section = ({ title, children }) => (
+  <div>
+    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{title}</p>
+    <div className="space-y-4">{children}</div>
+  </div>
+);
+
+/* ─── Page ───────────────────────────────────────────────────── */
 const CreateLiveClass = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -29,42 +54,35 @@ const CreateLiveClass = () => {
     thumbnail: ''
   });
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
+  useEffect(() => { fetchCourses(); }, []);
 
   const fetchCourses = async () => {
     try {
       const response = await getInstructorCourses();
       setCourses(response.courses || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch courses');
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
     if (!formData.title || !formData.courseId || !formData.meetingLink || !formData.scheduledDate || !formData.startTime) {
       return toast.error('Please fill in all required fields');
     }
-
-    // Date validation
-    if (new Date(formData.scheduledDate) < new Date().setHours(0,0,0,0)) {
+    if (new Date(formData.scheduledDate) < new Date().setHours(0, 0, 0, 0)) {
       return toast.error('Scheduled date cannot be in the past');
     }
-
     setLoading(true);
     try {
       const response = await liveClassService.createLiveClass(formData);
       if (response.success) {
-        toast.success('Live class scheduled successfully!');
+        toast.success('Session scheduled');
         navigate('/instructor/live-classes');
       }
     } catch (error) {
@@ -75,184 +93,176 @@ const CreateLiveClass = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <button 
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+
+      {/* ── Back nav ── */}
+      <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors mb-7 font-medium"
       >
-        <ArrowLeft size={20} />
-        Back to Dashboard
+        <ArrowLeft size={15} /> Back
       </button>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100 overflow-hidden">
-        <div className="p-8 bg-indigo-600">
-          <div className="flex items-center gap-4 text-white">
-            <div className="p-3 bg-white/10 rounded-2xl">
-              <Video size={32} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Schedule Live Class</h1>
-              <p className="text-indigo-100">Set up a new interactive session for your students</p>
-            </div>
-          </div>
-        </div>
+      {/* ── Page header ── */}
+      <div className="mb-7">
+        <h1 className="text-lg font-bold text-slate-900">Schedule a session</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Set up a new live class for your students.
+        </p>
+      </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Title */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <FileText size={16} /> Class Title *
-              </label>
-              <input 
+      {/* ── Form card ── */}
+      <form onSubmit={handleSubmit} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+
+        <div className="p-6 space-y-7">
+
+          {/* — Basic info — */}
+          <Section title="Session info">
+            <Field label="Class title" required>
+              <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="e.g., Weekly Q&A Session - Week 1"
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                placeholder="e.g. Week 4 Q&A — React Hooks Deep Dive"
+                className={inputCls}
                 required
               />
-            </div>
+            </Field>
 
-            {/* Course Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <BookOpen size={16} /> Select Course *
-              </label>
-              <select 
+            <Field label="Course" required>
+              <select
                 name="courseId"
                 value={formData.courseId}
                 onChange={handleChange}
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={inputCls}
                 required
               >
-                <option value="">Choose a course</option>
-                {courses.map(course => (
-                  <option key={course._id} value={course._id}>{course.title}</option>
+                <option value="">Select a course</option>
+                {courses.map((c) => (
+                  <option key={c._id} value={c._id}>{c.title}</option>
                 ))}
               </select>
+            </Field>
+
+            <Field
+              label="Description"
+              required
+              hint="What will students learn in this session? Keep it specific."
+            >
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Topics covered, prerequisites, what to bring…"
+                rows={3}
+                className={inputCls}
+                required
+              />
+            </Field>
+          </Section>
+
+          {/* — Schedule — */}
+          <Section title="Date & time">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Date" required>
+                <input
+                  type="date"
+                  name="scheduledDate"
+                  value={formData.scheduledDate}
+                  onChange={handleChange}
+                  className={inputCls}
+                  required
+                />
+              </Field>
+              <Field label="Start time" required>
+                <input
+                  type="time"
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  className={inputCls}
+                  required
+                />
+              </Field>
             </div>
 
-            {/* Meeting Link */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <LinkIcon size={16} /> Meeting Link (Zoom/GMeet) *
-              </label>
-              <input 
+            <Field label="Duration (minutes)" required>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleChange}
+                  min="15"
+                  max="360"
+                  className={`${inputCls} w-32`}
+                  required
+                />
+                <span className="text-xs text-slate-400 font-medium">minutes</span>
+              </div>
+            </Field>
+          </Section>
+
+          {/* — Links — */}
+          <Section title="Meeting">
+            <Field
+              label="Meeting link"
+              required
+              hint="Paste your Zoom, Google Meet, or Microsoft Teams invite link."
+            >
+              <input
                 type="url"
                 name="meetingLink"
                 value={formData.meetingLink}
                 onChange={handleChange}
-                placeholder="https://meet.google.com/..."
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                className={inputCls}
                 required
               />
-            </div>
+            </Field>
 
-            {/* Scheduled Date */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <Calendar size={16} /> Scheduled Date *
-              </label>
-              <input 
-                type="date"
-                name="scheduledDate"
-                value={formData.scheduledDate}
-                onChange={handleChange}
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Start Time */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <Clock size={16} /> Start Time *
-              </label>
-              <input 
-                type="time"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleChange}
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Duration */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <Clock size={16} /> Duration (minutes) *
-              </label>
-              <input 
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="1"
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Thumbnail */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <ImageIcon size={16} /> Thumbnail URL (Optional)
-              </label>
-              <input 
+            <Field
+              label="Thumbnail URL"
+              hint="Optional. A cover image makes your session easier to identify."
+            >
+              <input
                 type="text"
                 name="thumbnail"
                 value={formData.thumbnail}
                 onChange={handleChange}
-                placeholder="https://image-url.com/..."
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                placeholder="https://example.com/thumbnail.jpg"
+                className={inputCls}
               />
-            </div>
+            </Field>
+          </Section>
+        </div>
 
-            {/* Description */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <FileText size={16} /> Description *
-              </label>
-              <textarea 
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="What will students learn in this session?"
-                rows="4"
-                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="pt-6 flex gap-4">
-            <button 
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex-1 px-8 py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-all"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              disabled={loading}
-              className="flex-[2] px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <Calendar size={18} />
-                  Schedule Class
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* ── Footer actions ── */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <Calendar size={15} />
+                Schedule session
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

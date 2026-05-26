@@ -6,35 +6,345 @@ import {
   Video,
   CheckCircle2,
   Clock,
-  MoreVertical,
   Trash2,
   Edit3,
   Play,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  Radio,
+  MoreHorizontal
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import liveClassService from '../services/liveClassService';
 
+/* ─── Skeleton loader ────────────────────────────────────────── */
+const Skeleton = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative w-10 h-10">
+        <div className="absolute inset-0 rounded-full border-2 border-violet-100 border-t-violet-600 animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Radio size={14} className="text-violet-500" />
+        </div>
+      </div>
+      <span className="text-[11px] font-semibold text-slate-400 tracking-widest uppercase">
+        Loading sessions
+      </span>
+    </div>
+  </div>
+);
+
+/* ─── Status config map ──────────────────────────────────────── */
+const STATUS = {
+  upcoming: {
+    label: 'Upcoming',
+    dot: 'bg-amber-400',
+    badge: 'text-amber-700 bg-amber-50 border-amber-200',
+  },
+  live: {
+    label: 'Live',
+    dot: 'bg-red-500 animate-ping',
+    badge: 'text-red-700 bg-red-50 border-red-200',
+  },
+  ended: {
+    label: 'Completed',
+    dot: 'bg-emerald-400',
+    badge: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    dot: 'bg-slate-400',
+    badge: 'text-slate-500 bg-slate-50 border-slate-200',
+  },
+};
+
+/* ─── Stat bar — horizontal row, not cards ───────────────────── */
+const StatBar = ({ stats }) => (
+  <div className="flex items-center gap-0 bg-white border border-slate-100 rounded-xl overflow-hidden divide-x divide-slate-100">
+    {[
+      { label: 'Upcoming', value: stats.upcoming, color: 'text-amber-600' },
+      { label: 'Live now', value: stats.live, color: 'text-red-600', pulse: true },
+      { label: 'Completed', value: stats.completed, color: 'text-emerald-600' },
+      { label: 'Total', value: stats.total, color: 'text-slate-700' },
+    ].map((s) => (
+      <div key={s.label} className="flex-1 px-5 py-3.5 min-w-0">
+        <div className={`text-xl font-bold tabular-nums ${s.color} ${s.pulse && s.value > 0 ? 'animate-pulse' : ''}`}>
+          {s.value}
+        </div>
+        <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+          {s.label}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+/* ─── Filter tabs ────────────────────────────────────────────── */
+const FilterTabs = ({ active, onChange, counts }) => {
+  const tabs = [
+    { id: 'all', label: 'All' },
+    { id: 'upcoming', label: 'Upcoming' },
+    { id: 'live', label: 'Live' },
+    { id: 'ended', label: 'Completed' },
+  ];
+  return (
+    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
+            active === t.id
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/* ─── Actions menu (replaces hover-only trash) ───────────────── */
+const ActionMenu = ({ liveClass, onStart, onEnd, onDelete }) => {
+  const [open, setOpen] = useState(false);
+
+  const handleAction = (fn) => {
+    setOpen(false);
+    fn();
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-7 z-20 bg-white border border-slate-100 rounded-xl shadow-lg shadow-slate-200/60 py-1.5 w-36 text-xs font-medium">
+            {liveClass.status === 'upcoming' && (
+              <>
+                <Link
+                  to={`/instructor/live-classes/edit/${liveClass._id}`}
+                  className="flex items-center gap-2.5 px-3.5 py-2 text-slate-600 hover:bg-slate-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <Edit3 size={13} /> Edit
+                </Link>
+                <button
+                  onClick={() => handleAction(onStart)}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-violet-600 hover:bg-violet-50"
+                >
+                  <Play size={13} /> Start now
+                </button>
+              </>
+            )}
+            {liveClass.status === 'live' && (
+              <button
+                onClick={() => handleAction(onEnd)}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-slate-600 hover:bg-slate-50"
+              >
+                <XCircle size={13} /> End session
+              </button>
+            )}
+            <button
+              onClick={() => handleAction(onDelete)}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-red-500 hover:bg-red-50"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ─── Instructor live class card — list-style for instructor view */
+const LiveClassRow = ({ liveClass, onStart, onEnd, onDelete }) => {
+  const s = STATUS[liveClass.status] || STATUS.upcoming;
+  const isLive = liveClass.status === 'live';
+  const isUpcoming = liveClass.status === 'upcoming';
+  const isEnded = liveClass.status === 'ended';
+
+  const formattedDate = new Date(
+    liveClass.scheduledDateStr || liveClass.startTime
+  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return (
+    <div
+      className={`group bg-white border rounded-xl overflow-hidden transition-all ${
+        isLive
+          ? 'border-red-200 shadow-sm shadow-red-100'
+          : 'border-slate-100 hover:border-slate-200 hover:shadow-sm'
+      }`}
+    >
+      <div className="flex items-start gap-0">
+        {/* thumbnail strip — narrow vertical band */}
+        <div className="relative w-28 sm:w-36 flex-shrink-0 self-stretch bg-slate-100 overflow-hidden">
+          {liveClass.thumbnail ? (
+            <img
+              src={liveClass.thumbnail}
+              alt={liveClass.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center ${
+                isLive
+                  ? 'bg-gradient-to-b from-violet-600 to-indigo-700'
+                  : 'bg-gradient-to-b from-slate-100 to-slate-200'
+              }`}
+            >
+              <Video
+                className={isLive ? 'text-white/40' : 'text-slate-300'}
+                size={24}
+                strokeWidth={1.5}
+              />
+            </div>
+          )}
+          {isLive && (
+            <div className="absolute inset-0 bg-red-900/20" />
+          )}
+        </div>
+
+        {/* content */}
+        <div className="flex-1 min-w-0 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0">
+              {/* status + course on same line */}
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${s.badge}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                  {s.label}
+                </span>
+                {liveClass.course?.title && (
+                  <span className="text-[10px] text-slate-400 font-medium truncate max-w-[160px]">
+                    {liveClass.course.title}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-sm font-semibold text-slate-900 line-clamp-1 leading-snug">
+                {liveClass.title}
+              </h3>
+            </div>
+
+            <ActionMenu
+              liveClass={liveClass}
+              onStart={onStart}
+              onEnd={onEnd}
+              onDelete={onDelete}
+            />
+          </div>
+
+          {/* date + time row */}
+          <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
+            <span className="flex items-center gap-1.5">
+              <Calendar size={12} className="text-slate-400" />
+              {formattedDate}
+            </span>
+            <span className="text-slate-300">·</span>
+            <span className="flex items-center gap-1.5">
+              <Clock size={12} className="text-slate-400" />
+              {liveClass.startTimeStr}
+              {liveClass.duration && (
+                <span className="text-slate-400">· {liveClass.duration} min</span>
+              )}
+            </span>
+          </div>
+
+          {/* primary actions — inline, not oversized */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {isUpcoming && (
+              <button
+                onClick={onStart}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors"
+              >
+                <Play size={12} fill="white" /> Start class
+              </button>
+            )}
+            {isLive && (
+              <>
+                <a
+                  href={liveClass.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors"
+                >
+                  <ExternalLink size={12} /> Open meeting
+                </a>
+                <button
+                  onClick={onEnd}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors"
+                >
+                  <XCircle size={12} /> End session
+                </button>
+              </>
+            )}
+            {isEnded && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                <CheckCircle2 size={13} className="text-emerald-400" /> Session completed
+              </span>
+            )}
+
+            {/* edit link — text only, doesn't compete with primary CTA */}
+            {isUpcoming && (
+              <Link
+                to={`/instructor/live-classes/edit/${liveClass._id}`}
+                className="ml-auto text-xs text-slate-400 hover:text-violet-600 transition-colors font-medium"
+              >
+                Edit
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Stat cards (old 3-card grid) replaced by StatBar above.
+       Keeping StatCard only if needed somewhere else. */
+
+/* ─── Empty state ────────────────────────────────────────────── */
+const EmptyState = () => (
+  <div className="text-center py-16 border border-dashed border-slate-200 rounded-xl">
+    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-4">
+      <Video size={18} className="text-slate-300" />
+    </div>
+    <p className="text-sm font-semibold text-slate-700 mb-1">No sessions yet</p>
+    <p className="text-xs text-slate-400 mb-5 max-w-xs mx-auto leading-relaxed">
+      Schedule your first live class and start teaching interactively.
+    </p>
+    <Link
+      to="/instructor/live-classes/create"
+      className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-700"
+    >
+      <Plus size={13} strokeWidth={2.5} /> Schedule a session
+    </Link>
+  </div>
+);
+
+/* ─── Page ───────────────────────────────────────────────────── */
 const InstructorLiveClasses = () => {
   const [liveClasses, setLiveClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    fetchLiveClasses();
-  }, []);
+  useEffect(() => { fetchLiveClasses(); }, []);
 
   const fetchLiveClasses = async () => {
     try {
       setLoading(true);
       const response = await liveClassService.getInstructorLiveClasses();
-      if (response.success) {
-        setLiveClasses(response.data);
-      }
+      if (response.success) setLiveClasses(response.data);
     } catch (error) {
       toast.error('Failed to fetch live classes');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -42,280 +352,87 @@ const InstructorLiveClasses = () => {
 
   const handleStartClass = async (id) => {
     try {
-      const response = await liveClassService.startLiveClass(id);
-      if (response.success) {
-        toast.success('Live class started!');
-        fetchLiveClasses();
-      }
-    } catch (error) {
-      toast.error('Failed to start class');
-    }
+      const r = await liveClassService.startLiveClass(id);
+      if (r.success) { toast.success('Class started'); fetchLiveClasses(); }
+    } catch { toast.error('Failed to start class'); }
   };
 
   const handleEndClass = async (id) => {
     try {
-      const response = await liveClassService.endLiveClass(id);
-      if (response.success) {
-        toast.success('Live class ended!');
-        fetchLiveClasses();
-      }
-    } catch (error) {
-      toast.error('Failed to end class');
-    }
+      const r = await liveClassService.endLiveClass(id);
+      if (r.success) { toast.success('Class ended'); fetchLiveClasses(); }
+    } catch { toast.error('Failed to end class'); }
   };
 
   const handleDeleteClass = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this class?')) return;
+    if (!window.confirm('Delete this class?')) return;
     try {
-      const response = await liveClassService.deleteLiveClass(id);
-      if (response.success) {
-        toast.success('Live class deleted');
-        fetchLiveClasses();
-      }
-    } catch (error) {
-      toast.error('Failed to delete class');
-    }
+      const r = await liveClassService.deleteLiveClass(id);
+      if (r.success) { toast.success('Deleted'); fetchLiveClasses(); }
+    } catch { toast.error('Failed to delete'); }
   };
 
-  const filteredClasses = liveClasses.filter(c => {
-    if (filter === 'all') return true;
-    return c.status === filter;
-  });
+  if (loading) return <Skeleton />;
 
   const stats = {
     total: liveClasses.length,
-    upcoming: liveClasses.filter(c => c.status === 'upcoming').length,
-    live: liveClasses.filter(c => c.status === 'live').length,
-    completed: liveClasses.filter(c => c.status === 'ended').length
+    upcoming: liveClasses.filter((c) => c.status === 'upcoming').length,
+    live: liveClasses.filter((c) => c.status === 'live').length,
+    completed: liveClasses.filter((c) => c.status === 'ended').length,
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col justify-center items-center gap-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-purple-100 border-t-purple-600 animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Video size={20} className="text-purple-600 animate-pulse" />
-          </div>
-        </div>
-        <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Loading Sessions...</p>
-      </div>
-    );
-  }
+  const filtered = liveClasses.filter(
+    (c) => filter === 'all' || c.status === filter
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-12 gap-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
+      {/* ── Page header ── */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-200">
-              <Video className="text-white" size={20} />
-            </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Live Classes</h1>
-          </div>
-          <p className="text-slate-500 font-medium ml-1">Manage and schedule your high-impact interactive sessions</p>
+          <h1 className="text-lg font-bold text-slate-900 leading-tight">Live Classes</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Manage and schedule interactive sessions with your students.
+          </p>
         </div>
         <Link
           to="/instructor/live-classes/create"
-          className="flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-[22px] font-black text-sm hover:scale-[1.02] transition-all shadow-xl shadow-purple-200 active:scale-95 uppercase tracking-wider"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm flex-shrink-0"
         >
-          <Plus size={20} strokeWidth={3} />
-          Schedule Session
+          <Plus size={16} strokeWidth={2.5} />
+          <span className="hidden sm:inline">Schedule session</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        <StatCard title="Upcoming" value={stats.upcoming} icon={<Clock />} color="bg-amber-500" />
-        <StatCard title="Live Now" value={stats.live} icon={<Video />} color="bg-rose-500" pulse />
-        <StatCard title="Completed" value={stats.completed} icon={<CheckCircle2 />} color="bg-emerald-500" />
+      {/* ── Stats bar ── */}
+      <StatBar stats={stats} />
+
+      {/* ── Filter row ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <FilterTabs active={filter} onChange={setFilter} />
+        <span className="text-xs text-slate-400 font-medium">
+          {filtered.length} session{filtered.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      {/* Filters & Navigation */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 bg-white/50 backdrop-blur-sm p-2 rounded-[28px] border border-slate-100/50">
-        <div className="flex items-center gap-1 w-full md:w-auto">
-          {['all', 'upcoming', 'live', 'ended'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${filter === f
-                ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
-                : 'text-slate-500 hover:bg-slate-50'
-                }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">
-          Showing {filteredClasses.length} sessions
-        </div>
-      </div>
-
-      {/* Classes Grid */}
-      {filteredClasses.length === 0 ? (
-        <div className="bg-white rounded-[40px] border border-slate-100 p-20 text-center shadow-sm">
-          <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Video className="text-slate-200" size={40} />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900 mb-2">No Sessions Found</h3>
-          <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium text-sm leading-relaxed">
-            Ready to teach? Schedule your first live interaction with your students today.
-          </p>
-          <Link
-            to="/instructor/live-classes/create"
-            className="inline-flex items-center gap-2 text-purple-600 font-black text-sm uppercase tracking-widest hover:gap-4 transition-all"
-          >
-            Create your first class <Play size={14} fill="currentColor" />
-          </Link>
-        </div>
+      {/* ── List ── */}
+      {filtered.length === 0 ? (
+        <EmptyState />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredClasses.map((liveClass) => (
-            <LiveClassCard
-              key={liveClass._id}
-              liveClass={liveClass}
-              onStart={() => handleStartClass(liveClass._id)}
-              onEnd={() => handleEndClass(liveClass._id)}
-              onDelete={() => handleDeleteClass(liveClass._id)}
+        <div className="space-y-3">
+          {filtered.map((lc) => (
+            <LiveClassRow
+              key={lc._id}
+              liveClass={lc}
+              onStart={() => handleStartClass(lc._id)}
+              onEnd={() => handleEndClass(lc._id)}
+              onDelete={() => handleDeleteClass(lc._id)}
             />
           ))}
         </div>
       )}
-    </div>
-  );
-};
-
-const StatCard = ({ title, value, icon, color, pulse }) => (
-  <div className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-    <div className={`absolute top-0 right-0 w-32 h-32 ${color} opacity-[0.03] rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500`}></div>
-    <div className="flex items-center justify-between mb-4 relative z-10">
-      <div className={`p-4 rounded-2xl ${color} bg-opacity-10 ${pulse ? 'animate-pulse' : ''} text-[${color}]`}>
-        {React.cloneElement(icon, { size: 22, className: color.replace('bg-', 'text-') })}
-      </div>
-      <span className="text-3xl font-black text-slate-900 tracking-tighter">{value}</span>
-    </div>
-    <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">{title}</h3>
-  </div>
-);
-
-const LiveClassCard = ({ liveClass, onStart, onEnd, onDelete }) => {
-  const statusConfig = {
-    upcoming: { color: 'text-amber-600 bg-amber-50 border-amber-100', label: 'Upcoming' },
-    live: { color: 'text-rose-600 bg-rose-50 border-rose-100 animate-pulse', label: 'Live Now' },
-    ended: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', label: 'Completed' },
-    cancelled: { color: 'text-slate-400 bg-slate-50 border-slate-100', label: 'Cancelled' }
-  };
-
-  const config = statusConfig[liveClass.status] || statusConfig.upcoming;
-
-  const formattedDate = new Date(liveClass.scheduledDateStr || liveClass.startTime).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
-  return (
-    <div className="bg-white rounded-[35px] border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/5 transition-all group flex flex-col h-full">
-      {/* Thumbnail Area */}
-      <div className="relative h-56 overflow-hidden">
-        {liveClass.thumbnail ? (
-          <img src={liveClass.thumbnail} alt={liveClass.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-50">
-            <Video className="text-purple-200" size={56} strokeWidth={1} />
-          </div>
-        )}
-
-        {/* Status Badge */}
-        <div className={`absolute top-5 left-5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border backdrop-blur-md ${config.color}`}>
-          {config.label}
-        </div>
-
-        {/* Delete Overlay (Hidden by default) */}
-        <button
-          onClick={onDelete}
-          className="absolute top-5 right-5 p-3 bg-white/20 hover:bg-rose-500 text-white backdrop-blur-md rounded-2xl transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
-
-      <div className="p-8 flex-1 flex flex-col">
-        <div className="flex-1">
-          <div className="text-[10px] font-black text-purple-600 mb-3 uppercase tracking-[0.2em] line-clamp-1">
-            {liveClass.course?.title || 'Personal Session'}
-          </div>
-          <h3 className="text-xl font-black text-slate-900 mb-6 leading-tight line-clamp-2 tracking-tight">
-            {liveClass.title}
-          </h3>
-
-          <div className="space-y-4 mb-8">
-            <div className="flex items-center text-slate-500 text-[11px] font-bold gap-3">
-              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
-                <Calendar size={14} className="text-slate-400" />
-              </div>
-              {formattedDate}
-            </div>
-            <div className="flex items-center text-slate-500 text-[11px] font-bold gap-3">
-              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
-                <Clock size={14} className="text-slate-400" />
-              </div>
-              {liveClass.startTimeStr} • {liveClass.duration} Minutes
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-slate-50">
-          {liveClass.status === 'upcoming' && (
-            <>
-              <button
-                onClick={onStart}
-                className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-purple-200"
-              >
-                <Play size={16} fill="white" />
-                Start Now
-              </button>
-              <Link
-                to={`/instructor/live-classes/edit/${liveClass._id}`}
-                className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-purple-50 hover:text-purple-600 transition-all border border-slate-100/50"
-              >
-                <Edit3 size={18} />
-              </Link>
-            </>
-          )}
-
-          {liveClass.status === 'live' && (
-            <>
-              <a
-                href={liveClass.meetingLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-3 bg-indigo-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-              >
-                <ExternalLink size={16} />
-                Join
-              </a>
-              <button
-                onClick={onEnd}
-                className="flex-1 flex items-center justify-center gap-3 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all"
-              >
-                <XCircle size={16} />
-                End
-              </button>
-            </>
-          )}
-
-          {liveClass.status === 'ended' && (
-            <div className="w-full flex items-center justify-center py-4 bg-slate-50 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100">
-              Session Completed
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
