@@ -9,11 +9,18 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Proxies /api calls to backend during local development
-      // In production on Vercel, VITE_API_URL points to the EC2 backend directly
+      // In dev: proxies /api calls to backend
+      // In prod (Vercel): vercel.json rewrite handles this
       '/api': {
         target: 'http://localhost:5005',
         changeOrigin: true
+      },
+      // In dev: proxies Socket.IO polling + WebSocket upgrade to backend
+      // In prod (Vercel): vercel.json rewrite handles /socket.io/* → EC2
+      '/socket.io': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+        ws: true  // enables WebSocket proxying
       }
     }
   },

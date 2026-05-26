@@ -1,7 +1,9 @@
 import { io } from 'socket.io-client';
 
-// Use environment variable, fallback to origin in production or localhost in development
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:5005' : window.location.origin);
+// In production (Vercel): VITE_SOCKET_URL is empty → connect to Vercel origin.
+// Vercel rewrites /socket.io/* → EC2:5005 so no mixed-content issue.
+// In development: Vite server.proxy handles /api, and socket connects to localhost:5005 directly.
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 class SocketService {
   socket = null;

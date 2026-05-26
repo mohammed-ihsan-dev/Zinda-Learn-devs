@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "http://13.60.213.239:5005/api/:path*"
+    },
+    {
+      "source": "/socket.io/:path*",
+      "destination": "http://13.60.213.239:5005/socket.io/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
