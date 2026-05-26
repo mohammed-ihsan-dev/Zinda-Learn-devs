@@ -76,6 +76,7 @@ const AccountBlocked = lazy(() => import('./pages/AccountBlocked'));
 const VerifyEmailPage = lazy(() => import('./pages/student/VerifyEmailPage'));
 
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ScrollToTop from './components/common/ScrollToTop';
 
 function App() {
   return (
@@ -83,6 +84,7 @@ function App() {
       <NotificationProvider>
         <CallProvider>
           <Router>
+            <ScrollToTop />
             <Toaster position="top-center" reverseOrder={false} />
             <CallModal />
             <IncomingCallModal />
