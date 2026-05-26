@@ -25,6 +25,12 @@ const CoursesPage = lazy(() => import('./pages/CoursesPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const CourseDetailsPage = lazy(() => import('./pages/student/CourseDetailsPage'));
 const VideoTest = lazy(() => import('./pages/test/VideoTest'));
+// Static / Legal pages
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+const FAQsPage = lazy(() => import('./pages/FAQsPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
+const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'));
 
 // Student Pages
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
@@ -96,6 +102,13 @@ function App() {
                   <Route path="/test-video" element={<VideoTest />} />
                   <Route path="/account-blocked" element={<AccountBlocked />} />
                   <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+
+                  {/* Static / Legal Routes */}
+                  <Route path="/help-center" element={<HelpCenterPage />} />
+                  <Route path="/faqs" element={<FAQsPage />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                  <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+                  <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
                   {/* Student Routes */}
                   <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>

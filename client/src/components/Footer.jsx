@@ -67,11 +67,11 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-5 text-white">Support</h4>
             <ul className="space-y-3">
-              {['Help Center', 'FAQs', 'Privacy Policy', 'Terms of Service', 'Refund Policy'].map((item) => (
-                <li key={item}>
-                  <a href="#" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">{item}</a>
-                </li>
-              ))}
+              <li><Link to="/help-center" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">Help Center</Link></li>
+              <li><Link to="/faqs" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">FAQs</Link></li>
+              <li><Link to="/privacy-policy" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">Terms of Service</Link></li>
+              <li><Link to="/refund-policy" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">Refund Policy</Link></li>
             </ul>
           </div>
 
@@ -101,9 +101,9 @@ const Footer = () => {
             © {new Date().getFullYear()} Zinda Learn. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-surface-500 hover:text-primary-400">Privacy</a>
-            <a href="#" className="text-sm text-surface-500 hover:text-primary-400">Terms</a>
-            <a href="#" className="text-sm text-surface-500 hover:text-primary-400">Cookies</a>
+            <Link to="/privacy-policy" className="text-sm text-surface-500 hover:text-primary-400 transition-colors">Privacy</Link>
+            <Link to="/terms-of-service" className="text-sm text-surface-500 hover:text-primary-400 transition-colors">Terms</Link>
+            <Link to="/refund-policy" className="text-sm text-surface-500 hover:text-primary-400 transition-colors">Refunds</Link>
           </div>
         </div>
       </div>
