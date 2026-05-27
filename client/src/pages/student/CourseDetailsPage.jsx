@@ -19,13 +19,17 @@ import CourseSkeleton from '../../components/course/CourseSkeleton';
 const CourseDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, updateUser } = useAuth();
   
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [error, setError] = useState(null);
+
+  // Wishlist States
+  const [wishlisted, setWishlisted] = useState(false);
+  const [wishlisting, setWishlisting] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -51,7 +55,12 @@ const CourseDetailsPage = () => {
     fetchCourse();
   }, [id, navigate]);
 
-  // Razorpay script loader moved to utility for reusability
+  // Sync wishlist local state with global user context
+  useEffect(() => {
+    if (user && user.wishlist && course) {
+      setWishlisted(user.wishlist.includes(course._id));
+    }
+  }, [user, course]);
 
   const handleEnrollClick = () => {
     if (!isAuthenticated) {
@@ -66,7 +75,6 @@ const CourseDetailsPage = () => {
     if (enrolling) return;
     setEnrolling(true);
     
-    // Create a toast for initialization feedback
     const loadingToast = toast.loading('Initializing payment process...');
     
     try {
@@ -160,6 +168,59 @@ const CourseDetailsPage = () => {
     navigate(`/student/my-learning?course=${id}&play=true`);
   };
 
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to manage your wishlist');
+      navigate('/login');
+      return;
+    }
+
+    setWishlisting(true);
+    try {
+      const { toggleWishlist } = await import('../../services/settingsService');
+      const response = await toggleWishlist(course._id);
+      
+      if (response.success) {
+        // Sync context state
+        const updatedUser = { ...user, wishlist: response.wishlist };
+        updateUser(updatedUser);
+        setWishlisted(response.isWishlisted);
+        toast.success(response.message);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update wishlist');
+    } finally {
+      setWishlisting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: course?.title || 'Zinda Learn Course',
+      text: course?.subtitle || `Check out this course on Zinda Learn: ${course?.title}`,
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        toast.success('Course shared successfully!');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error sharing:', err);
+      }
+    }
+
+    // Fallback to clipboard copy
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Course link copied to clipboard!');
+    } catch (err) {
+      toast.error('Failed to copy course link');
+    }
+  };
+
   if (loading) return <CourseSkeleton />;
 
   if (error || !course) {
@@ -250,6 +311,10 @@ const CourseDetailsPage = () => {
               enrolling={enrolling}
               onEnroll={handleEnrollClick}
               onContinue={handleContinue}
+              wishlisted={wishlisted}
+              wishlisting={wishlisting}
+              onToggleWishlist={handleToggleWishlist}
+              onShare={handleShare}
             />
           </div>
 

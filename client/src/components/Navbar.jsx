@@ -35,7 +35,11 @@ const Navbar = ({ showBackground = false }) => {
 
   const getDashboardLink = () => {
     if (!user) return '/login';
-    const map = { student: '/student/dashboard' };
+    const map = { 
+      student: '/student/dashboard',
+      instructor: '/instructor/dashboard',
+      admin: '/admin/dashboard'
+    };
     return map[user.role] || '/';
   };
 

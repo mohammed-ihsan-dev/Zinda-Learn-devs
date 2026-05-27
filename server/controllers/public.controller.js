@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Course from "../models/Course.js";
 import Review from "../models/Review.js";
 import mongoose from "mongoose";
+import SystemSettings from "../models/SystemSettings.js";
 
 export const getLandingStats = async (req, res) => {
   try {
@@ -87,3 +88,27 @@ export const getLandingCategories = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getPublicSettings = async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        maintenanceMode: settings.maintenanceMode,
+        allowStudentRegistration: settings.allowStudentRegistration,
+        allowInstructorApplications: settings.allowInstructorApplications,
+        enablePublicCourseBrowsing: settings.enablePublicCourseBrowsing,
+        enableGoogleLogin: settings.enableGoogleLogin,
+        platformVersion: settings.platformVersion
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

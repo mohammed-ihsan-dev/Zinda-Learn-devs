@@ -2,7 +2,17 @@ import React from 'react';
 import { Play, Shield, Monitor, FileText, Award, Heart, Share2 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormatter';
 
-const CourseSidebar = ({ course, enrolled, enrolling, onEnroll, onContinue }) => {
+const CourseSidebar = ({ 
+  course, 
+  enrolled, 
+  enrolling, 
+  onEnroll, 
+  onContinue,
+  wishlisted,
+  wishlisting,
+  onToggleWishlist,
+  onShare
+}) => {
   if (!course) return null;
 
   return (
@@ -58,12 +68,6 @@ const CourseSidebar = ({ course, enrolled, enrolling, onEnroll, onContinue }) =>
               {enrolling ? 'Processing...' : 'Enroll Now'}
             </button>
           )}
-          
-          {!enrolled && (
-            <button className="w-full py-3.5 border border-gray-900 hover:bg-gray-50 text-gray-900 font-bold rounded-lg transition-colors">
-              Buy Now
-            </button>
-          )}
         </div>
 
         <p className="text-xs text-center text-gray-500 mb-6">30-Day Money-Back Guarantee</p>
@@ -93,13 +97,22 @@ const CourseSidebar = ({ course, enrolled, enrolling, onEnroll, onContinue }) =>
 
         {/* Share/Wishlist */}
         <div className="flex border-t border-gray-100 mt-6 pt-6">
-          <button className="flex-1 flex items-center justify-center gap-2 font-bold text-sm text-gray-700 hover:text-purple-600 transition-colors">
+          <button 
+            onClick={onShare}
+            className="flex-1 flex items-center justify-center gap-2 font-bold text-sm text-gray-700 hover:text-purple-600 transition-colors"
+          >
             <Share2 size={18} />
             Share
           </button>
-          <button className="flex-1 flex items-center justify-center gap-2 font-bold text-sm text-gray-700 hover:text-purple-600 transition-colors border-l border-gray-100">
-            <Heart size={18} />
-            Wishlist
+          <button 
+            disabled={wishlisting}
+            onClick={onToggleWishlist}
+            className={`flex-1 flex items-center justify-center gap-2 font-bold text-sm transition-colors border-l border-gray-100 ${
+              wishlisted ? 'text-red-500 hover:text-red-650' : 'text-gray-700 hover:text-purple-600'
+            }`}
+          >
+            <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} className={wishlisting ? 'animate-pulse' : ''} />
+            {wishlisted ? 'Wishlisted' : 'Wishlist'}
           </button>
         </div>
       </div>

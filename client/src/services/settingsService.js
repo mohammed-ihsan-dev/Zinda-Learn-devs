@@ -56,3 +56,18 @@ export const verifyEmailToken = async (token) => {
   const response = await api.post(`/student/settings/verify-email/${token}`);
   return response.data;
 };
+
+export const getAdminSettings = async () => {
+  const response = await api.get('/admin/settings');
+  return response.data;
+};
+
+export const updateAdminSettings = async (settingsData) => {
+  const response = await api.put('/admin/settings', settingsData);
+  return response.data;
+};
+
+export const toggleWishlist = async (courseId) => {
+  const response = await api.post('/student/settings/wishlist/toggle', { courseId });
+  return response.data;
+};

@@ -17,6 +17,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('zinda_token'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [googleLoginEnabled, setGoogleLoginEnabled] = useState(true);
 
   const logout = useCallback(() => {
     localStorage.removeItem('zinda_token');
@@ -63,9 +65,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, logout]);
 
+  const fetchPublicSettings = useCallback(async () => {
+    try {
+      const { data } = await api.get('/public/settings');
+      if (data?.success && data?.data) {
+        setMaintenanceMode(data.data.maintenanceMode);
+        setGoogleLoginEnabled(data.data.enableGoogleLogin);
+      }
+    } catch (err) {
+      if (err.response?.status === 503 || err.response?.data?.maintenance) {
+        setMaintenanceMode(true);
+      }
+      console.error('Failed to fetch public settings:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  useEffect(() => {
+    fetchPublicSettings();
+  }, [fetchPublicSettings]);
 
   useEffect(() => {
     if (token) {
@@ -175,6 +196,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       updateUser,
       refreshUser,
+      maintenanceMode,
+      googleLoginEnabled,
+      refreshPublicSettings: fetchPublicSettings,
       isAuthenticated: !!token && !!user
     }}>
       {children}

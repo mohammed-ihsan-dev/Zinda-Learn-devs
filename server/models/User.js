@@ -93,6 +93,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course'
   }],
+  wishlist: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
   hoursLearned: {
     type: Number,
     default: 0
@@ -216,11 +220,11 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Generate JWT token
-userSchema.methods.generateToken = function() {
+userSchema.methods.generateToken = function(expiresIn) {
   return jwt.sign(
     { id: this._id, role: this.role, tokenVersion: this.tokenVersion || 0 },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    { expiresIn: expiresIn || process.env.JWT_EXPIRE || '24h' }
   );
 };
 

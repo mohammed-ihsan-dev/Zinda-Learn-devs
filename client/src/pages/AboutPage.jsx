@@ -1,8 +1,10 @@
 import { Shield, Users, Target, Rocket, Heart, Award } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { useLandingData } from '../hooks/useLandingData';
 import Footer from '../components/Footer';
 
 const AboutPage = () => {
+  const { stats } = useLandingData();
   return (
     <div className="min-h-screen bg-surface-50">
       <Navbar showBackground={true} />
@@ -39,7 +41,7 @@ const AboutPage = () => {
                 />
               </div>
               <div className="absolute -bottom-6 -right-6 bg-primary-600 text-white p-8 rounded-3xl shadow-xl hidden md:block">
-                <p className="text-4xl font-bold mb-1">10k+</p>
+                <p className="text-4xl font-bold mb-1">{stats.students || 0}</p>
                 <p className="text-sm opacity-80">Students Empowered</p>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { CallProvider } from './features/calls/context/CallContext';
@@ -31,6 +31,7 @@ const FAQsPage = lazy(() => import('./pages/FAQsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
 const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'));
+const MaintenancePage = lazy(() => import('./pages/MaintenancePage'));
 
 // Student Pages
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
@@ -78,101 +79,129 @@ const VerifyEmailPage = lazy(() => import('./pages/student/VerifyEmailPage'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollToTop from './components/common/ScrollToTop';
 
+function AppContent() {
+  const { maintenanceMode, user, loading } = useAuth();
+  
+  const isMaintenanceRedirectNeeded = maintenanceMode && user?.role !== 'admin';
+  const isCurrentlyOnAdminRoute = window.location.pathname.startsWith('/admin');
+  const isCurrentlyOnMaintenance = window.location.pathname === '/maintenance';
+
+  // Wait until Auth is loaded before executing redirect flow to prevent flickers
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader /></div>;
+  }
+
+  if (isMaintenanceRedirectNeeded && !isCurrentlyOnAdminRoute && !isCurrentlyOnMaintenance) {
+    return <Navigate to="/maintenance" replace />;
+  }
+
+  if (!isMaintenanceRedirectNeeded && isCurrentlyOnMaintenance) {
+    return <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/'} replace />;
+  }
+
+  return (
+    <>
+      <ScrollToTop />
+      <Toaster position="top-center" reverseOrder={false} />
+      <CallModal />
+      <IncomingCallModal />
+      <ErrorBoundary>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader /></div>}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<StudentLogin />} />
+            <Route path="/register" element={<StudentRegister />} />
+            <Route path="/instructor/login" element={<InstructorLogin />} />
+            <Route path="/instructor/signup" element={<InstructorSignup />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/courses/:id" element={<CourseDetailsPage />} />
+            <Route path="/test-video" element={<VideoTest />} />
+            <Route path="/account-blocked" element={<AccountBlocked />} />
+            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
+
+            {/* Static / Legal Routes */}
+            <Route path="/help-center" element={<HelpCenterPage />} />
+            <Route path="/faqs" element={<FAQsPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
+
+            {/* Student Routes */}
+            <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/student/dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
+              <Route path="my-learning" element={<MyLearning />} />
+              <Route path="browse-courses" element={<BrowseCourses />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="notifications" element={<StudentNotifications />} />
+              <Route path="live-classes" element={<StudentLiveClasses />} />
+              <Route path="live-classes/:id" element={<LiveClassDetail />} />
+
+              <Route path="progress" element={<ProgressPage />} />
+              <Route path="certificates" element={<CertificatesPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="help" element={<StudentHelpCenter />} />
+            </Route>
+
+            {/* Instructor Routes */}
+            <Route path="/instructor" element={<ProtectedRoute roles={['instructor', 'admin']}><InstructorLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/instructor/dashboard" replace />} />
+              <Route path="dashboard" element={<InstructorDashboard />} />
+              <Route path="my-courses" element={<MyCourses />} />
+              <Route path="courses/:id" element={<CourseDetail />} />
+              <Route path="edit-course/:id" element={<EditCourse />} />
+              <Route path="create-course" element={<CreateCourse />} />
+              <Route path="earnings" element={<InstructorPayouts />} />
+              <Route path="students" element={<Students />} />
+              <Route path="reviews" element={<InstructorReviews />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="notifications" element={<InstructorNotifications />} />
+              <Route path="settings" element={<InstructorSettings />} />
+              <Route path="help" element={<InstructorHelpCenter />} />
+              <Route path="support" element={<InstructorSupport />} />
+              <Route path="live-classes" element={<InstructorLiveClasses />} />
+              <Route path="live-classes/create" element={<CreateLiveClass />} />
+              <Route path="live-classes/edit/:id" element={<EditLiveClass />} />
+            </Route>
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="courses" element={<CoursesManagement />} />
+              <Route path="students" element={<StudentsManagement />} />
+              <Route path="instructor-management" element={<InstructorManagement />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="support" element={<AdminSupportTickets />} />
+              <Route path="notifications" element={<AdminNotifications />} />
+            </Route>
+
+            {/* 404 Route */}
+            <Route path="*" element={<div className="min-h-screen flex items-center justify-center font-bold text-slate-500">404 - Page Not Found</div>} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
         <CallProvider>
           <Router>
-            <ScrollToTop />
-            <Toaster position="top-center" reverseOrder={false} />
-            <CallModal />
-            <IncomingCallModal />
-            <ErrorBoundary>
-              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader /></div>}>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<StudentLogin />} />
-                  <Route path="/register" element={<StudentRegister />} />
-                  <Route path="/instructor/login" element={<InstructorLogin />} />
-                  <Route path="/instructor/signup" element={<InstructorSignup />} />
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/courses" element={<CoursesPage />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/courses/:id" element={<CourseDetailsPage />} />
-                  <Route path="/test-video" element={<VideoTest />} />
-                  <Route path="/account-blocked" element={<AccountBlocked />} />
-                  <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-
-                  {/* Static / Legal Routes */}
-                  <Route path="/help-center" element={<HelpCenterPage />} />
-                  <Route path="/faqs" element={<FAQsPage />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-                  <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-                  <Route path="/refund-policy" element={<RefundPolicyPage />} />
-
-                  {/* Student Routes */}
-                  <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
-                    <Route index element={<Navigate to="/student/dashboard" replace />} />
-                    <Route path="dashboard" element={<StudentDashboard />} />
-                    <Route path="my-learning" element={<MyLearning />} />
-                    <Route path="browse-courses" element={<BrowseCourses />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="notifications" element={<StudentNotifications />} />
-                    <Route path="live-classes" element={<StudentLiveClasses />} />
-                    <Route path="live-classes/:id" element={<LiveClassDetail />} />
-
-                    <Route path="progress" element={<ProgressPage />} />
-                    <Route path="certificates" element={<CertificatesPage />} />
-                    <Route path="settings" element={<SettingsPage />} />
-                    <Route path="help" element={<StudentHelpCenter />} />
-                  </Route>
-
-                  {/* Instructor Routes */}
-                  <Route path="/instructor" element={<ProtectedRoute roles={['instructor', 'admin']}><InstructorLayout /></ProtectedRoute>}>
-                    <Route index element={<Navigate to="/instructor/dashboard" replace />} />
-                    <Route path="dashboard" element={<InstructorDashboard />} />
-                    <Route path="my-courses" element={<MyCourses />} />
-                    <Route path="courses/:id" element={<CourseDetail />} />
-                    <Route path="edit-course/:id" element={<EditCourse />} />
-                    <Route path="create-course" element={<CreateCourse />} />
-                    <Route path="earnings" element={<InstructorPayouts />} />
-                    <Route path="students" element={<Students />} />
-                    <Route path="reviews" element={<InstructorReviews />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="notifications" element={<InstructorNotifications />} />
-                    <Route path="settings" element={<InstructorSettings />} />
-                    <Route path="help" element={<InstructorHelpCenter />} />
-                    <Route path="support" element={<InstructorSupport />} />
-                    <Route path="live-classes" element={<InstructorLiveClasses />} />
-                    <Route path="live-classes/create" element={<CreateLiveClass />} />
-                    <Route path="live-classes/edit/:id" element={<EditLiveClass />} />
-                  </Route>
-
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
-                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="courses" element={<CoursesManagement />} />
-                    <Route path="students" element={<StudentsManagement />} />
-                    <Route path="instructor-management" element={<InstructorManagement />} />
-                    <Route path="analytics" element={<Analytics />} />
-                    <Route path="payments" element={<Payments />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="support" element={<AdminSupportTickets />} />
-                    <Route path="notifications" element={<AdminNotifications />} />
-                  </Route>
-
-                  {/* 404 Route */}
-                  <Route path="*" element={<div className="min-h-screen flex items-center justify-center font-bold text-slate-500">404 - Page Not Found</div>} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
-        </Router>
-      </CallProvider>
-    </NotificationProvider>
-  </AuthProvider>
+            <AppContent />
+          </Router>
+        </CallProvider>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }
 

@@ -64,6 +64,22 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle Maintenance Mode
+    if ((error.response?.status === 503 || error.response?.data?.maintenance) && !window.location.pathname.includes('/maintenance')) {
+      const userStr = localStorage.getItem('zinda_user');
+      let isAdmin = false;
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          isAdmin = user.role === 'admin';
+        } catch (e) {}
+      }
+      
+      if (!isAdmin) {
+        window.location.href = '/maintenance';
+      }
+    }
+
     // Global error message extraction
     const message = error.response?.data?.message || 'Something went wrong';
     

@@ -25,7 +25,9 @@ import {
   updatePayoutStatus,
   getStudents,
   getStudentStats,
-  getTutors
+  getTutors,
+  getSystemSettings,
+  updateSystemSettings
 } from '../controllers/admin.controller.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -61,5 +63,9 @@ router.get('/dashboard', getDashboardStats);
 router.get('/payments', getPayments);
 router.get('/payouts', getPayouts);
 router.patch('/payouts/:id/status', updatePayoutStatus);
+
+// 5. System Settings
+router.get('/settings', getSystemSettings);
+router.put('/settings', updateSystemSettings);
 
 export default router;

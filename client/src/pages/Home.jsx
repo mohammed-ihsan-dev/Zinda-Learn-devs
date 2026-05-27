@@ -45,7 +45,7 @@ const Home = () => {
             <div className="max-w-3xl animate-slide-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-sm text-white font-medium mb-8 border border-white/20">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
-                Trusted by 50,000+ learners worldwide
+                Trusted by {stats.students || 0} learners worldwide
               </div>
               <h1 className="text-4xl sm:text-6xl lg:text-8xl font-bold font-display text-white leading-[1.1] mb-8">
                 Master New Skills.

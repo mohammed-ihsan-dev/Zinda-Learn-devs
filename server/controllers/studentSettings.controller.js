@@ -275,3 +275,46 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+// @desc    Toggle course in student wishlist
+// @route   POST /api/student/settings/wishlist/toggle
+export const toggleWishlist = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Course ID is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.wishlist) {
+      user.wishlist = [];
+    }
+
+    const index = user.wishlist.indexOf(courseId);
+    let isWishlisted = false;
+
+    if (index > -1) {
+      user.wishlist.splice(index, 1);
+      isWishlisted = false;
+    } else {
+      user.wishlist.push(courseId);
+      isWishlisted = true;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: isWishlisted ? 'Course added to wishlist' : 'Course removed from wishlist',
+      isWishlisted,
+      wishlist: user.wishlist
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

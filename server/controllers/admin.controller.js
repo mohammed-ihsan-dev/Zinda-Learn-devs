@@ -1,6 +1,7 @@
 import { adminService } from "../services/admin.service.js";
 import mongoose from "mongoose";
 import { dispatchNotification } from "../services/notificationDispatcher.js";
+import SystemSettings from "../models/SystemSettings.js";
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -356,3 +357,81 @@ export const updatePayoutStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Get global system settings
+// @route   GET /api/admin/settings
+export const getSystemSettings = async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+    const backendStatus = 'Healthy';
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...settings.toObject(),
+        dbStatus,
+        backendStatus
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update global system settings
+// @route   PUT /api/admin/settings
+export const updateSystemSettings = async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    const {
+      maintenanceMode,
+      allowStudentRegistration,
+      allowInstructorApplications,
+      enablePublicCourseBrowsing,
+      requireEmailVerification,
+      enableGoogleLogin,
+      jwtSessionTimeout,
+      enableEmailService,
+      adminAlertEmails,
+      platformVersion
+    } = req.body;
+
+    if (maintenanceMode !== undefined) settings.maintenanceMode = maintenanceMode;
+    if (allowStudentRegistration !== undefined) settings.allowStudentRegistration = allowStudentRegistration;
+    if (allowInstructorApplications !== undefined) settings.allowInstructorApplications = allowInstructorApplications;
+    if (enablePublicCourseBrowsing !== undefined) settings.enablePublicCourseBrowsing = enablePublicCourseBrowsing;
+    if (requireEmailVerification !== undefined) settings.requireEmailVerification = requireEmailVerification;
+    if (enableGoogleLogin !== undefined) settings.enableGoogleLogin = enableGoogleLogin;
+    if (jwtSessionTimeout !== undefined) settings.jwtSessionTimeout = jwtSessionTimeout;
+    if (enableEmailService !== undefined) settings.enableEmailService = enableEmailService;
+    if (adminAlertEmails !== undefined) settings.adminAlertEmails = adminAlertEmails;
+    if (platformVersion !== undefined) settings.platformVersion = platformVersion;
+
+    await settings.save();
+
+    const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+    const backendStatus = 'Healthy';
+
+    res.status(200).json({
+      success: true,
+      message: 'System settings updated successfully',
+      data: {
+        ...settings.toObject(),
+        dbStatus,
+        backendStatus
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

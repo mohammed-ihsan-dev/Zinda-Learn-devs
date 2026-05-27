@@ -6,7 +6,6 @@ import {
   BarChart3, HelpCircle, Bell, Settings, LogOut, Menu, X,
   ChevronDown, ChevronRight, Shield
 } from 'lucide-react';
-import NotificationBell from '../components/NotificationBell';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NAV_SECTIONS = [
@@ -207,11 +206,6 @@ const AdminLayout = () => {
 
           {/* Right section */}
           <div className="flex items-center gap-1">
-            {/* Notification bell */}
-            <div className="flex items-center">
-              <NotificationBell />
-            </div>
-
             {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>
               <button

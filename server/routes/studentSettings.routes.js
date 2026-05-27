@@ -9,7 +9,8 @@ import {
   updateNotifications, 
   deleteAccount,
   sendVerificationEmail,
-  verifyEmail
+  verifyEmail,
+  toggleWishlist
 } from '../controllers/studentSettings.controller.js';
 import { protect } from '../middleware/auth.js';
 
@@ -22,6 +23,7 @@ router.put('/notifications', protect, updateNotifications);
 router.delete('/delete-account', protect, deleteAccount);
 router.post('/send-verification-email', protect, sendVerificationEmail);
 router.post('/verify-email/:token', verifyEmail); // Public — accessed from email link
+router.post('/wishlist/toggle', protect, toggleWishlist);
 
 export default router;
 

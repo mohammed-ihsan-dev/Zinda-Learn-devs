@@ -24,6 +24,7 @@ import publicRoutes from './routes/public.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
+import { checkMaintenance } from './middleware/maintenanceMode.js';
 
 const app = express();
 
@@ -113,6 +114,9 @@ app.use('/api/', limiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Global Maintenance Mode check
+app.use('/api/', checkMaintenance);
 
 // HTTP request logging
 if (process.env.NODE_ENV === 'development') {

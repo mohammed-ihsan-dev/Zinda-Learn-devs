@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import admin from "../config/firebaseAdmin.js";
 import sendEmail from "../utils/sendEmail.js";
 import * as otpService from "../services/otpService.js";
+import SystemSettings from "../models/SystemSettings.js";
 
 // Send OTP
 export const sendOTP = async (req, res) => {
@@ -73,6 +74,24 @@ export const register = async (req, res) => {
     const { name, email: rawEmail, password, role } = req.body;
     const email = rawEmail.toLowerCase().trim();
 
+    // Check settings controls
+    const systemSettings = await SystemSettings.findOne();
+    if (systemSettings) {
+      const actualRole = role || 'student';
+      if (actualRole === 'student' && !systemSettings.allowStudentRegistration) {
+        return res.status(403).json({
+          success: false,
+          message: "Student registration is currently disabled by the administrator."
+        });
+      }
+      if (actualRole === 'instructor' && !systemSettings.allowInstructorApplications) {
+        return res.status(403).json({
+          success: false,
+          message: "Instructor applications are currently closed."
+        });
+      }
+    }
+
     const user = await User.findOne({ email }).select("+password");
     if (!user || !user.isVerified) {
       return res.status(400).json({ success: false, message: "Email not verified" });
@@ -95,7 +114,8 @@ export const register = async (req, res) => {
 
     await user.save();
 
-    const token = user.generateToken();
+    const timeout = systemSettings?.jwtSessionTimeout ? `${systemSettings.jwtSessionTimeout}h` : undefined;
+    const token = user.generateToken(timeout);
 
     res.status(201).json({
       success: true,
@@ -152,8 +172,11 @@ export const login = async (req, res) => {
       });
     }
 
+    const systemSettings = await SystemSettings.findOne();
+    const timeout = systemSettings?.jwtSessionTimeout ? `${systemSettings.jwtSessionTimeout}h` : undefined;
+
     if (user.isBlocked) {
-      const token = user.generateToken();
+      const token = user.generateToken(timeout);
       return res.status(403).json({
         success: false,
         blocked: true,
@@ -181,7 +204,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = user.generateToken();
+    const token = user.generateToken(timeout);
 
     res.status(200).json({
       success: true,
@@ -273,7 +296,9 @@ export const changePassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    const token = user.generateToken();
+    const systemSettings = await SystemSettings.findOne();
+    const timeout = systemSettings?.jwtSessionTimeout ? `${systemSettings.jwtSessionTimeout}h` : undefined;
+    const token = user.generateToken(timeout);
 
     res.status(200).json({
       success: true,
@@ -292,6 +317,14 @@ export const changePassword = async (req, res) => {
 export const googleLogin = async (req, res) => {
   try {
     const { name, email, photo, token } = req.body;
+
+    const systemSettings = await SystemSettings.findOne();
+    if (systemSettings && !systemSettings.enableGoogleLogin) {
+      return res.status(403).json({
+        success: false,
+        message: "Google login is currently disabled by the administrator."
+      });
+    }
 
     if (!token) {
       return res.status(400).json({
@@ -358,8 +391,10 @@ export const googleLogin = async (req, res) => {
       }
     }
 
+    const timeout = systemSettings?.jwtSessionTimeout ? `${systemSettings.jwtSessionTimeout}h` : undefined;
+
     if (user.isBlocked) {
-      const jwtToken = user.generateToken();
+      const jwtToken = user.generateToken(timeout);
       return res.status(403).json({
         success: false,
         blocked: true,
@@ -388,7 +423,7 @@ export const googleLogin = async (req, res) => {
     }
 
     // 4. Generate JWT for our app
-    const jwtToken = user.generateToken();
+    const jwtToken = user.generateToken(timeout);
 
     res.status(200).json({
       success: true,
