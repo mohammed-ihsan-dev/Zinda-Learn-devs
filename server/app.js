@@ -35,42 +35,81 @@ app.use(helmet());
 app.use(compression());
 
 // Global Rate Limiter
+// NOTE: placed AFTER CORS so OPTIONS preflights bypass it
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  max: 1000,
   message: 'Too many requests from this IP, please try again later.'
 });
-app.use('/api/', limiter);
 
-// CORS
+// CORS — build allowed origins from env at runtime so no redeploy needed when domain changes
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   next();
 });
 
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      process.env.APP_URL,
-      // Local dev only — excluded in production
-      ...(process.env.NODE_ENV === 'development' ? [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://localhost:5175'
-      ] : [])
-    ].filter(Boolean);
+const buildAllowedOrigins = () => {
+  const origins = new Set();
 
-    if (!origin || allowedOrigins.includes(origin)) {
+  // Primary production origins from env
+  if (process.env.FRONTEND_URL) origins.add(process.env.FRONTEND_URL);
+  if (process.env.APP_URL)      origins.add(process.env.APP_URL);
+
+  // Auto-add www <-> non-www variants for each origin
+  origins.forEach((url) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.startsWith('www.')) {
+        // Add non-www version
+        parsed.hostname = parsed.hostname.slice(4);
+        origins.add(parsed.origin);
+      } else {
+        // Add www version
+        parsed.hostname = 'www.' + parsed.hostname;
+        origins.add(parsed.origin);
+      }
+    } catch (_) { /* ignore invalid URLs */ }
+  });
+
+  // Local dev origins — only included when NODE_ENV=development
+  if (process.env.NODE_ENV === 'development') {
+    ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'].forEach(o => origins.add(o));
+  }
+
+  return origins;
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no origin header) e.g. Postman, curl, health checks
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = buildAllowedOrigins();
+
+    if (allowedOrigins.has(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
+      // Use callback(null, false) NOT callback(new Error(...))
+      // Throwing an Error here causes Express to return HTTP 500 via errorMiddleware.
+      // Returning false causes the cors package to send a proper 403 CORS response.
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS preflight for all routes
+// This ensures preflight doesn't get blocked before route handlers run
+app.options('*', cors(corsOptions));
+
+// Rate limiter — placed after CORS so OPTIONS preflights are served without consuming quota
+app.use('/api/', limiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

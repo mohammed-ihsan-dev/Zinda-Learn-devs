@@ -5,13 +5,29 @@ import { callHandlers } from './callHandlers.js';
 let io;
 
 export const initSocket = (server) => {
-  const allowedOrigins = [
-    process.env.SOCKET_CORS_ORIGIN,
-    process.env.FRONTEND_URL,
-    process.env.APP_URL,
-    process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : null,
-    process.env.NODE_ENV === 'development' ? 'http://localhost:5174' : null,
-  ].filter(Boolean);
+  // Build allowed origins — must match the HTTP API CORS config exactly
+  const originSet = new Set();
+  [process.env.SOCKET_CORS_ORIGIN, process.env.FRONTEND_URL, process.env.APP_URL]
+    .filter(Boolean)
+    .forEach((url) => {
+      originSet.add(url);
+      // Auto-add www <-> non-www variant
+      try {
+        const parsed = new URL(url);
+        if (parsed.hostname.startsWith('www.')) {
+          parsed.hostname = parsed.hostname.slice(4);
+        } else {
+          parsed.hostname = 'www.' + parsed.hostname;
+        }
+        originSet.add(parsed.origin);
+      } catch (_) {}
+    });
+
+  if (process.env.NODE_ENV === 'development') {
+    ['http://localhost:5173', 'http://localhost:5174'].forEach(o => originSet.add(o));
+  }
+
+  const allowedOrigins = [...originSet];
 
   io = new Server(server, {
     cors: {
