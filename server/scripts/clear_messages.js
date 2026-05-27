@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Conversation from '../../backend/models/Conversation.js';
-import Message from '../../models/Message.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 
 dotenv.config();
 

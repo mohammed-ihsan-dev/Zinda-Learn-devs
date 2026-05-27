@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Enrollment from '../../backend/models/Enrollment.js';
-import Course from '../../backend/models/Course.js';
-import User from '../../backend/models/User.js';
+import Enrollment from '../models/Enrollment.js';
+import Course from '../models/Course.js';
+import User from '../models/User.js';
 
-dotenv.config({ path: '../backend/.env' });
+dotenv.config({ path: '../.env' });
 
 async function test() {
   try {
