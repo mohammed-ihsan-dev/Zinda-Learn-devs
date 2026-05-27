@@ -63,11 +63,6 @@ const Messages = () => {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      socketService.connect(token);
-    }
-
     const handleNewMessage = (msg) => {
       setMessages(prev => {
         if (prev.some(m => m._id === msg._id)) return prev;

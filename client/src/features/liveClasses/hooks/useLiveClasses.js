@@ -24,10 +24,6 @@ export const useLiveClasses = () => {
   };
 
   useEffect(() => {
-    if (token) {
-      socketService.connect(token);
-    }
-
     fetchLiveClasses();
 
     // Socket listeners handlers

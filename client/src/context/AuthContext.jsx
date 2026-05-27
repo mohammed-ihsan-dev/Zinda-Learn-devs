@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import api from '../services/api';
 import { getUserProfile } from '../services/userService';
 import { toast } from 'react-hot-toast';
+import socketService from '../services/socket';
 
 const AuthContext = createContext(null);
 
@@ -65,6 +66,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  useEffect(() => {
+    if (token) {
+      console.log('[AUTH] Global socket connection init');
+      socketService.connect(token);
+    } else {
+      socketService.disconnect();
+    }
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [token]);
 
   const login = async (credentials) => {
     try {
