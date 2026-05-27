@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import socketService from '../../../services/socket';
 import peerService from '../services/peerService';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext';
 
 const CallContext = createContext(null);
 
@@ -12,6 +13,7 @@ export const useCall = () => {
 };
 
 export const CallProvider = ({ children }) => {
+  const { user } = useAuth();
   const [call, setCall] = useState({
     isReceiving: false,
     isCalling: false,
@@ -170,6 +172,7 @@ export const CallProvider = ({ children }) => {
       socketService.offCallEvents();
     };
   }, [
+    user,
     handleIncomingCall,
     handleCallRinging,
     handleCallAccepted,

@@ -7,6 +7,31 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 class SocketService {
   socket = null;
+  listeners = new Map(); // event -> Set of callbacks
+
+  _registerListener(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event).add(callback);
+    this.socket?.on(event, callback);
+  }
+
+  _removeListener(event, callback) {
+    const callbacks = this.listeners.get(event);
+    if (!callbacks) return;
+
+    if (callback) {
+      callbacks.delete(callback);
+      this.socket?.off(event, callback);
+      if (callbacks.size === 0) {
+        this.listeners.delete(event);
+      }
+    } else {
+      this.listeners.delete(event);
+      this.socket?.off(event);
+    }
+  }
 
   connect(token) {
     if (this.socket) {
@@ -25,6 +50,13 @@ class SocketService {
       // Allow polling first so it works behind reverse proxies (nginx, AWS ALB)
       // Socket.IO will automatically upgrade to websocket when possible
       transports: ['polling', 'websocket'],
+    });
+
+    // Re-bind all registered listeners to the new socket
+    this.listeners.forEach((callbacks, event) => {
+      callbacks.forEach(callback => {
+        this.socket.on(event, callback);
+      });
     });
 
     this.socket.on('connect', () => {
@@ -68,51 +100,35 @@ class SocketService {
   }
 
   onNewMessage(callback) {
-    if (this.socket) {
-      this.socket.on('newMessage', callback);
-    }
+    this._registerListener('newMessage', callback);
   }
 
   onUserTyping(callback) {
-    if (this.socket) {
-      this.socket.on('userTyping', callback);
-    }
+    this._registerListener('userTyping', callback);
   }
 
   onUserStoppedTyping(callback) {
-    if (this.socket) {
-      this.socket.on('userStoppedTyping', callback);
-    }
+    this._registerListener('userStoppedTyping', callback);
   }
 
   onMessageSeen(callback) {
-    if (this.socket) {
-      this.socket.on('messageSeen', callback);
-    }
+    this._registerListener('messageSeen', callback);
   }
 
   onNotification(callback) {
-    if (this.socket) {
-      this.socket.on('newNotification', callback);
-    }
+    this._registerListener('newNotification', callback);
   }
 
   onLiveClassStarted(callback) {
-    if (this.socket) {
-      this.socket.on('liveClassStarted', callback);
-    }
+    this._registerListener('liveClassStarted', callback);
   }
 
   onLiveClassEnded(callback) {
-    if (this.socket) {
-      this.socket.on('liveClassEnded', callback);
-    }
+    this._registerListener('liveClassEnded', callback);
   }
 
   onLiveClassScheduled(callback) {
-    if (this.socket) {
-      this.socket.on('liveClassScheduled', callback);
-    }
+    this._registerListener('liveClassScheduled', callback);
   }
 
   markAsSeen(conversationId, messageIds) {
@@ -123,43 +139,35 @@ class SocketService {
 
   // Remove listeners to prevent memory leaks
   offNewMessage(callback) {
-    if (callback) this.socket?.off('newMessage', callback);
-    else this.socket?.off('newMessage');
+    this._removeListener('newMessage', callback);
   }
 
   offUserTyping(callback) {
-    if (callback) this.socket?.off('userTyping', callback);
-    else this.socket?.off('userTyping');
+    this._removeListener('userTyping', callback);
   }
 
   offUserStoppedTyping(callback) {
-    if (callback) this.socket?.off('userStoppedTyping', callback);
-    else this.socket?.off('userStoppedTyping');
+    this._removeListener('userStoppedTyping', callback);
   }
 
   offMessageSeen(callback) {
-    if (callback) this.socket?.off('messageSeen', callback);
-    else this.socket?.off('messageSeen');
+    this._removeListener('messageSeen', callback);
   }
 
   offNotification(callback) {
-    if (callback) this.socket?.off('newNotification', callback);
-    else this.socket?.off('newNotification');
+    this._removeListener('newNotification', callback);
   }
 
   offLiveClassStarted(callback) {
-    if (callback) this.socket?.off('liveClassStarted', callback);
-    else this.socket?.off('liveClassStarted');
+    this._removeListener('liveClassStarted', callback);
   }
 
   offLiveClassEnded(callback) {
-    if (callback) this.socket?.off('liveClassEnded', callback);
-    else this.socket?.off('liveClassEnded');
+    this._removeListener('liveClassEnded', callback);
   }
 
   offLiveClassScheduled(callback) {
-    if (callback) this.socket?.off('liveClassScheduled', callback);
-    else this.socket?.off('liveClassScheduled');
+    this._removeListener('liveClassScheduled', callback);
   }
 
   // Voice Call Signaling
@@ -192,53 +200,52 @@ class SocketService {
   }
 
   onIncomingCall(callback) {
-    this.socket?.on('incoming-call', callback);
+    this._registerListener('incoming-call', callback);
   }
 
   onCallRinging(callback) {
-    this.socket?.on('call-ringing', callback);
+    this._registerListener('call-ringing', callback);
   }
 
   onCallAccepted(callback) {
-    this.socket?.on('call-accepted', callback);
+    this._registerListener('call-accepted', callback);
   }
 
   onCallRejected(callback) {
-    this.socket?.on('call-rejected', callback);
+    this._registerListener('call-rejected', callback);
   }
 
   onCallEnded(callback) {
-    this.socket?.on('call-ended', callback);
+    this._registerListener('call-ended', callback);
   }
 
   onWebRTCOffer(callback) {
-    this.socket?.on('webrtc-offer', callback);
+    this._registerListener('webrtc-offer', callback);
   }
 
   onWebRTCAnswer(callback) {
-    this.socket?.on('webrtc-answer', callback);
+    this._registerListener('webrtc-answer', callback);
   }
 
   onIceCandidate(callback) {
-    this.socket?.on('ice-candidate', callback);
+    this._registerListener('ice-candidate', callback);
   }
 
   onCallError(callback) {
-    this.socket?.on('call-error', callback);
+    this._registerListener('call-error', callback);
   }
 
   // Cleanup for calls
   offCallEvents() {
-    if (!this.socket) return;
-    this.socket.off('incoming-call');
-    this.socket.off('call-ringing');
-    this.socket.off('call-accepted');
-    this.socket.off('call-rejected');
-    this.socket.off('call-ended');
-    this.socket.off('webrtc-offer');
-    this.socket.off('webrtc-answer');
-    this.socket.off('ice-candidate');
-    this.socket.off('call-error');
+    this._removeListener('incoming-call');
+    this._removeListener('call-ringing');
+    this._removeListener('call-accepted');
+    this._removeListener('call-rejected');
+    this._removeListener('call-ended');
+    this._removeListener('webrtc-offer');
+    this._removeListener('webrtc-answer');
+    this._removeListener('ice-candidate');
+    this._removeListener('call-error');
   }
 }
 

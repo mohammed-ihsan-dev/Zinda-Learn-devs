@@ -3,6 +3,8 @@ import { socketAuth } from './socketMiddleware.js';
 import { callHandlers } from './callHandlers.js';
 
 let io;
+export const onlineUsers = new Map();
+
 
 export const initSocket = (server) => {
   // Build allowed origins — must match the HTTP API CORS config exactly
@@ -50,6 +52,9 @@ export const initSocket = (server) => {
     const userId = socket.user._id.toString();
     console.log(`⚡ Socket Connected: ${userId} (${socket.user.role})`);
 
+    // Register user in onlineUsers map
+    onlineUsers.set(userId, socket.id);
+
     // 1. Join personal room (for direct notifications)
     socket.join(userId);
 
@@ -80,9 +85,12 @@ export const initSocket = (server) => {
     });
 
     // 6. Voice Call Handlers
-    callHandlers(io, socket);
+    callHandlers(io, socket, onlineUsers);
 
     socket.on('disconnect', () => {
+      if (onlineUsers.get(userId) === socket.id) {
+        onlineUsers.delete(userId);
+      }
       console.log(`🔥 Socket Disconnected: ${userId}`);
     });
   });
