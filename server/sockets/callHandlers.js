@@ -9,10 +9,11 @@ export const callHandlers = (io, socket) => {
   userSockets.set(userId, socket.id);
 
   // 1. Initial Call Request
-  socket.on('call-user', async ({ receiverId, conversationId }) => {
+  socket.on('call-user', async ({ receiverId, conversationId, callType }) => {
     if (!receiverId) return;
     
-    console.log(`[CALL] ${userId} calling ${receiverId}`);
+    const mode = callType || 'audio';
+    console.log(`[CALL] ${userId} calling ${receiverId} (${mode})`);
 
     // Check if receiver is online
     const receiverSocketId = userSockets.get(receiverId);
@@ -28,15 +29,16 @@ export const callHandlers = (io, socket) => {
     }
 
     // Mark both as busy
-    activeCalls.set(userId, { partnerId: receiverId, role: 'caller', socketId: socket.id });
-    activeCalls.set(receiverId, { partnerId: userId, role: 'receiver', socketId: receiverSocketId });
+    activeCalls.set(userId, { partnerId: receiverId, role: 'caller', socketId: socket.id, callType: mode });
+    activeCalls.set(receiverId, { partnerId: userId, role: 'receiver', socketId: receiverSocketId, callType: mode });
 
     // Notify receiver
     io.to(receiverSocketId).emit('incoming-call', {
       callerId: userId,
       callerName: socket.user.name,
       callerAvatar: socket.user.avatar,
-      conversationId
+      conversationId,
+      callType: mode
     });
 
     // Notify caller that it's ringing
@@ -59,11 +61,14 @@ export const callHandlers = (io, socket) => {
       io.to(callerSocketId).emit('call-rejected', { receiverId: userId });
     }
 
+    const callData = activeCalls.get(userId);
+
     // Log to history
     await CallHistory.create({
       caller: callerId,
       receiver: userId,
-      status: 'rejected'
+      status: 'rejected',
+      callType: callData?.callType || 'audio'
     });
 
     // Clear busy states after logging
@@ -110,6 +115,7 @@ export const callHandlers = (io, socket) => {
         receiver: callData?.role === 'receiver' ? userId : partnerId,
         status: 'completed',
         duration,
+        callType: callData?.callType || 'audio',
         endedAt: new Date()
       });
     }

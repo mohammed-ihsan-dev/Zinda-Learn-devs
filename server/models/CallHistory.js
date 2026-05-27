@@ -20,6 +20,11 @@ const callHistorySchema = new mongoose.Schema({
     type: Number, // In seconds
     default: 0
   },
+  callType: {
+    type: String,
+    enum: ['audio', 'video'],
+    default: 'audio'
+  },
   startedAt: {
     type: Date,
     default: Date.now

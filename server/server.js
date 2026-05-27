@@ -24,10 +24,10 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 initSocket(httpServer);
 
-// ─── Server Start ─────────────────────────────────────────────────────────────
+// ─── Server Start 
 const PORT = process.env.PORT || 5005;
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(`Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
   startLiveClassScheduler();
 });

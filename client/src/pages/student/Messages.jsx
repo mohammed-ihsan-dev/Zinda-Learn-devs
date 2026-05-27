@@ -9,7 +9,8 @@ import {
   Plus,
   MessageCircle,
   BookOpen,
-  Phone
+  Phone,
+  Video
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCall } from "../../features/calls/context/CallContext";
@@ -493,7 +494,8 @@ const Messages = () => {
                         otherUser?._id || otherUser?.id, 
                         otherUser?.name, 
                         otherUser?.avatar, 
-                        selectedConversation._id
+                        selectedConversation._id,
+                        'audio'
                       )}
                       disabled={isCallConnected || isCalling}
                       className="p-3 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl transition-all shadow-lg shadow-purple-200 group relative"
@@ -502,6 +504,24 @@ const Messages = () => {
                       <Phone size={20} />
                       <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                         Voice Call
+                      </span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => startCall(
+                        otherUser?._id || otherUser?.id, 
+                        otherUser?.name, 
+                        otherUser?.avatar, 
+                        selectedConversation._id,
+                        'video'
+                      )}
+                      disabled={isCallConnected || isCalling}
+                      className="p-3 bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl transition-all shadow-lg shadow-cyan-200 group relative"
+                      title="Video Call"
+                    >
+                      <Video size={20} />
+                      <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        Video Call
                       </span>
                     </button>
                   </div>

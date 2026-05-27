@@ -24,7 +24,9 @@ export const CallProvider = ({ children }) => {
     localStream: null,
     remoteStream: null,
     isMuted: false,
-    duration: 0
+    duration: 0,
+    callType: 'audio', // 'audio' | 'video'
+    isCameraOn: true
   });
 
   const timerRef = useRef(null);
@@ -56,19 +58,23 @@ export const CallProvider = ({ children }) => {
       localStream: null,
       remoteStream: null,
       isMuted: false,
-      duration: 0
+      duration: 0,
+      callType: 'audio',
+      isCameraOn: true
     });
   }, []);
 
   const handleIncomingCall = useCallback((data) => {
-    console.log('[CALL] Incoming call from:', data.callerName);
+    console.log('[CALL] Incoming call from:', data.callerName, 'Type:', data.callType);
     setCall(prev => ({
       ...prev,
       isReceiving: true,
       partnerId: data.callerId,
       partnerName: data.callerName,
       partnerAvatar: data.callerAvatar,
-      conversationId: data.conversationId
+      conversationId: data.conversationId,
+      callType: data.callType || 'audio',
+      isCameraOn: true
     }));
   }, []);
 
@@ -79,18 +85,27 @@ export const CallProvider = ({ children }) => {
 
   const handleCallAccepted = useCallback(async ({ receiverId }) => {
     console.log('[CALL] Call accepted by:', receiverId);
-    setCall(prev => ({ ...prev, isCalling: false, isRinging: false, isConnected: true }));
     
-    timerRef.current = setInterval(() => {
-      setCall(prev => ({ ...prev, duration: prev.duration + 1 }));
-    }, 1000);
-
     try {
+      const peer = peerService.getPeer();
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          peer.addTrack(track, localStreamRef.current);
+          console.log(`[CALL] Added local track on accept: ${track.kind}`);
+        });
+      }
+
+      setCall(prev => ({ ...prev, isCalling: false, isRinging: false, isConnected: true }));
+      
+      timerRef.current = setInterval(() => {
+        setCall(prev => ({ ...prev, duration: prev.duration + 1 }));
+      }, 1000);
+
       const offer = await peerService.getOffer();
       socketService.emitWebRTCOffer({ to: receiverId, offer });
       console.log('[CALL] WebRTC Offer sent');
     } catch (err) {
-      console.error('[CALL] Error creating offer:', err);
+      console.error('[CALL] Error establishing peer connection on accept:', err);
       toast.error('Failed to establish connection');
     }
   }, []);
@@ -177,16 +192,20 @@ export const CallProvider = ({ children }) => {
     };
 
     peer.ontrack = (event) => {
-      console.log('[CALL] Remote track received');
+      console.log('[CALL] Remote track received:', event.track.kind);
       const [remoteStream] = event.streams;
       setCall(prev => ({ ...prev, remoteStream }));
       
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch(e => {
-          console.error("[CALL] Auto-play prevented or failed:", e);
-          toast('Click anywhere to enable audio');
-        });
+        if (call.callType !== 'video') {
+          remoteAudioRef.current.play().catch(e => {
+            console.error("[CALL] Auto-play prevented or failed:", e);
+            toast('Click anywhere to enable audio');
+          });
+        } else {
+          remoteAudioRef.current.pause();
+        }
       }
     };
 
@@ -201,23 +220,21 @@ export const CallProvider = ({ children }) => {
         console.warn('[CALL] Connection unstable');
       }
     };
-  }, [call.partnerId]);
+  }, [call.partnerId, call.callType, resetCall]);
 
-  const startCall = async (receiverId, receiverName, receiverAvatar, conversationId) => {
+  const startCall = async (receiverId, receiverName, receiverAvatar, conversationId, callType = 'audio') => {
     if (call.isCalling || call.isConnected || call.isReceiving) {
       toast.error('A call is already in progress');
       return;
     }
     try {
-      console.log('[CALL] Starting call to:', receiverName);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[CALL] Starting call to:', receiverName, 'Type:', callType);
+      const constraints = { 
+        audio: true, 
+        video: callType === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } : false 
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
-      
-      const peer = peerService.getPeer();
-      stream.getTracks().forEach(track => {
-        peer.addTrack(track, stream);
-        console.log(`[CALL] Added local track: ${track.kind}`);
-      });
 
       setCall(prev => ({
         ...prev,
@@ -226,20 +243,26 @@ export const CallProvider = ({ children }) => {
         partnerName: receiverName,
         partnerAvatar: receiverAvatar,
         conversationId,
-        localStream: stream
+        localStream: stream,
+        callType,
+        isCameraOn: callType === 'video'
       }));
 
-      socketService.emitCallUser({ receiverId, conversationId });
+      socketService.emitCallUser({ receiverId, conversationId, callType });
     } catch (err) {
       console.error('[CALL] Media Error:', err);
-      toast.error('Microphone access denied. Please check your browser settings.');
+      toast.error('Microphone/Camera access denied. Please check your browser settings.');
     }
   };
 
   const acceptCall = async () => {
     try {
-      console.log('[CALL] Accepting call from:', call.partnerName);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[CALL] Accepting call from:', call.partnerName, 'Type:', call.callType);
+      const constraints = { 
+        audio: true, 
+        video: call.callType === 'video' ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } : false 
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
 
       const peer = peerService.getPeer();
@@ -252,7 +275,8 @@ export const CallProvider = ({ children }) => {
         ...prev, 
         isReceiving: false, 
         isConnected: true, 
-        localStream: stream 
+        localStream: stream,
+        isCameraOn: call.callType === 'video'
       }));
 
       timerRef.current = setInterval(() => {
@@ -262,7 +286,7 @@ export const CallProvider = ({ children }) => {
       socketService.emitAcceptCall({ callerId: call.partnerId });
     } catch (err) {
       console.error('[CALL] Media Error:', err);
-      toast.error('Microphone access denied');
+      toast.error('Microphone/Camera access denied');
       rejectCall();
     }
   };
@@ -288,6 +312,17 @@ export const CallProvider = ({ children }) => {
     }
   };
 
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCall(prev => ({ ...prev, isCameraOn: videoTrack.enabled }));
+        console.log('[CALL] Camera toggled:', videoTrack.enabled);
+      }
+    }
+  };
+
   return (
     <CallContext.Provider value={{
       ...call,
@@ -295,7 +330,8 @@ export const CallProvider = ({ children }) => {
       acceptCall,
       rejectCall,
       endCall,
-      toggleMute
+      toggleMute,
+      toggleCamera
     }}>
       {children}
     </CallContext.Provider>
