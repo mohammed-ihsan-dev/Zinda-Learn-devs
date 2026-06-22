@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CreditCard,
   BarChart3, HelpCircle, Bell, Settings, LogOut, Menu, X,
-  ChevronDown, ChevronRight, Shield
+  ChevronDown, ChevronRight, Shield, UserPlus, PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,6 +21,19 @@ const NAV_SECTIONS = [
       { label: 'Students',     icon: Users,          path: '/admin/students' },
       { label: 'Instructors',  icon: GraduationCap,  path: '/admin/instructor-management' },
       { label: 'Courses',      icon: BookOpen,        path: '/admin/courses' },
+    ],
+  },
+  {
+    label: 'Enrollments',
+    items: [
+      { label: 'Manual Enrollment', icon: UserPlus,   path: '/admin/enrollments' },
+    ],
+  },
+  {
+    label: 'Courses',
+    items: [
+      { label: 'Create Course',  icon: PlusCircle,    path: '/admin/create-course' },
+      { label: 'Manage Courses', icon: BookOpen,       path: '/admin/courses' },
     ],
   },
   {

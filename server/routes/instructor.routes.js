@@ -44,7 +44,7 @@ const upload = multer({
 
 // All routes are protected and restricted to instructors
 router.use(protect);
-router.use(authorize('instructor'));
+router.use(authorize('instructor', 'admin'));
 
 // Payouts
 router.get('/payouts', getInstructorPayouts);

@@ -119,3 +119,19 @@ export const updatePayoutStatus = async (id, updateData) => {
   const { data } = await api.patch(`/admin/payouts/${id}/status`, updateData);
   return data;
 };
+
+// ── MANUAL ENROLLMENT ────────────────────────────────────────────────────────
+export const grantEnrollment = async (studentId, courseId) => {
+  const { data } = await api.post('/admin/enrollments/grant', { studentId, courseId });
+  return data;
+};
+
+export const revokeEnrollment = async (enrollmentId) => {
+  const { data } = await api.delete(`/admin/enrollments/${enrollmentId}`);
+  return data;
+};
+
+export const getEnrollmentHistory = async (params) => {
+  const { data } = await api.get('/admin/enrollments', { params });
+  return data;
+};

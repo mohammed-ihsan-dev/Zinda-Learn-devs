@@ -22,6 +22,7 @@
     "express-rate-limit": "^8.5.2",
     "firebase-admin": "^13.8.0",
     "helmet": "^8.2.0",
+    "js-yaml": "^5.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.0",
     "morgan": "^1.10.0",
@@ -30,7 +31,8 @@
     "razorpay": "^2.9.6",
     "redis": "^5.12.1",
     "slugify": "^1.6.9",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

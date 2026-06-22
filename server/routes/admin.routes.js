@@ -29,6 +29,11 @@ import {
   getSystemSettings,
   updateSystemSettings
 } from '../controllers/admin.controller.js';
+import {
+  grantEnrollment,
+  revokeEnrollment,
+  getEnrollmentHistory
+} from '../controllers/adminEnrollmentController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 // All routes require auth + admin role
@@ -68,4 +73,10 @@ router.patch('/payouts/:id/status', updatePayoutStatus);
 router.get('/settings', getSystemSettings);
 router.put('/settings', updateSystemSettings);
 
+// 6. Manual Enrollment Management
+router.post('/enrollments/grant', grantEnrollment);
+router.delete('/enrollments/:enrollmentId', revokeEnrollment);
+router.get('/enrollments', getEnrollmentHistory);
+
 export default router;
+

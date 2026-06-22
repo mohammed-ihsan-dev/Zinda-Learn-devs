@@ -73,6 +73,7 @@ const Payments = lazy(() => import('./pages/admin/Payments'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
 const AdminSupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'));
+const ManualEnrollment = lazy(() => import('./pages/admin/ManualEnrollment'));
 const AccountBlocked = lazy(() => import('./pages/AccountBlocked'));
 const VerifyEmailPage = lazy(() => import('./pages/student/VerifyEmailPage'));
 
@@ -180,6 +181,10 @@ function AppContent() {
               <Route path="settings" element={<Settings />} />
               <Route path="support" element={<AdminSupportTickets />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="enrollments" element={<ManualEnrollment />} />
+              <Route path="create-course" element={<CreateCourse />} />
+              <Route path="edit-course/:id" element={<EditCourse />} />
+              <Route path="courses/:id" element={<CourseDetail />} />
             </Route>
 
             {/* 404 Route */}

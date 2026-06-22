@@ -25,6 +25,7 @@ import paymentRoutes from './routes/payment.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { checkMaintenance } from './middleware/maintenanceMode.js';
+import { swaggerSetup } from './swagger.js';
 
 const app = express();
 
@@ -142,6 +143,9 @@ app.use('/api/student/settings', studentSettingsRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/support', supportRoutes);
+
+// Swagger Documentation
+swaggerSetup(app);
 
 // Health check
 app.get('/api/health', (req, res) => {

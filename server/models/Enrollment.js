@@ -59,6 +59,20 @@ const enrollmentSchema = new mongoose.Schema({
   },
   paymentId: {
     type: String
+  },
+  accessType: {
+    type: String,
+    enum: ['purchase', 'manual'],
+    default: 'purchase'
+  },
+  grantedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  grantedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 
