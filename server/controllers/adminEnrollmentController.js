@@ -80,7 +80,7 @@ export const grantEnrollment = async (req, res) => {
       await dispatchNotification({
         userId: studentId,
         type: "courseEnrollments",
-        title: "Course Access Granted 🎓",
+        title: "Course Access Granted",
         message: `You have been granted access to "${course.title}" by an administrator.`,
         link: "/student/my-learning"
       });
@@ -89,7 +89,7 @@ export const grantEnrollment = async (req, res) => {
         await dispatchNotification({
           userId: course.instructor,
           type: "courseEnrollments",
-          title: "New Student Enrolled! 🎓",
+          title: "New Student Enrolled!",
           message: `${student.name || 'A student'} has been enrolled in your course "${course.title}" by admin.`,
           link: "/instructor/students"
         });

@@ -258,7 +258,7 @@ export const enrollInCourse = async (req, res) => {
       await dispatchNotification({
         userId: req.user.id,
         type: "courseEnrollments",
-        title: "Course Enrolled 🎓",
+        title: "Course Enrolled",
         message: `You have successfully enrolled in "${course.title}". Enjoy your learning journey!`,
         link: "/student/my-learning"
       });
@@ -268,7 +268,7 @@ export const enrollInCourse = async (req, res) => {
         await dispatchNotification({
           userId: course.instructor,
           type: "courseEnrollments",
-          title: "New Student Enrolled! 🎓",
+          title: "New Student Enrolled!",
           message: `${req.user.name || 'A student'} has enrolled in your course "${course.title}".`,
           link: "/instructor/students"
         });

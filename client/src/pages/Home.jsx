@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Play, Star, Users, BookOpen, Award, CheckCircle2, ChevronRight, Quote } from 'lucide-react';
+import { 
+  ArrowRight, Play, Star, Users, BookOpen, Award, CheckCircle2, ChevronRight, Quote,
+  Code, Briefcase, Palette, TrendingUp, Cpu, DollarSign
+} from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CourseCard from '../components/CourseCard';
@@ -10,6 +13,16 @@ import Loader from '../components/Loader';
 import CourseCardSkeleton from '../components/CourseCardSkeleton';
 
 import { useLandingData } from '../hooks/useLandingData';
+import { formatCategory } from '../utils/format';
+
+const CATEGORY_ICONS = {
+  development: Code,
+  business: Briefcase,
+  design: Palette,
+  marketing: TrendingUp,
+  it: Cpu,
+  finance: DollarSign
+};
 
 const Home = () => {
   const location = useLocation();
@@ -139,17 +152,22 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.length > 0 ? categories.map((cat) => (
-              <Link
-                key={cat.name}
-                to={`/courses?category=${encodeURIComponent(cat.name)}`}
-                className="group bg-white rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 text-center border border-surface-100 hover:border-primary-200"
-              >
-                <div className="text-4xl mb-3">{cat.icon}</div>
-                <h3 className="font-semibold text-surface-900 text-sm mb-1 group-hover:text-primary-600 transition-colors">{cat.name}</h3>
-                <p className="text-xs text-surface-400">{cat.count} courses</p>
-              </Link>
-            )) : (
+            {categories.length > 0 ? categories.map((cat) => {
+              const IconComponent = CATEGORY_ICONS[cat.name] || BookOpen;
+              return (
+                <Link
+                  key={cat.name}
+                  to={`/courses?category=${encodeURIComponent(cat.name)}`}
+                  className="group bg-white rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 text-center border border-surface-100 hover:border-primary-200"
+                >
+                  <div className="flex justify-center mb-4 text-primary-600 group-hover:scale-110 transition-transform duration-300">
+                    <IconComponent className="w-10 h-10" />
+                  </div>
+                  <h3 className="font-semibold text-surface-900 text-sm mb-1 group-hover:text-primary-600 transition-colors">{formatCategory(cat.name)}</h3>
+                  <p className="text-xs text-surface-400">{cat.count} courses</p>
+                </Link>
+              );
+            }) : (
               <div className="col-span-full py-10 text-center text-surface-400">Loading categories...</div>
             )}
           </div>
@@ -239,7 +257,9 @@ const Home = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-surface-900 text-base mb-0.5">{t.user?.name || 'Anonymous'}</h4>
-                    <p className="text-xs font-medium text-surface-400 uppercase tracking-wide">{t.user?.role || 'Learner'}</p>
+                    <p className="text-xs font-medium text-surface-400 uppercase tracking-wide">
+                      {t.user?.role === 'student' ? 'Learner' : t.user?.role === 'instructor' ? 'Instructor' : t.user?.role || 'Learner'}
+                    </p>
                   </div>
                 </div>
               </div>

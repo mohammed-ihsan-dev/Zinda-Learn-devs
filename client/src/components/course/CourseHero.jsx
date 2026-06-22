@@ -1,5 +1,6 @@
 import React from 'react';
 import { Star, Users, Clock, Globe, Calendar, Info } from 'lucide-react';
+import { formatCategory } from '../../utils/format';
 
 const CourseHero = ({ course }) => {
   if (!course) return null;
@@ -12,7 +13,7 @@ const CourseHero = ({ course }) => {
           <nav className="flex text-sm font-bold text-purple-400 mb-6 space-x-2">
             <a href="/courses" className="hover:underline">Courses</a>
             <span>&gt;</span>
-            <a href={`/courses?category=${course.category}`} className="hover:underline capitalize">{course.category}</a>
+            <a href={`/courses?category=${course.category}`} className="hover:underline">{formatCategory(course.category)}</a>
           </nav>
 
           <h1 className="text-3xl lg:text-4xl font-bold mb-4 leading-tight">

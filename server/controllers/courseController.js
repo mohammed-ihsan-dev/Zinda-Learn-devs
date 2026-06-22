@@ -587,7 +587,7 @@ export const addLessonQA = async (req, res) => {
       await dispatchNotification({
         userId: course.instructor,
         type: 'qaQuestions',
-        title: 'New Student Question ❓',
+        title: 'New Student Question',
         message: `${studentName} asked a question under lesson "${lesson.title}" of "${course.title}": "${question.trim()}"`,
         link: `/instructor/courses`
       });

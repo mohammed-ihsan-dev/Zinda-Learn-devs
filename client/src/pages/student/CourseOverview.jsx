@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import PurchaseModal from '../../components/course/PurchaseModal';
 import { loadRazorpayScript } from '../../utils/razorpayLoader';
 import CourseReviews from '../../components/course/CourseReviews';
+import { formatCategory } from '../../utils/format';
 
 const formatDuration = (mins) => {
   if (!mins) return '0m';
@@ -110,7 +111,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
           ondismiss: function() {
             setEnrolling(false);
             toast.dismiss(loadingToast);
-            toast('Payment cancelled', { icon: 'ℹ️' });
+            toast('Payment cancelled');
           }
         },
         theme: { color: '#7c3aed' }
@@ -166,7 +167,7 @@ const CourseOverview = ({ course, enrollment, onLessonClick }) => {
           <div className="flex-1 p-8 lg:p-10">
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="px-3 py-1 bg-primary-100 text-primary-700 text-xs font-black uppercase tracking-widest rounded-lg">
-                {course.category}
+                {formatCategory(course.category)}
               </span>
               <span className={`px-3 py-1 text-xs font-black uppercase tracking-widest rounded-lg ${
                 course.level === 'Beginner' ? 'bg-green-100 text-green-700' :

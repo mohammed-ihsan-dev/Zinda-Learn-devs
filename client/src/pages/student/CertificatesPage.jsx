@@ -260,8 +260,8 @@ const CertificatesPage = () => {
                     </div>
                  </div>
 
-                 {/* Hidden DOM for PDF generation */}
-                 <div className="hidden">
+                 {/* Hidden DOM for PDF generation (rendered off-screen to support html2canvas calculation) */}
+                 <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', overflow: 'hidden' }}>
                     <div id={`cert-hidden-${cert._id}`} className="w-[800px] h-[600px] bg-white p-20 border-[20px] border-zinc-100 relative">
                        <div className="h-full border-4 border-zinc-200 p-10 flex flex-col items-center justify-center text-center space-y-6">
                           <Award className="w-20 h-20 text-primary-600 mb-4" />

@@ -61,23 +61,10 @@ export const getLandingCategories = async (req, res) => {
       { $limit: 8 }
     ]);
 
-    const categoryIcons = {
-      'Web Development': '🌐',
-      'Mobile Development': '📱',
-      'Data Science': '📊',
-      'Machine Learning': '🤖',
-      'UI/UX Design': '🎨',
-      'DevOps': '⚙️',
-      'Cybersecurity': '🔒',
-      'Cloud Computing': '☁️',
-      'Business': '💼',
-      'Marketing': '📈'
-    };
-
     const formattedCategories = categories.map(cat => ({
       name: cat._id,
       count: cat.count,
-      icon: categoryIcons[cat._id] || '📚'
+      icon: ""
     }));
 
     res.status(200).json({

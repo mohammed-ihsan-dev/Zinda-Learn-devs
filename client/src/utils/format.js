@@ -13,3 +13,18 @@ export const formatDate = (date) => {
     year: 'numeric',
   }).format(new Date(date));
 };
+
+export const CATEGORY_DISPLAY_MAPPING = {
+  development: 'Development',
+  business: 'Business',
+  marketing: 'Marketing',
+  design: 'Design',
+  finance: 'Finance',
+  it: 'IT & Software'
+};
+
+export const formatCategory = (category) => {
+  if (!category) return '';
+  const key = String(category).toLowerCase().trim();
+  return CATEGORY_DISPLAY_MAPPING[key] || category;
+};

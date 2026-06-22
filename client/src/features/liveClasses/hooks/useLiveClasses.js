@@ -29,7 +29,6 @@ export const useLiveClasses = () => {
     // Socket listeners handlers
     const handleStarted = ({ liveClassId, title }) => {
       toast.success(`Live Class Started: ${title}`, {
-        icon: '🔴',
         duration: 5000
       });
       // Update state if exists, otherwise refetch to get the new live class
@@ -46,7 +45,6 @@ export const useLiveClasses = () => {
 
     const handleEnded = ({ liveClassId, title }) => {
       toast.error(`Live Class Ended: ${title}`, {
-        icon: '⚪',
         duration: 5000
       });
       setLiveClasses(prev => prev.map(c =>
@@ -55,9 +53,7 @@ export const useLiveClasses = () => {
     };
 
     const handleScheduled = ({ title }) => {
-      toast.success(`New Live Class Scheduled: ${title}`, {
-        icon: '📅'
-      });
+      toast.success(`New Live Class Scheduled: ${title}`);
       fetchLiveClasses();
     };
 

@@ -334,7 +334,7 @@ export const updatePayoutStatus = async (req, res) => {
           await dispatchNotification({
             userId: instId,
             type: "payouts",
-            title: "Payout Approved 💳",
+            title: "Payout Approved",
             message: `Your payout request of ₹${payout.amount} has been approved.`,
             link: "/instructor/earnings"
           });
@@ -342,7 +342,7 @@ export const updatePayoutStatus = async (req, res) => {
           await dispatchNotification({
             userId: instId,
             type: "payouts",
-            title: "Payout Rejected ❌",
+            title: "Payout Rejected",
             message: `Your payout request of ₹${payout.amount} was rejected. Comment: ${req.body.adminComment || 'None'}.`,
             link: "/instructor/earnings"
           });

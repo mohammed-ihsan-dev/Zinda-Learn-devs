@@ -18,8 +18,9 @@ import { useCourses } from "../hooks/useCourses";
 import { useAuth } from "../context/AuthContext";
 import { getMyEnrollments } from "../services/courseService";
 import { Link } from "react-router-dom";
+import { formatCategory } from '../utils/format';
 
-const CATEGORIES = ['All', 'Development', 'Business', 'Design', 'Marketing', 'IT', 'Finance'];
+const CATEGORIES = ['All', 'development', 'business', 'design', 'marketing', 'it', 'finance'];
 const LEVELS = ['All', 'Beginner', 'Intermediate', 'Expert'];
 const SORT_OPTIONS = [
   { label: 'Newest', value: 'newest', icon: Clock },
@@ -68,7 +69,7 @@ const CoursesPage = () => {
 
   const filters = {
     search: debouncedSearch,
-    category: selectedCategory === "All" ? undefined : selectedCategory.toLowerCase(),
+    category: selectedCategory === "All" ? undefined : selectedCategory,
     level: selectedLevel === "All" ? undefined : selectedLevel,
     sort: selectedSort,
     page: currentPage,
@@ -181,7 +182,7 @@ const CoursesPage = () => {
                     : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
                 }`}
               >
-                {category}
+                {category === 'All' ? 'All' : formatCategory(category)}
               </button>
             ))}
           </div>

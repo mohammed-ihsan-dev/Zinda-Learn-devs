@@ -119,7 +119,7 @@ export const sendMessage = async (req, res) => {
 
     // 4. Update lastMessage in Conversation (for inbox sorting)
     conversation.lastMessage = {
-      text: messageType === 'audio' ? '🎵 Voice Message' : (messageType === 'image' ? '🖼️ Image' : text),
+      text: messageType === 'audio' ? 'Voice Message' : (messageType === 'image' ? 'Image' : text),
       sender: senderId,
       createdAt: msg.createdAt
     };
@@ -148,7 +148,7 @@ export const sendMessage = async (req, res) => {
       await dispatchNotification({
         userId: receiverId,
         type: 'messages',
-        title: 'New Message 💬',
+        title: 'New Message',
         message: `You received a message from ${req.user.name}: "${text ? text.substring(0, 50) : 'Media Attachment'}"`,
         link: redirectLink,
         metadata: { conversationId: conversation._id }
@@ -361,7 +361,7 @@ export const broadcastMessage = async (req, res) => {
       });
 
       conversation.lastMessage = {
-        text: messageType === 'audio' ? `🎵 [BROADCAST] Voice Message` : `[BROADCAST] ${text}`,
+        text: messageType === 'audio' ? `[BROADCAST] Voice Message` : `[BROADCAST] ${text}`,
         sender: senderId,
         createdAt: msg.createdAt
       };
@@ -386,7 +386,7 @@ export const broadcastMessage = async (req, res) => {
         await dispatchNotification({
           userId: studentId,
           type: 'messages',
-          title: 'New Announcement 📢',
+          title: 'New Announcement',
           message: `Broadcast from ${req.user.name} in "${course.title}": "${text ? text.substring(0, 50) : ''}"`,
           link: "/student/messages",
           metadata: { conversationId: conversation._id }

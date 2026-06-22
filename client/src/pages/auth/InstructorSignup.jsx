@@ -230,45 +230,20 @@ const InstructorSignup = () => {
             Join our elite circle of instructors and share your expertise with a global community of {stats.students} students.
           </p>
 
-          {/* Profile Card Mockup */}
-          <div className="mt-auto relative z-20">
-            <div className="w-[300px] h-[340px] bg-gradient-to-b from-[#1a1c2e] to-[#0a0a0b] rounded-3xl p-1 relative shadow-2xl overflow-hidden mx-auto flex flex-col justify-end">
-              <div className="absolute inset-0 flex items-center justify-center pt-8">
-                {/* SVG avatar mockup */}
-                <svg viewBox="0 0 200 200" className="w-[85%] h-auto drop-shadow-xl" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="100" cy="100" r="100" fill="#25273b"/>
-                  <path d="M100 30 C 60 30, 60 80, 100 80 C 140 80, 140 30, 100 30" fill="#fca5a5" />
-                  <path d="M60 200 L60 140 C60 110, 140 110, 140 140 L140 200" fill="#334155" />
-                  <circle cx="100" cy="140" r="20" fill="#1e293b" />
-                  <circle cx="100" cy="65" r="25" fill="#fcd34d" />
-                  <path d="M70 50 Q100 20 130 50 Q100 40 70 50" fill="#451a03" />
-                </svg>
-              </div>
-              <div className="bg-black/60 backdrop-blur-md rounded-2xl p-4 border border-white/10 m-3 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center p-0.5">
-                    <div className="w-full h-full rounded-full bg-[#1a1c2e]"></div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white leading-tight">Dr. Elena Rodriguez</p>
-                    <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-0.5">Design Systems Lead & Top Instructor</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between mt-12 w-full max-w-sm mx-auto px-4">
+          {/* Dynamic Statistics Section */}
+          <div className="mt-auto w-full max-w-sm mx-auto">
+            <div className="flex items-center justify-between gap-6 px-4">
               <div>
                 <p className="text-2xl font-bold text-white">{stats.students}</p>
                 <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">ACTIVE STUDENTS</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">25+</p>
-                <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">COUNTRIES</p>
+                <p className="text-2xl font-bold text-white">{stats.instructors}</p>
+                <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">ACTIVE INSTRUCTORS</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.avgRating}/5</p>
-                <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">RATING AVERAGE</p>
+                <p className="text-2xl font-bold text-white">{stats.courses}</p>
+                <p className="text-[10px] text-purple-200 uppercase tracking-widest mt-1">PUBLISHED COURSES</p>
               </div>
             </div>
           </div>

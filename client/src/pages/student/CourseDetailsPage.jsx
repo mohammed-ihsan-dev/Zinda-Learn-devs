@@ -149,7 +149,7 @@ const CourseDetailsPage = () => {
           ondismiss: function() {
             setEnrolling(false);
             toast.dismiss(loadingToast);
-            toast('Payment cancelled', { icon: 'ℹ️' });
+            toast('Payment cancelled');
           }
         }
       };

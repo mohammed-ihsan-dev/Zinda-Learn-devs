@@ -32,7 +32,7 @@ export const startLiveClassScheduler = () => {
           await dispatchNotification({
             userId: liveClass.instructor,
             type: 'liveClasses',
-            title: 'Upcoming Live Session Starting Soon! 🎥',
+            title: 'Upcoming Live Session Starting Soon!',
             message: `Your scheduled live session "${liveClass.title}" for course "${liveClass.course?.title || 'Course'}" starts in 15 minutes.`,
             link: '/instructor/live-classes'
           });
@@ -44,7 +44,7 @@ export const startLiveClassScheduler = () => {
             dispatchNotification({
               userId: studentId,
               type: 'liveClasses',
-              title: 'Live Session Starting in 15 mins! 🎥',
+              title: 'Live Session Starting in 15 mins!',
               message: `The live class "${liveClass.title}" for "${liveClass.course?.title || 'your course'}" is starting soon. Prepare your setup!`,
               link: `/student/course/${liveClass.course?._id || liveClass.course}/player`
             })

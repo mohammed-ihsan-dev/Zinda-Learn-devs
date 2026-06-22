@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLandingData } from '../../hooks/useLandingData';
 
 import Skeleton, { CourseCardSkeleton } from '../../components/Skeleton';
+import { formatCategory } from '../../utils/format';
 
 const LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
@@ -96,7 +97,7 @@ const BrowseCourses = () => {
                     : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                   }`}
               >
-                {cat}
+                {cat === 'All' ? 'All' : formatCategory(cat)}
               </button>
             ))}
           </div>

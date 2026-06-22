@@ -92,7 +92,15 @@ const MyLearning = () => {
   // In-place updates to sync enrollment progress across views instantly
   const handleProgressUpdate = (updatedEnrollment) => {
     if (!updatedEnrollment) return;
-    setEnrollments(prev => prev.map(e => e._id === updatedEnrollment._id ? updatedEnrollment : e));
+    setEnrollments(prev => prev.map(e => {
+      if (e._id === updatedEnrollment._id) {
+        return {
+          ...updatedEnrollment,
+          course: e.course // Preserve the populated course object
+        };
+      }
+      return e;
+    }));
   };
 
   if (loading) {

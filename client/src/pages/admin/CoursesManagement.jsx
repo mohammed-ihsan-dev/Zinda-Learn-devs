@@ -13,6 +13,7 @@ import StatusBadge from '../../components/admin/shared/StatusBadge';
 import PageHeader from '../../components/admin/shared/PageHeader';
 import ConfirmModal from '../../components/admin/shared/ConfirmModal';
 import toast from 'react-hot-toast';
+import { formatCategory } from '../../utils/format';
 
 const CoursesManagement = () => {
   const [courses, setCourses] = useState([]);
@@ -115,7 +116,7 @@ const CoursesManagement = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-200 line-clamp-1 max-w-[200px]">{course.title}</p>
-            <p className="text-xs text-slate-500 capitalize">{course.category}</p>
+            <p className="text-xs text-slate-500">{formatCategory(course.category)}</p>
           </div>
         </div>
       )

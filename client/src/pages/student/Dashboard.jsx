@@ -55,7 +55,7 @@ const StudentDashboard = () => {
         
         <div className="relative z-20 p-8 lg:p-12 flex flex-col justify-end min-h-[380px] lg:min-h-[460px]">
           <h1 className="text-lg lg:text-xl font-medium text-zinc-400 mb-2">
-            Welcome back, {user?.name?.split(' ')[0] || 'Learner'} 👋
+            Welcome back, {user?.name?.split(' ')[0] || 'Learner'}
           </h1>
           
           {enrollments.length > 0 ? (

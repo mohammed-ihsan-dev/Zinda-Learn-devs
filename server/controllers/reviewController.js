@@ -90,7 +90,7 @@ export const addReview = async (req, res) => {
       await dispatchNotification({
         userId: course.instructor,
         type: 'reviews',
-        title: 'New Course Review! ⭐',
+        title: 'New Course Review!',
         message: `${studentName} left a ${rating}-star review on your course "${course.title}".`,
         link: '/instructor/reviews'
       });

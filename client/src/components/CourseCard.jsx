@@ -8,6 +8,7 @@ import { formatCurrency } from '../utils/currencyFormatter';
 import { useAuth } from '../context/AuthContext';
 import PurchaseModal from './course/PurchaseModal';
 import { loadRazorpayScript } from '../utils/razorpayLoader';
+import { formatCategory } from '../utils/format';
 
 const CourseCard = ({ course, enrolled = false }) => {
   const navigate = useNavigate();
@@ -121,7 +122,7 @@ const CourseCard = ({ course, enrolled = false }) => {
           ondismiss: function() {
             setIsEnrolling(false);
             toast.dismiss(loadingToast);
-            toast('Payment cancelled', { icon: 'ℹ️' });
+            toast('Payment cancelled');
           }
         },
         theme: { color: '#7c3aed' }
@@ -164,7 +165,7 @@ const CourseCard = ({ course, enrolled = false }) => {
         
         <div className="absolute top-3 left-3">
           <span className="px-3 py-1 text-xs font-semibold bg-white/90 backdrop-blur-sm text-primary-700 rounded-lg">
-            {category}
+            {formatCategory(category)}
           </span>
         </div>
       </div>

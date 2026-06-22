@@ -185,7 +185,7 @@ export const verifyPayment = async (req, res) => {
       await dispatchNotification({
         userId: order.user,
         type: "courseEnrollments",
-        title: "Course Enrolled 🎓",
+        title: "Course Enrolled",
         message: `Payment successful! You have been enrolled in "${course.title}".`,
         link: "/student/my-learning"
       });
@@ -195,7 +195,7 @@ export const verifyPayment = async (req, res) => {
         await dispatchNotification({
           userId: course.instructor,
           type: "courseEnrollments",
-          title: "New Student Enrolled! 🎓",
+          title: "New Student Enrolled!",
           message: `${studentName} has enrolled in your course "${course.title}".`,
           link: "/instructor/students"
         });

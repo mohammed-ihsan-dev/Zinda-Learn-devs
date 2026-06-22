@@ -3,7 +3,9 @@ import html2canvas from 'html2canvas';
 
 export const generateCertificatePDF = async (elementId, fileName) => {
   const element = document.getElementById(elementId);
-  if (!element) return;
+  if (!element) {
+    throw new Error(`Certificate element with ID "${elementId}" not found.`);
+  }
 
   try {
     const canvas = await html2canvas(element, {

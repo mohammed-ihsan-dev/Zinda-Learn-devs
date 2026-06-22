@@ -157,7 +157,7 @@ const CreateCourse = () => {
                     <option value="business">Business</option>
                     <option value="design">Design</option>
                     <option value="marketing">Marketing</option>
-                    <option value="it">IT</option>
+                    <option value="it">IT & Software</option>
                     <option value="finance">Finance</option>
                   </select>
                   <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />

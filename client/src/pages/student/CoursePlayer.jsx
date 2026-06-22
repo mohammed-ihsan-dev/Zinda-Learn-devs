@@ -3,8 +3,10 @@ import {
   Play, ChevronLeft, ChevronRight, CheckCircle2, CheckCircle,
   Clock, BarChart2, Eye, Lock, Lightbulb, Wrench,
   Video, Calendar, Users, ChevronDown, ChevronUp,
-  Star, Send, Paperclip, BookOpen, HelpCircle, FileText
+  Star, Send, Paperclip, BookOpen, HelpCircle, FileText,
+  Award
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { updateProgress, addLessonQA, replyOrEditQA, addLessonReview } from '../../services/courseService';
 import toast from 'react-hot-toast';
@@ -121,6 +123,7 @@ ModuleRow.displayName = 'ModuleRow';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgressUpdate, onBack }) => {
+  const navigate = useNavigate();
   const { moduleIndex = 0, lessonIndex = 0, lesson = null, module: activeModule = null } = activeLesson || {};
   const [activeTab, setActiveTab] = useState('Overview');
   const [savingProgress, setSavingProgress] = useState(false);
@@ -208,7 +211,13 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
       });
       if (data?.success && data?.enrollment) {
         onProgressUpdate(data.enrollment);
-        toast.success('Lesson completed! (+10 XP) 🎉');
+        toast.success('Lesson completed! (+10 XP)');
+
+        if (nextLesson) {
+          setTimeout(() => {
+            onLessonClick(nextLesson);
+          }, 1500);
+        }
       }
     } catch (err) {
       console.error("Auto-completion failed:", err);
@@ -216,7 +225,7 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
     } finally {
       setSavingProgress(false);
     }
-  }, [enrollment?._id, savingProgress, onProgressUpdate]);
+  }, [enrollment?._id, savingProgress, onProgressUpdate, nextLesson, onLessonClick]);
 
   // Sync on leave (lesson change or unmount)
   const syncOnLeave = useCallback(() => {
@@ -379,7 +388,13 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
       });
       if (data?.success && data?.enrollment) {
         onProgressUpdate(data.enrollment);
-        toast.success('Lesson marked as complete! ✅');
+        toast.success('Lesson marked as complete!');
+
+        if (nextLesson) {
+          setTimeout(() => {
+            onLessonClick(nextLesson);
+          }, 1500);
+        }
       }
     } catch (err) {
       console.error("Failed to manually complete lesson:", err);
@@ -509,7 +524,7 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
       const sectionId = activeModule?._id || course.modules?.[moduleIndex]?._id;
       const res = await addLessonQA(course._id, sectionId, lesson._id, { question: newQuestionText.trim() });
       if (res?.success && res?.course) {
-        toast.success('Question posted successfully! 🎉');
+        toast.success('Question posted successfully!');
         setNewQuestionText('');
         const updatedEnrollment = { ...enrollment, course: res.course };
         onProgressUpdate(updatedEnrollment);
@@ -529,7 +544,7 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
       const sectionId = activeModule?._id || course.modules?.[moduleIndex]?._id;
       const res = await addLessonReview(course._id, sectionId, lesson._id, { rating: newRating, review: newReview.trim() });
       if (res?.success && res?.course) {
-        toast.success('Review submitted successfully! 🎉');
+        toast.success('Review submitted successfully!');
         setNewReview('');
         const updatedEnrollment = { ...enrollment, course: res.course };
         onProgressUpdate(updatedEnrollment);
@@ -577,6 +592,35 @@ const CoursePlayer = ({ course, enrollment, activeLesson, onLessonClick, onProgr
             onEnded={handleVideoEnded}
             initialTime={initialTime}
           />
+
+          {/* COURSE COMPLETION BANNER */}
+          {(progress === 100 || enrollment?.isCompleted) && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-6 shadow-sm flex items-start gap-4 animate-fade-in mb-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <Award className="w-6 h-6 animate-bounce" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <h3 className="text-lg font-bold text-emerald-900">Congratulations! You've Completed the Course!</h3>
+                <p className="text-sm text-emerald-700 leading-relaxed">
+                  You have successfully completed all lessons in <strong>{course.title}</strong>. A certificate of completion has been issued to your account.
+                </p>
+                <div className="pt-2 flex gap-3">
+                  <button
+                    onClick={() => navigate('/student/certificates')}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+                  >
+                    View Certificates
+                  </button>
+                  <button
+                    onClick={onBack}
+                    className="px-4 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-50 transition-colors"
+                  >
+                    Back to My Learning
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 2. NAVIGATION BUTTONS */}
           <div className="flex items-center gap-3 flex-wrap">
