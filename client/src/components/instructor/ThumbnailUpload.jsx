@@ -4,7 +4,7 @@ import { UploadCloud, Image as ImageIcon, X, Loader2, CheckCircle2 } from 'lucid
 import { uploadThumbnail } from '../../services/instructorService';
 import { toast } from 'react-hot-toast';
 
-const ThumbnailUpload = ({ initialUrl, onUploadSuccess, onRemove }) => {
+const ThumbnailUpload = ({ initialUrl, onUploadSuccess, onRemove, isAdmin = false }) => {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(initialUrl || '');
 
@@ -55,10 +55,10 @@ const ThumbnailUpload = ({ initialUrl, onUploadSuccess, onRemove }) => {
       <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Course Thumbnail</label>
       
       {previewUrl ? (
-        <div className="relative group rounded-[28px] overflow-hidden border border-slate-100 shadow-xl aspect-video">
+        <div className={`relative group rounded-[28px] overflow-hidden shadow-xl aspect-video border ${isAdmin ? 'border-slate-700/60' : 'border-slate-100'}`}>
           <img src={previewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-            <div {...getRootProps()} className="p-3 bg-white text-slate-900 rounded-2xl cursor-pointer hover:scale-110 transition-transform shadow-lg">
+            <div {...getRootProps()} className={`p-3 rounded-2xl cursor-pointer hover:scale-110 transition-transform shadow-lg ${isAdmin ? 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700' : 'bg-white text-slate-900'}`}>
               <input {...getInputProps()} />
               <UploadCloud className="w-5 h-5" />
             </div>
@@ -78,31 +78,37 @@ const ThumbnailUpload = ({ initialUrl, onUploadSuccess, onRemove }) => {
         <div 
           {...getRootProps()}
           className={`relative h-48 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center p-6 cursor-pointer overflow-hidden ${
-            isDragActive ? 'border-purple-400 bg-purple-50' : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
+            isDragActive 
+              ? isAdmin ? 'border-indigo-500 bg-indigo-500/10' : 'border-purple-400 bg-purple-50' 
+              : isAdmin ? 'border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/40' : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
           } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <input {...getInputProps()} />
           
           {uploading ? (
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
+              <Loader2 className={`w-10 h-10 animate-spin ${isAdmin ? 'text-indigo-400' : 'text-purple-600'}`} />
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Uploading Image...</p>
             </div>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <ImageIcon className="w-7 h-7 text-purple-600" />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${isAdmin ? 'bg-indigo-500/10' : 'bg-purple-50'}`}>
+                <ImageIcon className={`w-7 h-7 ${isAdmin ? 'text-indigo-400' : 'text-purple-600'}`} />
               </div>
-              <h4 className="text-sm font-bold text-slate-700 mb-1">
+              <h4 className={`text-sm font-bold mb-1 ${isAdmin ? 'text-slate-300' : 'text-slate-700'}`}>
                 {isDragActive ? 'Drop it here!' : 'Click or drag thumbnail'}
               </h4>
               <p className="text-[11px] text-slate-400 max-w-[160px] mb-6">Drop your image here or browse files</p>
               
-              <div className="px-6 py-3 bg-white border border-slate-100 text-slate-600 text-[11px] font-bold rounded-xl shadow-sm hover:shadow-md transition-all">
+              <div className={`px-6 py-3 border text-[11px] font-bold rounded-xl shadow-sm hover:shadow-md transition-all ${
+                isAdmin 
+                  ? 'bg-slate-800 border-slate-700 text-slate-350 hover:bg-slate-750' 
+                  : 'bg-white border-slate-100 text-slate-600'
+              }`}>
                 Browse Files
               </div>
               
-              <p className="mt-4 text-[9px] font-bold text-slate-300 uppercase tracking-widest">JPG, PNG or WEBP • Max 5MB</p>
+              <p className={`mt-4 text-[9px] font-bold uppercase tracking-widest ${isAdmin ? 'text-slate-500' : 'text-slate-300'}`}>JPG, PNG or WEBP • Max 5MB</p>
             </>
           )}
         </div>

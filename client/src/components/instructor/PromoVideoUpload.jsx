@@ -3,7 +3,7 @@ import { UploadCloud, Video, X, Play, Loader2, CheckCircle2, AlertCircle } from 
 import { videoService } from '../../services/videoService';
 import { toast } from 'react-hot-toast';
 
-const PromoVideoUpload = ({ courseId, initialUrl, onUploadSuccess, onRemove }) => {
+const PromoVideoUpload = ({ courseId, initialUrl, onUploadSuccess, onRemove, isAdmin = false }) => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState(initialUrl || '');
@@ -59,7 +59,7 @@ const PromoVideoUpload = ({ courseId, initialUrl, onUploadSuccess, onRemove }) =
       {previewUrl ? (
         <div className="relative group">
           {showPreview ? (
-            <div className="relative aspect-video rounded-[28px] overflow-hidden bg-black shadow-2xl border border-slate-100">
+            <div className={`relative aspect-video rounded-[28px] overflow-hidden bg-black shadow-2xl border ${isAdmin ? 'border-slate-700/60' : 'border-slate-100'}`}>
               <video 
                 src={previewUrl} 
                 controls 
@@ -74,7 +74,7 @@ const PromoVideoUpload = ({ courseId, initialUrl, onUploadSuccess, onRemove }) =
               </button>
             </div>
           ) : (
-            <div className="relative aspect-video rounded-[28px] overflow-hidden bg-slate-900 shadow-xl group border border-slate-100">
+            <div className={`relative aspect-video rounded-[28px] overflow-hidden bg-slate-900 shadow-xl group border ${isAdmin ? 'border-slate-700/60' : 'border-slate-100'}`}>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <button 
@@ -112,38 +112,46 @@ const PromoVideoUpload = ({ courseId, initialUrl, onUploadSuccess, onRemove }) =
           )}
         </div>
       ) : (
-        <div className={`relative h-52 bg-slate-50/50 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center p-8 group ${uploading ? 'border-purple-300 bg-purple-50/30' : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'}`}>
+        <div className={`relative h-52 rounded-[28px] border-2 border-dashed transition-all flex flex-col items-center justify-center text-center p-8 group ${
+          uploading 
+            ? isAdmin ? 'border-indigo-500 bg-indigo-500/10' : 'border-purple-300 bg-purple-50/30' 
+            : isAdmin ? 'border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/40' : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
+        }`}>
           {uploading ? (
             <div className="w-full max-w-xs space-y-4">
               <div className="flex items-center justify-center mb-2">
-                <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
+                <Loader2 className={`w-10 h-10 animate-spin ${isAdmin ? 'text-indigo-400' : 'text-purple-600'}`} />
               </div>
               <div className="space-y-2">
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-2 w-full rounded-full overflow-hidden ${isAdmin ? 'bg-slate-850' : 'bg-slate-100'}`}>
                   <div 
-                    className="h-full bg-purple-600 transition-all duration-300"
+                    className={`h-full transition-all duration-300 ${isAdmin ? 'bg-indigo-600' : 'bg-purple-600'}`}
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">
                   Uploading Promo... {progress}%
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Video className="w-7 h-7 text-purple-600" />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${isAdmin ? 'bg-indigo-500/10' : 'bg-purple-50'}`}>
+                <Video className={`w-7 h-7 ${isAdmin ? 'text-indigo-400' : 'text-purple-600'}`} />
               </div>
-              <h4 className="text-sm font-bold text-slate-700 mb-1">Upload Course Promo</h4>
+              <h4 className={`text-sm font-bold mb-1 ${isAdmin ? 'text-slate-300' : 'text-slate-700'}`}>Upload Course Promo</h4>
               <p className="text-[11px] text-slate-400 max-w-[200px] mb-6">Attract students with a professional video introduction.</p>
               
-              <label className="px-6 py-3 bg-white border border-slate-100 text-slate-600 text-[11px] font-bold rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95">
+              <label className={`px-6 py-3 border text-[11px] font-bold rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 ${
+                isAdmin 
+                  ? 'bg-slate-800 border-slate-700 text-slate-350 hover:bg-slate-750' 
+                  : 'bg-white border-slate-100 text-slate-600'
+              }`}>
                 Browse Video
                 <input type="file" className="hidden" onChange={handleFileChange} accept="video/*" />
               </label>
               
-              <div className="mt-6 flex items-center gap-4 text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
+              <div className={`mt-6 flex items-center gap-4 text-[9px] font-bold uppercase tracking-tighter ${isAdmin ? 'text-slate-500' : 'text-slate-300'}`}>
                 <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> MP4/MOV</span>
                 <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Max 100MB</span>
               </div>

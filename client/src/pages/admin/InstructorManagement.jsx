@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FileText, Lock, Unlock, MoreVertical, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Lock, Unlock, MoreVertical, CheckCircle, XCircle, Eye, GraduationCap, Users } from 'lucide-react';
 import { getPendingInstructors, getTutors, approveInstructor, rejectInstructor, blockUser, unblockUser } from '../../services/adminService';
 import PageHeader from '../../components/admin/shared/PageHeader';
 import StatusBadge from '../../components/admin/shared/StatusBadge';
 import ConfirmModal from '../../components/admin/shared/ConfirmModal';
+import UserDetailsModal from '../../components/admin/shared/UserDetailsModal';
 import EmptyState from '../../components/admin/shared/EmptyState';
 import { toast } from 'react-hot-toast';
-import { GraduationCap, Users } from 'lucide-react';
 
 const InstructorManagement = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -17,6 +17,9 @@ const InstructorManagement = () => {
   const [selectedTutor, setSelectedTutor] = useState(null);
   const [blockReason, setBlockReason] = useState('');
   const [submittingBlock, setSubmittingBlock] = useState(false);
+
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [viewingTutor, setViewingTutor] = useState(null);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -47,11 +50,19 @@ const InstructorManagement = () => {
     } catch (error) { toast.error(error.response?.data?.message || 'Failed to reject'); }
   };
 
+  const handleViewDetails = (tutor) => {
+    setViewingTutor(tutor);
+    setShowDetailsModal(true);
+  };
+
   const handleBlockToggle = async (tutor) => {
     if (tutor.isBlocked) {
       try {
         await unblockUser(tutor._id);
         toast.success('Instructor unblocked');
+        if (viewingTutor && viewingTutor._id === tutor._id) {
+          setViewingTutor(prev => ({ ...prev, isBlocked: false, blockedReason: '' }));
+        }
         fetchData();
       } catch { toast.error('Failed to unblock'); }
     } else {
@@ -68,6 +79,9 @@ const InstructorManagement = () => {
       setSubmittingBlock(true);
       await blockUser(selectedTutor._id, blockReason);
       toast.success('Instructor suspended');
+      if (viewingTutor && viewingTutor._id === selectedTutor._id) {
+        setViewingTutor(prev => ({ ...prev, isBlocked: true, blockedReason: blockReason }));
+      }
       setShowBlockModal(false);
       setSelectedTutor(null);
       setBlockReason('');
@@ -211,6 +225,13 @@ const InstructorManagement = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
+                            onClick={() => handleViewDetails(tutor)}
+                            className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                            title="View Profile"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => handleBlockToggle(tutor)}
                             className={`p-1.5 hover:bg-slate-700 rounded-lg transition-colors ${tutor.isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-red-400 hover:text-red-300'}`}
                             title={tutor.isBlocked ? 'Unblock' : 'Block'}
@@ -250,6 +271,14 @@ const InstructorManagement = () => {
           />
         </div>
       </ConfirmModal>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => { setShowDetailsModal(false); setViewingTutor(null); }}
+        user={viewingTutor}
+        onBlockToggle={handleBlockToggle}
+      />
     </div>
   );
 };

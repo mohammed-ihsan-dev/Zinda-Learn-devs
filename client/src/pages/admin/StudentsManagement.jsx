@@ -6,6 +6,7 @@ import AnalyticsCard from '../../components/admin/shared/AnalyticsCard';
 import StatusBadge from '../../components/admin/shared/StatusBadge';
 import PageHeader from '../../components/admin/shared/PageHeader';
 import ConfirmModal from '../../components/admin/shared/ConfirmModal';
+import UserDetailsModal from '../../components/admin/shared/UserDetailsModal';
 import toast from 'react-hot-toast';
 
 const StudentsManagement = () => {
@@ -21,6 +22,9 @@ const StudentsManagement = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [blockReason, setBlockReason] = useState('');
   const [submittingBlock, setSubmittingBlock] = useState(false);
+
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [viewingStudent, setViewingStudent] = useState(null);
 
   const fetchStudents = async () => {
     try {
@@ -52,11 +56,19 @@ const StudentsManagement = () => {
   useEffect(() => { fetchStudents(); }, [searchTerm, statusFilter, currentPage]);
   useEffect(() => { fetchStats(); }, []);
 
+  const handleViewDetails = (student) => {
+    setViewingStudent(student);
+    setShowDetailsModal(true);
+  };
+
   const handleBlockToggle = async (student) => {
     if (student.isBlocked) {
       try {
         await unblockUser(student._id);
         toast.success('Student unblocked successfully');
+        if (viewingStudent && viewingStudent._id === student._id) {
+          setViewingStudent(prev => ({ ...prev, isBlocked: false, blockedReason: '' }));
+        }
         fetchStudents();
       } catch { toast.error('Failed to unblock student'); }
     } else {
@@ -73,6 +85,9 @@ const StudentsManagement = () => {
       setSubmittingBlock(true);
       await blockUser(selectedStudent._id, blockReason);
       toast.success('Student suspended successfully');
+      if (viewingStudent && viewingStudent._id === selectedStudent._id) {
+        setViewingStudent(prev => ({ ...prev, isBlocked: true, blockedReason: blockReason }));
+      }
       setShowBlockModal(false);
       setSelectedStudent(null);
       setBlockReason('');
@@ -142,7 +157,11 @@ const StudentsManagement = () => {
       className: 'text-right',
       cell: (s) => (
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-500 hover:text-slate-300 transition-colors" title="View Profile">
+          <button 
+            onClick={() => handleViewDetails(s)}
+            className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-200 transition-colors" 
+            title="View Profile"
+          >
             <Eye className="w-3.5 h-3.5" />
           </button>
           <button
@@ -243,6 +262,14 @@ const StudentsManagement = () => {
           />
         </div>
       </ConfirmModal>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => { setShowDetailsModal(false); setViewingStudent(null); }}
+        user={viewingStudent}
+        onBlockToggle={handleBlockToggle}
+      />
     </div>
   );
 };
