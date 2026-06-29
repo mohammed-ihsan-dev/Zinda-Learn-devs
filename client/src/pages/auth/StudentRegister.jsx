@@ -9,6 +9,8 @@ import { auth, googleProvider } from '../../lib/firebase';
 import { signInWithPopup } from 'firebase/auth';
 import api from '../../services/api';
 
+const EMAIL_VERIFICATION_ENABLED = import.meta.env.VITE_EMAIL_VERIFICATION_ENABLED !== 'false';
+
 const StudentRegister = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -106,7 +108,7 @@ const StudentRegister = () => {
     const errs = {};
     if (!formData.name.trim()) errs.name = 'Name is required';
     if (!formData.email) errs.email = 'Email is required';
-    if (!isEmailVerified) errs.email = 'Please verify your email first';
+    if (EMAIL_VERIFICATION_ENABLED && !isEmailVerified) errs.email = 'Please verify your email first';
     if (!formData.password) errs.password = 'Password is required';
     else if (formData.password.length < 6) errs.password = 'Password must be at least 6 characters';
     if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match';
@@ -140,7 +142,7 @@ const StudentRegister = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const _handleGoogleLogin = async () => {
     if (!auth) {
       toast.error('Firebase is not configured.');
       return;
@@ -235,14 +237,14 @@ const StudentRegister = () => {
                   icon={Mail}
                   placeholder="Enter your email"
                   value={formData.email}
-                  disabled={isEmailVerified}
+                  disabled={EMAIL_VERIFICATION_ENABLED && isEmailVerified}
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
                     if (errors.email) setErrors({ ...errors, email: null });
                   }}
                   error={errors.email}
                 />
-                {!isEmailVerified && (
+                {!isEmailVerified && EMAIL_VERIFICATION_ENABLED && (
                   <button
                     type="button"
                     onClick={handleSendOTP}
@@ -252,14 +254,14 @@ const StudentRegister = () => {
                     {sendingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Verify Email'}
                   </button>
                 )}
-                {isEmailVerified && (
+                {isEmailVerified && EMAIL_VERIFICATION_ENABLED && (
                   <div className="absolute right-3 top-10 flex items-center gap-1 text-green-600 text-xs font-bold">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Verified
                   </div>
                 )}
               </div>
 
-              {otpSent && !isEmailVerified && (
+              {EMAIL_VERIFICATION_ENABLED && otpSent && !isEmailVerified && (
                 <div className="p-4 bg-primary-50 rounded-2xl border border-primary-100 animate-slide-up">
                   <label className="text-xs font-bold text-primary-700 mb-2 block">Enter 6-Digit OTP</label>
                   <div className="flex gap-2">
@@ -335,7 +337,7 @@ const StudentRegister = () => {
                 </span>
               </label>
 
-              <Button type="submit" fullWidth size="lg" loading={loading} disabled={!isEmailVerified}>
+              <Button type="submit" fullWidth size="lg" loading={loading} disabled={EMAIL_VERIFICATION_ENABLED && !isEmailVerified}>
                 Create Account
                 <ArrowRight className="w-4 h-4" />
               </Button>

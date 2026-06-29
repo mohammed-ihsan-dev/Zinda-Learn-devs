@@ -92,9 +92,24 @@ export const register = async (req, res) => {
       }
     }
 
-    const user = await User.findOne({ email }).select("+password");
-    if (!user || !user.isVerified) {
-      return res.status(400).json({ success: false, message: "Email not verified" });
+    // Temporary Email Verification Bypass Flow
+    const EMAIL_VERIFICATION_ENABLED = process.env.EMAIL_VERIFICATION_ENABLED !== 'false';
+    let user;
+
+    if (EMAIL_VERIFICATION_ENABLED) {
+      user = await User.findOne({ email }).select("+password");
+      if (!user || !user.isVerified) {
+        return res.status(400).json({ success: false, message: "Email not verified" });
+      }
+    } else {
+      user = await User.findOne({ email }).select("+password");
+      if (!user) {
+        // Create user record and set verified to true immediately
+        user = new User({ email });
+        user.isVerified = true;
+      } else if (!user.isVerified) {
+        user.isVerified = true;
+      }
     }
 
     if (user.password) {

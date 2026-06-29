@@ -8,6 +8,8 @@ import { signInWithPopup } from 'firebase/auth';
 import api from '../../services/api';
 import { useLandingData } from '../../hooks/useLandingData';
 
+const EMAIL_VERIFICATION_ENABLED = import.meta.env.VITE_EMAIL_VERIFICATION_ENABLED !== 'false';
+
 const InstructorSignup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [agreed, setAgreed] = useState(false);
@@ -125,7 +127,7 @@ const InstructorSignup = () => {
       toast.error('Please fill in all fields');
       return;
     }
-    if (!isEmailVerified) {
+    if (EMAIL_VERIFICATION_ENABLED && !isEmailVerified) {
       toast.error('Please verify your email first');
       return;
     }
@@ -283,11 +285,11 @@ const InstructorSignup = () => {
                   type="email"
                   placeholder="Enter Your Email..."
                   value={formData.email}
-                  disabled={isEmailVerified}
+                  disabled={EMAIL_VERIFICATION_ENABLED && isEmailVerified}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm"
                 />
-                {!isEmailVerified && (
+                {!isEmailVerified && EMAIL_VERIFICATION_ENABLED && (
                   <button
                     type="button"
                     onClick={handleSendOTP}
@@ -297,7 +299,7 @@ const InstructorSignup = () => {
                     {sendingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Verify'}
                   </button>
                 )}
-                {isEmailVerified && (
+                {isEmailVerified && EMAIL_VERIFICATION_ENABLED && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-600 text-[10px] font-bold">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Verified
                   </div>
@@ -305,7 +307,7 @@ const InstructorSignup = () => {
               </div>
             </div>
 
-            {otpSent && !isEmailVerified && (
+            {EMAIL_VERIFICATION_ENABLED && otpSent && !isEmailVerified && (
               <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100 animate-slide-up">
                 <label className="text-[10px] font-bold text-purple-700 mb-3 block uppercase tracking-widest">Enter 6-Digit OTP</label>
                 <div className="flex gap-2">
@@ -413,7 +415,7 @@ const InstructorSignup = () => {
 
             <button
               type="submit"
-              disabled={loading || !isEmailVerified}
+              disabled={loading || (EMAIL_VERIFICATION_ENABLED && !isEmailVerified)}
               className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-full transition-colors shadow-lg shadow-purple-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
             >
               {loading ? 'Creating Account...' : 'Create Instructor Account'}
